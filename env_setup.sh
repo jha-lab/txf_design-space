@@ -9,4 +9,15 @@ conda create --name txf_design-space pytorch torchvision torchaudio cudatoolkit=
 
 conda activate txf_design-space
 
-conda install -c huggingface transformers
+# Not needed for editable install
+# conda install -c huggingface transformers
+
+# Editable installation from source
+git clone https://github.com/huggingface/transformers.git
+cd transformers
+pip install -e .
+
+# Check installation
+cd ..
+python check_install.py
+
