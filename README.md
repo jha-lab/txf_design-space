@@ -26,3 +26,7 @@ Every model will be represented by a dictionary (referred to by the variable `mo
 ```
 model_dict = {'l': 4, 'a': [12, 12, 12, 12], 'f': [2048, 2048, 2048, 2048], 's': ['sdp', 'sdp', 'sdp', 'sdp']}
 ```
+
+This dictionary will be converted to a pytorch model for training, where the weights would be transferred from the 'nearest' pre-trained model. This modular simulator is a wrapper over the [huggingface/transformers](https://github.com/huggingface/transformers) repo.
+
+The computation of the 'nearest' transformer is done using graph embeddings for every transformer's computational graph in this design space. 
