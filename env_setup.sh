@@ -20,7 +20,7 @@ pip install -e .
 # Add other packages
 conda install pyyaml
 
-## TODO: create environmenty.yaml file or requirements.txt
+## TODO: create environment.yaml file or requirements.txt
 
 # Check installation
 cd ..
