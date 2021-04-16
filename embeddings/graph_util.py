@@ -12,6 +12,7 @@ def model_dict_to_graph(model_dict, ops_list):
 
     Args:
         model_dict: the model dictionary
+        ops_list: list of all possible operations
 
     Returns:
         model_graph = (adjacency_matrix, ops)
