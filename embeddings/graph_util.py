@@ -71,7 +71,7 @@ def model_dict_to_graph(model_dict, ops_list):
             i += 2 # Re-instate i to add_norm as output of current encoder layer
     matrix[-2][-1] = 1 # add_norm to output
  
-    assert check_upper_tri(matrix), \
+    assert is_upper_tri(matrix), \
         f'Matrix generated is not an upper-triangular adjacency matrix: \n{matrix}'
     assert is_full_dag(matrix), \
         f'Matrix generated has "hanging" vertices: \n{matrix}'
@@ -79,7 +79,7 @@ def model_dict_to_graph(model_dict, ops_list):
     return (matrix, ops)
 
 
-def check_upper_tri(matrix):
+def is_upper_tri(matrix):
     """Checks if the given matrix is an upper-triangular adjacency matrix
     
     Args:
