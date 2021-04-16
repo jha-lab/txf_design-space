@@ -17,6 +17,11 @@ git clone https://github.com/huggingface/transformers.git
 cd transformers
 pip install -e .
 
+# Add other packages
+conda install pyyaml
+
+## TODO: create environmenty.yaml file or requirements.txt
+
 # Check installation
 cd ..
 python check_install.py
