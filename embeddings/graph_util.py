@@ -4,7 +4,8 @@
 
 import numpy as np
 import hashlib
-
+from grakel import Graph, WeisfeilerLehman, NeighborhoodHash, RandomWalkLabeled
+from sklearn.manifold import MDS
 
 def model_dict_to_graph(model_dict, ops_list):
     """Converts model_dict to model_graph which is a tuple of
@@ -167,3 +168,59 @@ def hash_graph(matrix, ops, algo='md5'):
     fingerprint = hash_func(str(sorted(hashes)).encode('utf-8'), algo).hexdigest()
 
     return fingerprint
+
+
+def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', n_jobs=8):
+    """Generate the dissimilarity matrix which is N x N, for N graphs 
+    in the design space
+    
+    Args:
+        graph_list (list[tuple]): list of graphs, which are 
+        	tuples of adjacency matrix and ops
+        kernel (str, optional): the kernel to be used for computing the dissimilarity matrix. The
+        	default value is 'WeisfeilerLehman'
+        n_jobs (int, optional): number of parrallel jobs for joblib
+    
+    Returns:
+        dissimilarity_matrix (np.ndarray): dissimilarity matrix
+    """
+    grakel_graph_list = []
+    for graph in graph_list:
+    	grakel_graph_list.append(Graph(graph[0], 
+    		node_labels={idx:op for idx, op in zip(range(len(graph[1])), graph[1])}))
+
+    # Instantiate kernel function based on choice of distance kernel
+    kernel_func = eval(f'{kernel}(n_jobs={n_jobs}, normalize=True)')
+
+    # Generate similarity matrix based on kernel function
+    similarity_matrix = kernel_func.fit_transform(grakel_graph_list)
+
+    dissimilarity_matrix = 1 - similarity_matrix
+
+    return dissimilarity_matrix
+
+
+def generate_embeddings(dissimilarity_matrix, embedding_size: int, n_init=4, max_iter=1000, n_jobs=8):
+    """Generate embeddings using Multi-Dimensional Scaling (SMACOF algorithm)
+    
+    Args:
+        dissimilarity_matrix (np.ndarry): input dissimilarity_matrix
+        embedding_size (int): size of the embedding
+        n_init (int, optional): number of times the SMACOF algorithm will be run with 
+        	different initializations. The final results will be the best output of 
+        	the runs, determined by the run with the smallest final stres
+        max_iter (int, optional): maximum number of iterations of the SMACOF algorithm 
+        	for a single run.
+        n_jobs (int, optional): number of parrallel jobs for joblib
+    
+    Returns:
+        embeddings (np.ndarray): ndarray of embeddings of shape (len(dissimilarity_matrix), embedding_size)
+    """
+    #  Instantiate embedding function
+    embedding_func = MDS(n_components=embedding_size, n_init=n_init, max_iter=max_iter, 
+    	dissimilarity='precomputed', verbose=1, eps=1e-10, n_jobs=n_jobs)
+
+    # Fit the embedding
+    embeddings = embedding_func.fit_transform(dissimilarity_matrix)
+
+    return embeddings
