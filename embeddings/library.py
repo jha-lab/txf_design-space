@@ -7,6 +7,7 @@ import yaml
 from itertools import combinations_with_replacement
 from tqdm.contrib.itertools import product
 import graph_util
+import json
 
 
 class GraphLib(object):
@@ -21,7 +22,7 @@ class GraphLib(object):
         ops_list (list[str]): list of all possible operation blocks in the computational graph
     """
     
-    def __init__(self, design_space: str):
+    def __init__(self, design_space=None):
         """Init GraphLib instance with design_space
         
         Args:
@@ -31,32 +32,38 @@ class GraphLib(object):
         Raises:
             AssertionError: if a sanity check fails
         """
-        with open(design_space) as config_file:
-            try:
-                config = yaml.safe_load(config_file)
-            except yaml.YAMLError as exc:
-                print(exc)
-            self.datasets = config.get('datasets')
-            self.design_space = config.get('architecture')
+        if design_space:
+            with open(design_space) as config_file:
+                try:
+                    config = yaml.safe_load(config_file)
+                except yaml.YAMLError as exc:
+                    print(exc)
+                self.datasets = config.get('datasets')
+                self.design_space = config.get('architecture')
 
-        # List of all possible operations in the computation graph
-        self.ops_list = ['input'] 
-        for hidden in self.design_space['hidden_size']:
-            for sim in self.design_space['similarity_metric']:
-                op = f'a_h{hidden}_s-{sim}'
+            # List of all possible operations in the computation graph
+            self.ops_list = ['input'] 
+            for hidden in self.design_space['hidden_size']:
+                for sim in self.design_space['similarity_metric']:
+                    op = f'a_h{hidden}_s-{sim}'
+                    if op not in self.ops_list: self.ops_list.append(op) 
+            for ff in self.design_space['feed-forward_hidden']:
+                op = f'f{ff}'
                 if op not in self.ops_list: self.ops_list.append(op) 
-        for ff in self.design_space['feed-forward_hidden']:
-            op = f'f{ff}'
-            if op not in self.ops_list: self.ops_list.append(op) 
-        self.ops_list.append('add_norm')
-        self.ops_list.append('output')
+            self.ops_list.append('add_norm')
+            self.ops_list.append('output')
 
-        # Check for no duplicate operations
-        assert len(self.ops_list) == len(set(self.ops_list)), \
-            f'Operations list contains duplicates:\n{self.ops_list}'
+            # Check for no duplicate operations
+            assert len(self.ops_list) == len(set(self.ops_list)), \
+                f'Operations list contains duplicates:\n{self.ops_list}'
 
-        # Library of all graphs
-        self.library = []
+            # Library of all graphs
+            self.library = []
+        else:
+            self.datasets = {}
+            self.design_space = {}
+            self.ops_list = {}
+            self.library = []
 
     def __len__(self):
         """Computes the number of graphs in the library
@@ -103,6 +110,61 @@ class GraphLib(object):
             self.hashes_computed = True
         else:
             self.hashes_computed = False
+
+    def build_embeddings(self, embedding_size: int, kernel='WeisfeilerLehman'):
+        """Build the embeddings of all Graphs in GraphLib using MDS
+        
+        Args:
+            embedding_size (int): size of the embedding
+            kernel (str, optional): the kernel to be used for computing the dissimilarity matrix. The
+                default value is 'WeisfeilerLehman'
+        """
+        graph_list = [self.library[i].graph for i in range(__len__(self))]
+
+        # Generate dissimilarity_matrix using the specified kernel
+        dissimilarity_matrix = graph_util.generate_dissimilarity_matrix(graph_list, kernel=kernel)
+
+        # Generate embeddings using MDS
+        embeddings = graph_util.generate_embeddings(diss_mat, embedding_size=embedding_size)
+
+        # Update embeddings og all Graphs in GraphLib
+        for i in range(__len__(self)):
+            self.library[i].embedding = embeddings[i, :]
+
+    def save_dataset(self, file_path: str):
+        """Saves dataset of all transformers in the design space
+        
+        Args:
+            file_path (str): file path to save dataset
+        """
+        with open(file_path, 'w', encoding ='utf8') as json_file:
+            json.dump({'datasets': self.datasets, 
+                        'design_space': self.design_space,
+                        'ops_list': self.ops_list,
+                        'library': self.library}, json_file, ensure_ascii = True)
+
+    @staticmethod
+    def load_from_dataset(self, file_path: str) -> 'GraphLib':
+        """Summary
+        
+        Args:
+            file_path (str): file path to load dataset
+        
+        Returns:
+            GraphLib: a GraphLib object
+        """
+        graphLib = GraphLib()
+
+        with open(file_path, 'r', encoding ='utf8') as json_file:
+            dataset_dict = json.load(json_file)
+
+            graphLib.datasets = dataset_dict['datasets']
+            graphLib.ops_list = dataset_dict['ops_list']
+            graphLib.design_space = dataset_dict['design_space']
+            graphLib.library = dataset_dict['library']
+
+        return graphLib
+
 
 
 class Graph(object):
