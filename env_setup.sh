@@ -17,8 +17,14 @@ git clone https://github.com/huggingface/transformers.git
 cd transformers
 pip install -e .
 
-# Add other packages
+# Add other packages and enabling extentions
+conda install -c conda-forge tqdm ipywidgets matplotlib
+jupyter nbextension enable --py widgetsnbextension
+conda install -c anaconda scipy cython
 conda install pyyaml
+
+# Conda prefers pip packages in the end
+pip install grakel
 
 ## TODO: create environment.yaml file or requirements.txt
 
