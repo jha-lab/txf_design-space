@@ -96,7 +96,7 @@ class GraphLib(object):
             for a, h, s, f in product(possible_a, possible_h, possible_s, possible_f, \
                     desc=f'Generating transformers with {layers} encoder layers'):
                 model_dict = {'l': layers, 'a': list(a), 'h': list(h), 's': list(s), 'f': list(f)}
-                new_graph = Graph(model_dict, self.datasets, self.ops_list, do_hash=check_isomorphism)
+                new_graph = Graph(model_dict, self.datasets, self.ops_list, compute_hash=check_isomorphism)
                 if check_isomorphism:
                     assert new_graph.hash not in [graph.hash for graph in self.library], \
                         'Two graphs found with same hash! Check if they are isomorphic:\n' \
@@ -117,7 +117,7 @@ class GraphLib(object):
         graph_list = [self.library[i].graph for i in range(__len__(self))]
 
         # Generate dissimilarity_matrix using the specified kernel
-        dissimilarity_matrix = graph_util.generate_dissimilarity_matrix(graph_list, kernel=kernel)
+        diss_mat = graph_util.generate_dissimilarity_matrix(graph_list, kernel=kernel)
 
         # Generate embeddings using MDS
         embeddings = graph_util.generate_embeddings(diss_mat, embedding_size=embedding_size)
@@ -186,7 +186,7 @@ class Graph(object):
         model_dict (dict): dictionary of model hyper-parameter choices for this graph
         ops_idx (list[int]): list of operation indices
     """
-    def __init__(self, model_dict: dict, datasets: list, ops_list: list, do_hash: bool, hash_algo='md5'):
+    def __init__(self, model_dict: dict, datasets: list, ops_list: list, compute_hash: bool, hash_algo='md5'):
         """Init a Graph instance from model_dict
         
         Args:
@@ -195,7 +195,7 @@ class Graph(object):
             datasets (list): list of datasets to keep accuracy for the graph
             ops_list (list): list of all possible operation blocks in 
                 the computational graph
-            do_hash (bool): if True, hash is computed, else, is None.
+            compute_hash (bool): if True, hash is computed, else, is None.
             hash_algo (str, optional): hash algorithm to use among ["md5", "sha256", "sha512"]
         """
         self.model_dict = model_dict
