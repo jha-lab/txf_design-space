@@ -19,6 +19,7 @@ def model_dict_to_graph(model_dict, ops_list):
 
     Raises:
         ValueError: if a required operation is not in ops_list
+        AssertionError: if a sanity check fails
     """
     layers = model_dict.get('l')
     hidden = model_dict.get('h')
