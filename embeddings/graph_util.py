@@ -218,7 +218,7 @@ def generate_embeddings(dissimilarity_matrix, embedding_size: int, n_init=4, max
     """
     #  Instantiate embedding function
     embedding_func = MDS(n_components=embedding_size, n_init=n_init, max_iter=max_iter, 
-    	dissimilarity='precomputed', verbose=1, eps=1e-10, n_jobs=n_jobs)
+    	dissimilarity='precomputed', eps=1e-10, n_jobs=n_jobs)
 
     # Fit the embedding
     embeddings = embedding_func.fit_transform(dissimilarity_matrix)
