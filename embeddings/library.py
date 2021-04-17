@@ -62,7 +62,7 @@ class GraphLib(object):
         else:
             self.datasets = {}
             self.design_space = {}
-            self.ops_list = {}
+            self.ops_list = []
             self.library = []
 
     def __len__(self):
@@ -106,11 +106,6 @@ class GraphLib(object):
 
         print(f'Graph library created! \n{len(self.library)} graphs within the design space.')
 
-        if check_isomorphism: 
-            self.hashes_computed = True
-        else:
-            self.hashes_computed = False
-
     def build_embeddings(self, embedding_size: int, kernel='WeisfeilerLehman'):
         """Build the embeddings of all Graphs in GraphLib using MDS
         
@@ -141,7 +136,10 @@ class GraphLib(object):
             json.dump({'datasets': self.datasets, 
                         'design_space': self.design_space,
                         'ops_list': self.ops_list,
-                        'library': self.library}, json_file, ensure_ascii = True)
+                        'model_dicts': [graph.model_dict for graph in self.library],
+                        'hashes': [graph.hash for graph in self.library],
+                        'embeddings': [graph.embedding for graph in self.library]}, 
+                        json_file, ensure_ascii = True)
 
     @staticmethod
     def load_from_dataset(self, file_path: str) -> 'GraphLib':
@@ -161,7 +159,14 @@ class GraphLib(object):
             graphLib.datasets = dataset_dict['datasets']
             graphLib.ops_list = dataset_dict['ops_list']
             graphLib.design_space = dataset_dict['design_space']
-            graphLib.library = dataset_dict['library']
+            
+            for i in range(len(dataset_dict.model_dicts)):
+                graph = Graph(dataset_dict['model_dicts'][i], 
+                    graphLib.datasets, graphLib.ops_list, do_hash=False)
+                graph.hash = dataset_dict['hashes'][i]
+                graph.embedding = dataset_dict['embeddings'][i]
+
+                graphLib.library.append(graph)
 
         return graphLib
 
