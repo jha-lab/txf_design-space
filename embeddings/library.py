@@ -138,7 +138,8 @@ class GraphLib(object):
                         'ops_list': self.ops_list,
                         'model_dicts': [graph.model_dict for graph in self.library],
                         'hashes': [graph.hash for graph in self.library],
-                        'embeddings': [graph.embedding for graph in self.library]}, 
+                        'embeddings': [graph.embedding for graph in self.library]}
+                        'accuracies': [graph.accuracy for graph in self.library], 
                         json_file, ensure_ascii = True)
 
     @staticmethod
@@ -165,6 +166,7 @@ class GraphLib(object):
                     graphLib.datasets, graphLib.ops_list, do_hash=False)
                 graph.hash = dataset_dict['hashes'][i]
                 graph.embedding = dataset_dict['embeddings'][i]
+                graph.accuracy = dataset_dict['accuracies'][i]
 
                 graphLib.library.append(graph)
 
