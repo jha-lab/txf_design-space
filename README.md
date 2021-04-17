@@ -15,7 +15,7 @@ The model architectures are restricted in the following ranges for the respectiv
 - `dataset` in the GLUE benchmark tasks: [CoLA, SST-2, MRPC, STS-B, QQP, MNLI-mm, QNLI, RTE, WNLI]
 - `h`, the hidden size in: [128, **256**, 512]
 - `a`, the number of attention heads in: [10, **12**, 14, 16]
-- `l`, the number of encoder layers in: [2, **4**, 6, 8]
+- `l`, the number of encoder layers in: [2, **4**, 6]
 - `f`, the inner-layer dimensionality of the feed-forward layer in: [512, 1024, **2048**, 4096]
 - `s`, the similarity metric in: [**scaled dot-product (sdp)**, weighted multiplicative attention (wma), additive attention (aa)]
 
