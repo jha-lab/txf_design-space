@@ -2105,7 +2105,7 @@ class BertOutputModular(nn.Module):
 
 
 class BertLayerModular(nn.Module):
-    def __init__(self, config, layer_id. last_layer = False):
+    def __init__(self, config, layer_id, last_layer = False):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
