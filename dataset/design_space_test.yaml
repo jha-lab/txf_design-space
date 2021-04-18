@@ -16,7 +16,7 @@ architecture:
   hidden_size:
     - 128
   attention_heads:
-    - 12
+    - 2
   encoder_layers:
     - 1
     - 2
@@ -26,5 +26,3 @@ architecture:
   similarity_metric:
     - sdp
     - wma
-    - aa
-
