@@ -157,7 +157,7 @@ class BertConfig(PretrainedConfig):
 
     def from_model_dict(self,model_dict):
 
-        self.layers = model_dict['l']
+        self.num_hidden_layers = model_dict['l']
         self.hidden_dim_list = model_dict['h']
         self.attention_heads_list = model_dict['a']
         self.ff_dim_list = model_dict['f']
