@@ -204,7 +204,7 @@ class Graph(object):
         self.graph = graph_util.model_dict_to_graph(model_dict, ops_list)
 
         # Generate hash to check isomorphic graphs
-        if do_hash: 
+        if compute_hash: 
             self.hash = graph_util.hash_graph(*self.graph, algo=hash_algo)
         else:
             self.hash = None
