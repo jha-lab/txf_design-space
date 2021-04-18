@@ -539,6 +539,13 @@ class BertForMaskedLM:
     def from_pretrained(self, *args, **kwargs):
         requires_backends(self, ["torch"])
 
+class BertForMaskedLMModular:
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+    @classmethod
+    def from_pretrained(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
 
 class BertForMultipleChoice:
     def __init__(self, *args, **kwargs):
@@ -548,13 +555,29 @@ class BertForMultipleChoice:
     def from_pretrained(self, *args, **kwargs):
         requires_backends(self, ["torch"])
 
+class BertForMultipleChoiceModular:
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+    @classmethod
+    def from_pretrained(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
 
 class BertForNextSentencePrediction:
     def __init__(self, *args, **kwargs):
         requires_backends(self, ["torch"])
 
 
+class BertForNextSentencePredictionModular:
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
 class BertForPreTraining:
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+
+class BertForPreTrainingModular:
     def __init__(self, *args, **kwargs):
         requires_backends(self, ["torch"])
 
@@ -567,8 +590,23 @@ class BertForQuestionAnswering:
     def from_pretrained(self, *args, **kwargs):
         requires_backends(self, ["torch"])
 
+class BertForQuestionAnsweringModular:
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+    @classmethod
+    def from_pretrained(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
 
 class BertForSequenceClassification:
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+    @classmethod
+    def from_pretrained(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+class BertForSequenceClassificationModular:
     def __init__(self, *args, **kwargs):
         requires_backends(self, ["torch"])
 
@@ -585,6 +623,14 @@ class BertForTokenClassification:
     def from_pretrained(self, *args, **kwargs):
         requires_backends(self, ["torch"])
 
+class BertForTokenClassificationModular:
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+    @classmethod
+    def from_pretrained(self, *args, **kwargs):
+        requires_backends(self, ["torch"])        
+
 
 class BertLayer:
     def __init__(self, *args, **kwargs):
@@ -600,7 +646,23 @@ class BertLMHeadModel:
         requires_backends(self, ["torch"])
 
 
+class BertLMHeadModelModular:
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+    @classmethod
+    def from_pretrained(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
 class BertModel:
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+    @classmethod
+    def from_pretrained(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+class BertModelModular:
     def __init__(self, *args, **kwargs):
         requires_backends(self, ["torch"])
 
