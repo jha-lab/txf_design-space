@@ -120,8 +120,8 @@ class BertConfig(PretrainedConfig):
     def __init__(
         self,
         vocab_size=30522,
-        hidden_size=768,
         num_hidden_layers=12,
+        hidden_size=768,
         num_attention_heads=12,
         intermediate_size=3072,
         hidden_act="gelu",
@@ -154,3 +154,12 @@ class BertConfig(PretrainedConfig):
         self.gradient_checkpointing = gradient_checkpointing
         self.position_embedding_type = position_embedding_type
         self.use_cache = use_cache
+
+    def from_model_dict(self,model_dict):
+
+        self.layers = model_dict['l']
+        self.hidden_dim_list = model_dict['h']
+        self.attention_heads_list = model_dict['a']
+        self.ff_dim_list = model_dict['f']
+        self.similarity_list = model_dict['s']
+
