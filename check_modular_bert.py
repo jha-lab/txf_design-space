@@ -1,3 +1,6 @@
+import sys
+sys.path.append('./transformers/src/')
+
 from transformers import BertTokenizer,BertLMHeadModelModular, BertConfig
 
 import torch
