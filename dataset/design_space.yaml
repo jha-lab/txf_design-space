@@ -18,10 +18,9 @@ architecture:
     - 256
     - 512
   attention_heads:
-    - 10
-    - 12
-    - 14
-    - 16
+    - 2
+    - 4
+    - 8
   encoder_layers:
     - 2
     - 4
@@ -34,4 +33,3 @@ architecture:
   similarity_metric:
     - sdp
     - wma
-    - aa
