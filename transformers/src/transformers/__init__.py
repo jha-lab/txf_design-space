@@ -1812,7 +1812,7 @@ if TYPE_CHECKING:
         from .models.bert import (
             BERT_PRETRAINED_MODEL_ARCHIVE_LIST,
             BertForMaskedLM,
-            ertForMaskedLMModular,
+            BertForMaskedLMModular,
             BertForMultipleChoiceModular,
             BertForMultipleChoice,
             BertForNextSentencePrediction,
