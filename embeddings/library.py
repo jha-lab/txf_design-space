@@ -4,6 +4,7 @@
 # Author : Shikhar Tuli
 
 import yaml
+import numpy as np
 from itertools import combinations_with_replacement
 from tqdm.contrib.itertools import product
 import graph_util
@@ -164,12 +165,12 @@ class GraphLib(object):
                         'ops_list': self.ops_list,
                         'model_dicts': [graph.model_dict for graph in self.library],
                         'hashes': [graph.hash for graph in self.library],
-                        'embeddings': [graph.embedding for graph in self.library],
+                        'embeddings': [graph.embedding.tolist() for graph in self.library],
                         'accuracies': [graph.accuracy for graph in self.library]}, 
                         json_file, ensure_ascii = True)
 
     @staticmethod
-    def load_from_dataset(self, file_path: str) -> 'GraphLib':
+    def load_from_dataset(file_path: str) -> 'GraphLib':
         """Summary
         
         Args:
@@ -187,11 +188,11 @@ class GraphLib(object):
             graphLib.ops_list = dataset_dict['ops_list']
             graphLib.design_space = dataset_dict['design_space']
             
-            for i in range(len(dataset_dict.model_dicts)):
+            for i in range(len(dataset_dict['model_dicts'])):
                 graph = Graph(dataset_dict['model_dicts'][i], 
                     graphLib.datasets, graphLib.ops_list, compute_hash=False)
                 graph.hash = dataset_dict['hashes'][i]
-                graph.embedding = dataset_dict['embeddings'][i]
+                graph.embedding = np.array(dataset_dict['embeddings'][i])
                 graph.accuracy = dataset_dict['accuracies'][i]
 
                 graphLib.library.append(graph)
