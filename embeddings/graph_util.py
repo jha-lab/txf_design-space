@@ -6,6 +6,7 @@ import numpy as np
 import hashlib
 from grakel import Graph, WeisfeilerLehman, NeighborhoodHash, RandomWalkLabeled
 from sklearn.manifold import MDS
+from scipy.stats import zscore
 
 def model_dict_to_graph(model_dict, ops_list):
     """Converts model_dict to model_graph which is a tuple of
@@ -224,3 +225,42 @@ def generate_embeddings(dissimilarity_matrix, embedding_size: int, n_init=4, max
     embeddings = embedding_func.fit_transform(dissimilarity_matrix)
 
     return embeddings
+
+
+def generate_naive_embeddings(model_dict_list: list, design_space: dict):
+    """Generate embeddings by flattening the model dictionary
+    
+    Args:
+        model_dict_list (list): list of model dictionaries
+        design_space (dict): the design space dictionary containing span
+            of all the hyper-parameters, extracted from the yaml file
+    
+    Returns:
+        embeddings (np.ndarray): ndarray of embeddings of shape (len(model_dict_list), embedding_size)
+    """
+    # Get maximum hyper-parameters
+    max_l = max(design_space['encoder_layers'])
+
+    # Create dictionary of similirty metrics to map to numbers
+    sim_dict = {sim:idx for idx, sim in enumerate(design_space['similarity_metric'])}
+
+    # Calculate embedding size
+    embedding_size = 1 + 4 * max_l
+
+    embeddings = np.zeros((len(model_dict_list), embedding_size))
+
+    for i in range(len(model_dict_list)):
+        embeddings[i][0] = model_dict_list[i]['l']
+        for j in range(model_dict_list[i]['l']):
+            for k in range(4):
+                if k == 0:
+                    val = model_dict_list[i]['a'][j]
+                elif k == 1:
+                    val = model_dict_list[i]['h'][j]
+                elif k == 2:
+                    val = model_dict_list[i]['f'][j]
+                else:
+                    val = sim_dict[model_dict_list[i]['s'][j]] 
+                embeddings[i][1 + 4*k + j] = val
+
+    return zscore(embeddings, axis=1)

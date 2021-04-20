@@ -96,7 +96,7 @@ class GraphLib(object):
             for a, h, s, f in product(possible_a, possible_h, possible_s, possible_f, \
                     desc=f'Generating transformers with {layers} encoder layers'):
                 model_dict = {'l': layers, 'a': list(a), 'h': list(h), 's': list(s), 'f': list(f)}
-                new_graph = Graph(model_dict, self.datasets, self.ops_list, compute_hash=check_isomorphism)
+                new_graph = Graph(model_dict, self.datasets, self.ops_list, compute_hash=True)
                 if check_isomorphism:
                     assert new_graph.hash not in [graph.hash for graph in self.library], \
                         'Two graphs found with same hash! Check if they are isomorphic:\n' \
@@ -111,10 +111,17 @@ class GraphLib(object):
         
         Args:
             embedding_size (int): size of the embedding
-            kernel (str, optional): the kernel to be used for computing the dissimilarity matrix. The
-                default value is 'WeisfeilerLehman'
+            kernel (str, optional): the kernel to be used for computing the dissimilarity matrix. Can
+            	be any of the following:
+            		- 'WeisfeilerLehman'
+            		- 'NeighborhoodHash'
+            		- 'RandomWalkLabeled'
+            	The default value is 'WeisfeilerLehman'
         """
-        graph_list = [self.library[i].graph for i in range(__len__(self))]
+        print('Building embeddings for the Graph library')
+
+        # Create list of graphs (tuples of adjacency matrices and ops)
+        graph_list = [self.library[i].graph for i in range(len(self))]
 
         # Generate dissimilarity_matrix using the specified kernel
         diss_mat = graph_util.generate_dissimilarity_matrix(graph_list, kernel=kernel)
@@ -122,9 +129,28 @@ class GraphLib(object):
         # Generate embeddings using MDS
         embeddings = graph_util.generate_embeddings(diss_mat, embedding_size=embedding_size)
 
-        # Update embeddings og all Graphs in GraphLib
-        for i in range(__len__(self)):
+        # Update embeddings of all Graphs in GraphLib
+        for i in range(len(self)):
             self.library[i].embedding = embeddings[i, :]
+
+        print(f'Embeddings generated, of size: {embedding_size}')
+
+    def build_naive_embeddings(self):
+    	"""Build the embeddings of all Graphs in GraphLib naively
+    	"""
+    	print('Building embeddings for the Graph library')
+
+    	# Create list of model dictionaries
+    	model_dict_list = [graph.model_dict for graph in self.library]
+
+    	# Generate naive embeddings
+    	embeddings = graph_util.generate_sparse_embeddings(model_dict_list, self.design_space)
+
+    	# Update embeddings of all Graphs in GraphLib
+    	for i in range(len(self)):
+        	self.library[i].embedding = embeddings[i, :]
+
+    	print(f'Embeddings generated, of size: {embeddings.shape[1]}')
 
     def save_dataset(self, file_path: str):
         """Saves dataset of all transformers in the design space
@@ -138,8 +164,8 @@ class GraphLib(object):
                         'ops_list': self.ops_list,
                         'model_dicts': [graph.model_dict for graph in self.library],
                         'hashes': [graph.hash for graph in self.library],
-                        'embeddings': [graph.embedding for graph in self.library]}
-                        'accuracies': [graph.accuracy for graph in self.library], 
+                        'embeddings': [graph.embedding for graph in self.library],
+                        'accuracies': [graph.accuracy for graph in self.library]}, 
                         json_file, ensure_ascii = True)
 
     @staticmethod
@@ -163,7 +189,7 @@ class GraphLib(object):
             
             for i in range(len(dataset_dict.model_dicts)):
                 graph = Graph(dataset_dict['model_dicts'][i], 
-                    graphLib.datasets, graphLib.ops_list, do_hash=False)
+                    graphLib.datasets, graphLib.ops_list, compute_hash=False)
                 graph.hash = dataset_dict['hashes'][i]
                 graph.embedding = dataset_dict['embeddings'][i]
                 graph.accuracy = dataset_dict['accuracies'][i]
