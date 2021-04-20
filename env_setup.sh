@@ -22,6 +22,8 @@ conda install -c conda-forge tqdm ipywidgets matplotlib
 jupyter nbextension enable --py widgetsnbextension
 conda install -c anaconda scipy cython
 conda install pyyaml
+conda install pandas
+conda install -c plotly plotly
 
 # Conda prefers pip packages in the end
 pip install grakel
