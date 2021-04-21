@@ -1,0 +1,74 @@
+# Graph library generating all possible graphs
+# within the design space
+
+# Author : Shikhar Tuli
+
+import argparse
+from library import GraphLib, Graph
+from utils import print_util as pu
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Input parameters for generation of dataset library',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--design_space_file',
+        metavar='', 
+        type=str, 
+        help='path to yaml file for the design space')
+    parser.add_argument('--dataset_file',
+        metavar='',
+        type=str,
+        help='path to store the dataset')
+    parser.add_argument('--kernel',
+        metavar='',
+        type=str,
+        help='kernel for graph similarity computation',
+        default='WeisfeilerLehman')
+    parser.add_argument('--embedding_size',
+        metavar='',
+        type=int,
+        help='dimensionality of embedding',
+        default=16)
+    parser.add_argument('--n_jobs',
+        metavar='',
+        type=int,
+        help='number of parallel jobs',
+        default=8)
+
+    args = parser.parse_args()
+
+    # Create an empty graph library with the hyper-parameter ranges
+    # given in the design_space file
+    graphLib = GraphLib(args.design_space_file)
+
+    # Show generated library
+    print(f'{pu.bcolors.OKGREEN}Generated empty library{pu.bcolors.ENDC}')
+    print(graphLib)
+    print()
+
+    # Generating graph library
+    graphLib.build_library(check_isomorphism=False)
+    print()
+
+    # Simple test to check isomorphisms, rather than comparing hash for every new graph
+    hashes = [graph.hash for graph in graphLib.library]
+    if len(hashes) == len(set(hashes)):
+        print(f'{pu.bcolors.OKGREEN}No isomorphisms detected!{pu.bcolors.ENDC}')
+    else:
+        print(f'{pu.bcolors.WARNING}Graphs with the same hash encountered!{pu.bcolors.ENDC}')
+    print()
+
+    # Build embeddings
+    graphLib.build_embeddings(embedding_size=args.embedding_size, kernel=args.kernel)
+    print()
+
+    # Save dataset
+    graphLib.save_dataset(args.dataset_file)
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+
