@@ -1,5 +1,4 @@
-# Graph library generating all possible graphs
-# within the design space
+# Graph library class for the design space of transformers
 
 # Author : Shikhar Tuli
 
@@ -7,7 +6,7 @@ import yaml
 import numpy as np
 from itertools import combinations_with_replacement
 from tqdm.contrib.itertools import product
-import graph_util
+from utils import graph_util, embedding_util, print_util as pu
 import json
 
 
@@ -56,7 +55,7 @@ class GraphLib(object):
 
             # Check for no duplicate operations
             assert len(self.ops_list) == len(set(self.ops_list)), \
-                f'Operations list contains duplicates:\n{self.ops_list}'
+                f'{pu.bcolors.FAIL}Operations list contains duplicates:\n{self.ops_list}{pu.bcolors.ENDC}'
 
             # Library of all graphs
             self.library = []
@@ -76,7 +75,8 @@ class GraphLib(object):
 
     def __repr__(self):
         """Representation of the GraphLib"""
-        return f'Graph Library with design space:\n{self.design_space}\nNumber of graphs: {len(self.library)}'
+        return f'{pu.bcolors.HEADER}Graph Library with design space:{pu.bcolors.ENDC}\n{self.design_space}' \
+            + f'\n{pu.bcolors.HEADER}Number of graphs:{pu.bcolors.ENDC} {len(self.library)}'
 
     def build_library(self, check_isomorphism=False):
         """Build the GraphLib library
@@ -100,14 +100,16 @@ class GraphLib(object):
                 new_graph = Graph(model_dict, self.datasets, self.ops_list, compute_hash=True)
                 if check_isomorphism:
                     assert new_graph.hash not in [graph.hash for graph in self.library], \
-                        'Two graphs found with same hash! Check if they are isomorphic:\n' \
+                        f'{pu.bcolors.FAIL}Two graphs found with same hash! ' \
+                        + f'Check if they are isomorphic:{pu.bcolors.ENDC}\n' \
                         + f'Graph-1: {new_graph.model_dict}\n' \
                         + f'Graph-2: {graph.model_dict for graph in self.library if graph.hash == new_graph.hash}'
                 self.library.append(new_graph)
 
-        print(f'Graph library created! \n{len(self.library)} graphs within the design space.')
+        print(f'{pu.bcolors.OKGREEN}Graph library created!{pu.bcolors.ENDC} ' \
+            + f'\n{len(self.library)} graphs within the design space.')
 
-    def build_embeddings(self, embedding_size: int, kernel='WeisfeilerLehman'):
+    def build_embeddings(self, embedding_size: int, kernel='WeisfeilerLehman', n_jobs=8):
         """Build the embeddings of all Graphs in GraphLib using MDS
         
         Args:
@@ -118,6 +120,7 @@ class GraphLib(object):
             		- 'NeighborhoodHash'
             		- 'RandomWalkLabeled'
             	The default value is 'WeisfeilerLehman'
+            n_jobs (int, optional): number of parrallel jobs for joblib
         """
         print('Building embeddings for the Graph library')
 
@@ -125,16 +128,20 @@ class GraphLib(object):
         graph_list = [self.library[i].graph for i in range(len(self))]
 
         # Generate dissimilarity_matrix using the specified kernel
-        diss_mat = graph_util.generate_dissimilarity_matrix(graph_list, kernel=kernel)
+        diss_mat = graph_util.generate_dissimilarity_matrix(graph_list, kernel=kernel, n_jobs=n_jobs)
 
         # Generate embeddings using MDS
-        embeddings = graph_util.generate_embeddings(diss_mat, embedding_size=embedding_size)
+        embeddings = embedding_util.generate_embeddings(diss_mat, embedding_size=embedding_size, n_jobs=n_jobs)
 
-        # Update embeddings of all Graphs in GraphLib
+        # Get neighboring graph in the embedding space, for all Graphs
+        neighbor_idx = embedding_util.get_neighbors(embeddings)
+
+        # Update embeddings and neighbors of all Graphs in GraphLib
         for i in range(len(self)):
             self.library[i].embedding = embeddings[i, :]
+            self.library[i].neighbor = self.library[int(neighbor_idx[i])].hash
 
-        print(f'Embeddings generated, of size: {embedding_size}')
+        print(f'{pu.bcolors.OKGREEN}Embeddings generated, of size: {embedding_size}{pu.bcolors.ENDC}')
 
     def build_naive_embeddings(self):
     	"""Build the embeddings of all Graphs in GraphLib naively
@@ -145,13 +152,32 @@ class GraphLib(object):
     	model_dict_list = [graph.model_dict for graph in self.library]
 
     	# Generate naive embeddings
-    	embeddings = graph_util.generate_sparse_embeddings(model_dict_list, self.design_space)
+    	embeddings = embedding_util.generate_naive_embeddings(model_dict_list, self.design_space)
 
-    	# Update embeddings of all Graphs in GraphLib
+        # Get neighboring graph in the embedding space, for all Graphs
+    	neighbor_idx = embedding_util.get_neighbors(embeddings)
+
+        # Update embeddings and neighbors of all Graphs in GraphLib
     	for i in range(len(self)):
-        	self.library[i].embedding = embeddings[i, :]
+            self.library[i].embedding = embeddings[i, :]
+            self.library[i].neighbor = self.library[int(neighbor_idx[i])].hash
 
-    	print(f'Embeddings generated, of size: {embeddings.shape[1]}')
+    	print(f'{pu.bcolors.OKGREEN}Embeddings generated, of size: {embeddings.shape[1]}{pu.bcolors.ENDC}')
+
+    def get_graph(self, graph_hash: str) -> 'Graph':
+        """Return a Graph object in the library from hash
+        
+        Args:
+            graph_hash (str): hash of the query graph
+        
+        Returns:
+            Graph object in the library
+        """
+        hashes = [graph.hash for graph in self.library]
+
+        graph_idx = hashes.index(graph_hash)
+
+        return self.library[graph_idx]
 
     def save_dataset(self, file_path: str):
         """Saves dataset of all transformers in the design space
@@ -166,8 +192,11 @@ class GraphLib(object):
                         'model_dicts': [graph.model_dict for graph in self.library],
                         'hashes': [graph.hash for graph in self.library],
                         'embeddings': [graph.embedding.tolist() for graph in self.library],
+                        'neighbors': [graph.neighbor for graph in self.library],
                         'accuracies': [graph.accuracy for graph in self.library]}, 
                         json_file, ensure_ascii = True)
+
+        print(f'{pu.bcolors.OKGREEN}Dataset saved to:{pu.bcolors.ENDC} {file_path}')
 
     @staticmethod
     def load_from_dataset(file_path: str) -> 'GraphLib':
@@ -193,6 +222,7 @@ class GraphLib(object):
                     graphLib.datasets, graphLib.ops_list, compute_hash=False)
                 graph.hash = dataset_dict['hashes'][i]
                 graph.embedding = np.array(dataset_dict['embeddings'][i])
+                graph.neighbor = dataset_dict['neighbors'][i]
                 graph.accuracy = dataset_dict['accuracies'][i]
 
                 graphLib.library.append(graph)
@@ -211,6 +241,7 @@ class Graph(object):
             a list of operations
         hash (str): hash for current graph to check isomorphism
         model_dict (dict): dictionary of model hyper-parameter choices for this graph
+        neighbor (str): hash of the nearest neighbor for this graph
         ops_idx (list[int]): list of operation indices
     """
     def __init__(self, model_dict: dict, datasets: list, ops_list: list, compute_hash: bool, hash_algo='md5'):
@@ -242,12 +273,15 @@ class Graph(object):
         # Initialize embedding
         self.embedding = None
 
+        # Initialize the nearest neighboring graph
+        self.neighbor = None
+
         # Initialize accuracies for all datasets
         self.accuracy = {dataset:None for dataset in datasets}
 
     def __repr__(self):
         """Representation of the Graph"""
-        return f'Graph model_dict: {self.model_dict}\n' \
-            + f'Accuracies: {self.accuracy}\n' \
-            + f'Embedding: {self.embedding}\n' \
-            + f'Hash: {self.hash}'
+        return f'{pu.bcolors.HEADER}Graph model_dict:{pu.bcolors.ENDC} {self.model_dict}\n' \
+            + f'{pu.bcolors.HEADER}Accuracies:{pu.bcolors.ENDC} {self.accuracy}\n' \
+            + f'{pu.bcolors.HEADER}Embedding:{pu.bcolors.ENDC} {self.embedding}\n' \
+            + f'{pu.bcolors.HEADER}Hash:{pu.bcolors.ENDC} {self.hash}'
