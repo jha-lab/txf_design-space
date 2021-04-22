@@ -4,6 +4,7 @@
 # Author : Shikhar Tuli
 
 import argparse
+from os import path
 from library import GraphLib, Graph
 from utils import print_util as pu
 
@@ -37,26 +38,38 @@ def main():
 
     args = parser.parse_args()
 
-    # Create an empty graph library with the hyper-parameter ranges
-    # given in the design_space file
-    graphLib = GraphLib(args.design_space_file)
+    if not path.exists(args.dataset_file):
+        # Create an empty graph library with the hyper-parameter ranges
+        # given in the design_space file
+        graphLib = GraphLib(args.design_space_file)
 
-    # Show generated library
-    print(f'{pu.bcolors.OKGREEN}Generated empty library{pu.bcolors.ENDC}')
-    print(graphLib)
-    print()
+        # Show generated library
+        print(f'{pu.bcolors.OKGREEN}Generated empty library{pu.bcolors.ENDC}')
+        print(graphLib)
+        print()
 
-    # Generating graph library
-    graphLib.build_library(check_isomorphism=False)
-    print()
+        # Generating graph library
+        graphLib.build_library(check_isomorphism=False)
+        print()
 
-    # Simple test to check isomorphisms, rather than comparing hash for every new graph
-    hashes = [graph.hash for graph in graphLib.library]
-    if len(hashes) == len(set(hashes)):
-        print(f'{pu.bcolors.OKGREEN}No isomorphisms detected!{pu.bcolors.ENDC}')
+        # Simple test to check isomorphisms, rather than comparing hash for every new graph
+        hashes = [graph.hash for graph in graphLib.library]
+        if len(hashes) == len(set(hashes)):
+            print(f'{pu.bcolors.OKGREEN}No isomorphisms detected!{pu.bcolors.ENDC}')
+        else:
+            print(f'{pu.bcolors.WARNING}Graphs with the same hash encountered!{pu.bcolors.ENDC}')
+        print()
+
+        # Save dataset without embeddings to dataset_file
+        graphLib.save_dataset(args.dataset_file)
+        print()
     else:
-        print(f'{pu.bcolors.WARNING}Graphs with the same hash encountered!{pu.bcolors.ENDC}')
-    print()
+        # Load dataset without embeddings from dataset_file
+        graphLib = GraphLib.load_from_dataset(args.dataset_file)
+
+        print(f'{pu.bcolors.OKGREEN}Dataset without embeddings loaded from:{pu.bcolors.ENDC}' \
+            + f' {args.dataset_file}')
+        print()
 
     # Build embeddings
     graphLib.build_embeddings(embedding_size=args.embedding_size, kernel=args.kernel)
