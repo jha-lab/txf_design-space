@@ -165,10 +165,7 @@ class BertSelfAttentionModular(nn.Module):
 
         self.is_decoder = config.is_decoder
         self.sim = config.similarity_list[layer_id]
-
-        if config.similarity_list[layer_id]=='wma':
-
-            self.W = torch.nn.Parameter(torch.FloatTensor(self.attention_head_size,self.attention_head_size).uniform_(-0.1, 0.1))
+        self.W = torch.nn.Parameter(torch.FloatTensor(self.attention_head_size,self.attention_head_size).uniform_(-0.1, 0.1))
 
     def transpose_for_scores(self, x):
         new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
@@ -362,14 +359,23 @@ class BertOutputModular(nn.Module):
         self.LayerNorm = nn.LayerNorm(config.hidden_dim_list[layer_id], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.last_layer = last_layer
-        if not(last_layer):
+        if last_layer:
+                self.proj_required = False
+
+        else:
+            if  config.hidden_dim_list[layer_id]==config.hidden_dim_list[layer_id+1]:
+                self.proj_required = False
+            else:
+                self.proj_required = True
+
+        if self.proj_required:
             self.proj_head = nn.Linear(config.hidden_dim_list[layer_id],config.hidden_dim_list[layer_id+1])
 
     def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
-        if not(self.last_layer):
+        if self.proj_required:
             hidden_states = self.proj_head(hidden_states)
         return hidden_states
 
@@ -731,7 +737,6 @@ class BertModelModular(BertPreTrainedModel):
 
         self.embeddings = BertEmbeddingsModular(config)
         self.encoder = BertEncoderModular(config)
-
         self.pooler = BertPoolerModular(config) if add_pooling_layer else None
 
         self.init_weights()
@@ -741,6 +746,48 @@ class BertModelModular(BertPreTrainedModel):
 
     def set_input_embeddings(self, value):
         self.embeddings.word_embeddings = value
+
+    def load_model_from_source(self,source_model):
+        """
+        Loads the BertModelModular from a source model. Updates weights of the layers uptil h matches. Also updates the weights 
+        for matching feed forward dimensions.
+        """
+
+        source_config = source_model.config
+
+        #Load embeddings if input size same:
+
+        if self.config.hidden_dim_list[0] == source_config.hidden_dim_list[0]:
+
+            self.embeddings.load_state_dict(source_model.embeddings.state_dict())
+
+            print("-"*3,"Loaded embeddings weights from source","-"*3)
+
+        #Loading encoder
+
+        for i in range(min(self.config.num_hidden_layers,source_config.num_hidden_layers)):
+
+            #Loading self attention 
+
+            if self.config.hidden_dim_list[i] ==  source_config.hidden_dim_list[i] and self.config.attention_heads_list[i] ==  source_config.attention_heads_list[i]:
+                self.encoder.layer[i].attention.load_state_dict(source_model.encoder.layer[i].attention.state_dict())
+
+                if self.config.ff_dim_list[i] == source_config.ff_dim_list[i]:
+                    self.encoder.layer[i].intermediate.load_state_dict(source_model.encoder.layer[i].intermediate.state_dict())
+                    #print("Intermediate loaded")
+
+                    if self.config.hidden_dim_list[i+1] ==  source_config.hidden_dim_list[i+1]:
+                        self.encoder.layer[i].output.load_state_dict(source_model.encoder.layer[i].output.state_dict())
+                        #print("Output loaded")
+
+                print("-"*3,"Loaded Weights for Layer:",i,"-"*3)
+
+            else:
+
+                print("-"*3,"Done Loading Source","-"*3)
+                break
+
+            
 
     def _prune_heads(self, heads_to_prune):
         """
