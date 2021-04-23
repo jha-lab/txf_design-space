@@ -185,13 +185,18 @@ class GraphLib(object):
         Args:
             file_path (str): file path to save dataset
         """
+        if self.library and self.library[0].embedding is not None:
+            embeddings_list = [graph.embedding.tolist() for graph in self.library]
+        else:
+            embeddings_list = [None for graph in self.library]
+
         with open(file_path, 'w', encoding ='utf8') as json_file:
             json.dump({'datasets': self.datasets, 
                         'design_space': self.design_space,
                         'ops_list': self.ops_list,
                         'model_dicts': [graph.model_dict for graph in self.library],
                         'hashes': [graph.hash for graph in self.library],
-                        'embeddings': [graph.embedding.tolist() for graph in self.library],
+                        'embeddings': embeddings_list,
                         'neighbors': [graph.neighbor for graph in self.library],
                         'accuracies': [graph.accuracy for graph in self.library]}, 
                         json_file, ensure_ascii = True)
@@ -216,12 +221,17 @@ class GraphLib(object):
             graphLib.datasets = dataset_dict['datasets']
             graphLib.ops_list = dataset_dict['ops_list']
             graphLib.design_space = dataset_dict['design_space']
+
+            if dataset_dict['embeddings'][0] is not None:
+                embeddings_list = [np.array(embedding) for embedding in dataset_dict['embeddings']]
+            else:
+                embeddings_list = [None for embedding in dataset_dict['embeddings']]
             
             for i in range(len(dataset_dict['model_dicts'])):
                 graph = Graph(dataset_dict['model_dicts'][i], 
                     graphLib.datasets, graphLib.ops_list, compute_hash=False)
                 graph.hash = dataset_dict['hashes'][i]
-                graph.embedding = np.array(dataset_dict['embeddings'][i])
+                graph.embedding = embeddings_list[i]
                 graph.neighbor = dataset_dict['neighbors'][i]
                 graph.accuracy = dataset_dict['accuracies'][i]
 
