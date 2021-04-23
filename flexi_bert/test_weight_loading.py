@@ -1,5 +1,5 @@
 import sys
-sys.path.append('./transformers/src/')
+sys.path.append('../transformers/src/')
 
 import torch
 
@@ -15,7 +15,7 @@ config.from_model_dict(model_dict_bert_mini)
 
 bert_mini = BertModelModular(config)
 
-bert_mini.load_state_dict(torch.load('./main_models/bert_mini.pth'))
+bert_mini.load_state_dict(torch.load('../main_models/bert_mini.pth'))
 
 #Test 1
 

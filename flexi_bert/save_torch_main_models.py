@@ -1,5 +1,5 @@
 import sys
-sys.path.append('./transformers/src/')
+sys.path.append('../transformers/src/')
 
 import torch
 
@@ -24,7 +24,7 @@ model_state_dict = bert_base.state_dict()
 
 modular_state_dict.update(model_state_dict)
 
-torch.save(modular_state_dict, './main_models/bert_base.pth')
+torch.save(modular_state_dict, '../main_models/bert_base.pth')
 
 print("Bert Base Modularized")
 
@@ -45,7 +45,7 @@ model_state_dict = bert_small.state_dict()
 
 modular_state_dict.update(model_state_dict)
 
-torch.save(modular_state_dict, './main_models/bert_small.pth')
+torch.save(modular_state_dict, '../main_models/bert_small.pth')
 
 print("Bert Small Modularized")
 
@@ -66,7 +66,7 @@ model_state_dict = bert_medium.state_dict()
 
 modular_state_dict.update(model_state_dict)
 
-torch.save(modular_state_dict, './main_models/bert_medium.pth')
+torch.save(modular_state_dict, '../main_models/bert_medium.pth')
 
 print("Bert Medium Modularized")
 
@@ -88,7 +88,7 @@ model_state_dict = bert_mini.state_dict()
 
 modular_state_dict.update(model_state_dict)
 
-torch.save(modular_state_dict, './main_models/bert_mini.pth')
+torch.save(modular_state_dict, '../main_models/bert_mini.pth')
 
 print("Bert Mini Modularized")
 
@@ -109,7 +109,7 @@ model_state_dict = bert_tiny.state_dict()
 
 modular_state_dict.update(model_state_dict)
 
-torch.save(modular_state_dict, './main_models/bert_tiny.pth')
+torch.save(modular_state_dict, '../main_models/bert_tiny.pth')
 
 
 print("Bert Tiny Modularized")

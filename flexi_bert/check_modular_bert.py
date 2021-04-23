@@ -1,5 +1,5 @@
 import sys
-sys.path.append('./transformers/src/')
+sys.path.append('../transformers/src/')
 
 from transformers import  BertConfig,  BertTokenizer
 from transformers.models.bert.modeling_modular_bert import BertModelModular
