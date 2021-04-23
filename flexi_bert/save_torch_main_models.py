@@ -111,6 +111,48 @@ modular_state_dict.update(model_state_dict)
 
 torch.save(modular_state_dict, '../main_models/bert_tiny.pth')
 
-
 print("Bert Tiny Modularized")
+
+
+bert_2_256 = BertModel.from_pretrained('google/bert_uncased_L-2_H-256_A-4')
+
+model_dict_bert_2_256= {'l':2,'a':[4]*2,'f':[4*256]*2,'h':[256]*2,'s':['sdp']*2}
+
+config = BertConfig()
+
+config.from_model_dict(model_dict_bert_2_256)
+
+model_modular = BertModelModular(config)
+
+modular_state_dict = model_modular.state_dict()
+
+model_state_dict = bert_2_256.state_dict()
+
+modular_state_dict.update(model_state_dict)
+
+torch.save(modular_state_dict, '../main_models/bert_L-2_H-256_A-4.pth')
+
+print("Bert L-2/H-256/A-4 Modularized")
+
+
+bert_4_128 = BertModel.from_pretrained('google/bert_uncased_L-4_H-128_A-2')
+
+model_dict_bert_4_128= {'l':4,'a':[2]*4,'f':[4*128]*4,'h':[128]*4,'s':['sdp']*4}
+
+config = BertConfig()
+
+config.from_model_dict(model_dict_bert_4_128)
+
+model_modular = BertModelModular(config)
+
+modular_state_dict = model_modular.state_dict()
+
+model_state_dict = bert_4_128.state_dict()
+
+modular_state_dict.update(model_state_dict)
+
+torch.save(modular_state_dict, '../main_models/bert_L-4_H-128_A-2.pth')
+
+print("Bert L-4/H-128/A-2 Modularized")
+
 
