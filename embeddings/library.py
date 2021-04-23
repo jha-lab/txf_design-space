@@ -164,20 +164,35 @@ class GraphLib(object):
 
     	print(f'{pu.bcolors.OKGREEN}Embeddings generated, of size: {embeddings.shape[1]}{pu.bcolors.ENDC}')
 
-    def get_graph(self, graph_hash: str) -> 'Graph':
+    def get_graph(self, neighbor_hash=None, model_dict=None) -> 'Graph':
         """Return a Graph object in the library from hash
         
         Args:
-            graph_hash (str): hash of the query graph
+            neighbor_hash (str, optional): hash of the neighbor graph in
+            	the library
+            model_dict (dict, optional): model_dict of the graph to be
+            	loaded
         
         Returns:
-            Graph object in the library
+            Graph
+        
+        Raises:
+            ValueError: if neither neighbor_hash nor model_dict are provided
         """
-        hashes = [graph.hash for graph in self.library]
-
-        graph_idx = hashes.index(graph_hash)
-
-        return self.library[graph_idx]
+        if neighbor_hash is not None:
+        	if type(neighbor_hash) != str:
+        		raise ValueError('Dictionary provided for neighbor_hash. Use keyword argument')
+        	hashes = [graph.hash for graph in self.library]
+        	graph_idx = hashes.index(neighbor_hash)
+        	return self.library[graph_idx]
+        elif model_dict is not None:
+        	if type(model_dict) != dict:
+        		raise ValueError('String provided for model_dict. Use keyword argument')
+        	model_dicts = [graph.model_dict for graph in self.library]
+        	model_idx = model_dicts.index(model_dict)
+        	return self.library[model_idx]
+        else:
+        	raise ValueError('Neither neighbor_hash nor model_dict was provided')
 
     def save_dataset(self, file_path: str):
         """Saves dataset of all transformers in the design space

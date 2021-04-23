@@ -72,7 +72,8 @@ def main():
         print()
 
     # Build embeddings
-    graphLib.build_embeddings(embedding_size=args.embedding_size, kernel=args.kernel)
+    graphLib.build_embeddings(embedding_size=args.embedding_size, 
+        kernel=args.kernel, n_jobs=args.n_jobs)
     print()
 
     # Save dataset
