@@ -23,9 +23,9 @@ architecture:
     - 2
     - 4
   feed-forward_hidden:
+    - 512
     - 1024
     - 2048
-    - 4096
   similarity_metric:
     - sdp
-    - wma
+    - wma # An extra
