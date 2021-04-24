@@ -17,7 +17,7 @@ from utils import print_util as pu
 # Testing if bert-mini is in design_space_small
 model_dict_bert_mini = {'l':4, 'a':[4]*4, 'f':[4*256]*4, 'h':[256]*4, 's':['sdp']*4}
 
-graphLib = GraphLib.load_from_dataset('../dataset/dataset_n10_small.json')
+graphLib = GraphLib.load_from_dataset('../dataset/dataset_small.json')
 bert_mini_graph = graphLib.get_graph(model_dict=model_dict_bert_mini)
 
 if bert_mini_graph is not None:
