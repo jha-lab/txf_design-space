@@ -27,10 +27,10 @@ config.from_model_dict(model_dict_target)
 
 bert_target = BertModelModular(config)
 
-bert_target.load_model_from_source(bert_mini)
+percent = bert_target.load_model_from_source(bert_mini)
 
 
-print("Model 1 loaded!")
+print("Model 1 loaded with fraction:", percent)
 
 
 #Test 2
@@ -42,6 +42,6 @@ config.from_model_dict(model_dict_target)
 
 bert_target = BertModelModular(config)
 
-bert_target.load_model_from_source(bert_mini)
+percent = bert_target.load_model_from_source(bert_mini)
 
-print("Model 2 loaded")
+print("Model 2 loaded with fraction:", percent)

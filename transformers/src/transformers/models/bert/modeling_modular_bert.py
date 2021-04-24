@@ -753,6 +753,10 @@ class BertModelModular(BertPreTrainedModel):
         for matching feed forward dimensions.
         """
 
+        count = 0
+
+        total = len(self.embeddings.state_dict())+len(self.encoder.state_dict())
+
         source_config = source_model.config
 
         #Load embeddings if input size same:
@@ -761,7 +765,9 @@ class BertModelModular(BertPreTrainedModel):
 
             self.embeddings.load_state_dict(source_model.embeddings.state_dict())
 
-            print("-"*3,"Loaded embeddings weights from source","-"*3)
+            count+=len(source_model.embeddings.state_dict())
+
+            #print("-"*3,"Loaded embeddings weights from source","-"*3)
 
         #Loading encoder
 
@@ -771,21 +777,26 @@ class BertModelModular(BertPreTrainedModel):
 
             if self.config.hidden_dim_list[i] ==  source_config.hidden_dim_list[i] and self.config.attention_heads_list[i] ==  source_config.attention_heads_list[i]:
                 self.encoder.layer[i].attention.load_state_dict(source_model.encoder.layer[i].attention.state_dict())
+                count+=len(source_model.encoder.layer[i].attention.state_dict())
 
                 if self.config.ff_dim_list[i] == source_config.ff_dim_list[i]:
                     self.encoder.layer[i].intermediate.load_state_dict(source_model.encoder.layer[i].intermediate.state_dict())
+                    count+=len(source_model.encoder.layer[i].intermediate.state_dict())
                     #print("Intermediate loaded")
 
                     if self.config.hidden_dim_list[i+1] ==  source_config.hidden_dim_list[i+1]:
                         self.encoder.layer[i].output.load_state_dict(source_model.encoder.layer[i].output.state_dict())
+                        count+=len(source_model.encoder.layer[i].output.state_dict())
                         #print("Output loaded")
 
-                print("-"*3,"Loaded Weights for Layer:",i,"-"*3)
+                #print("-"*3,"Loaded Weights for Layer:",i,"-"*3)
 
             else:
 
-                print("-"*3,"Done Loading Source","-"*3)
+                #print("-"*3,"Done Loading Source","-"*3)
                 break
+
+        return count*1.0/total
 
             
 
