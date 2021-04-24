@@ -44,6 +44,8 @@ print(f'{pu.bcolors.OKBLUE}Loading weights for BERT-Mini\'s neighbor{pu.bcolors.
 config = BertConfig()
 config.from_model_dict(bert_mini_neighbor_graph.model_dict)
 bert_mini_neighbor = BertModelModular(config)
-bert_mini_neighbor.load_model_from_source(bert_mini)
+overlap = bert_mini_neighbor.load_model_from_source(bert_mini)
 
-print(f'{pu.bcolors.OKGREEN}\nBERT-Mini neighbor\'s model loaded!{pu.bcolors.ENDC}')
+print(f'{pu.bcolors.OKGREEN}BERT-Mini neighbor\'s model loaded!{pu.bcolors.ENDC}')
+
+print(f'{pu.bcolors.OKBLUE}\nOverlap with BERT-Mini: {overlap: 0.4f}{pu.bcolors.ENDC}')
