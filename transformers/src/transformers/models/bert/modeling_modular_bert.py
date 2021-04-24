@@ -784,7 +784,8 @@ class BertModelModular(BertPreTrainedModel):
                     count+=len(source_model.encoder.layer[i].intermediate.state_dict())
                     #print("Intermediate loaded")
 
-                    if self.config.hidden_dim_list[i+1] ==  source_config.hidden_dim_list[i+1]:
+                    if i + 1 < min(self.config.num_hidden_layers,source_config.num_hidden_layers) \
+                        and self.config.hidden_dim_list[i+1] == source_config.hidden_dim_list[i+1]:
                         self.encoder.layer[i].output.load_state_dict(source_model.encoder.layer[i].output.state_dict())
                         count+=len(source_model.encoder.layer[i].output.state_dict())
                         #print("Output loaded")
