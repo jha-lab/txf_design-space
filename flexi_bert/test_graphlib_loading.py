@@ -17,7 +17,7 @@ from utils import print_util as pu
 # Testing if bert-mini is in design_space_small
 model_dict_bert_mini = {'l':4, 'a':[4]*4, 'f':[4*256]*4, 'h':[256]*4, 's':['sdp']*4}
 
-graphLib = GraphLib.load_from_dataset('../dataset/dataset_small.json')
+graphLib = GraphLib.load_from_dataset('../dataset/dataset_n10_small.json')
 bert_mini_graph = graphLib.get_graph(model_dict=model_dict_bert_mini)
 
 if bert_mini_graph is not None:
@@ -32,20 +32,34 @@ bert_mini.load_state_dict(torch.load('../main_models/bert_mini.pth'))
 
 print(f'{pu.bcolors.OKGREEN}BERT-Mini model loaded!{pu.bcolors.ENDC}\n')
 
-# Get neighbor of bert-mini in design space
-bert_mini_neighbor_graph = graphLib.get_graph(neighbor_hash=bert_mini_graph.neighbor)
+ordinal = lambda n: "%d%s" % (n,"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4])
 
-if bert_mini_neighbor_graph is not None:
-	print(f'{pu.bcolors.OKGREEN}BERT-Mini\'s neighbor found in dataset!{pu.bcolors.ENDC}')
-	print(bert_mini_neighbor_graph, '\n') # prints representation of the neighbor graph
+neighbor_idx_max_overlap = 0
+max_overlap = 0
 
-# Test loading of weights for bert-mini's neighbor
-print(f'{pu.bcolors.OKBLUE}Loading weights for BERT-Mini\'s neighbor{pu.bcolors.ENDC}\n')
-config = BertConfig()
-config.from_model_dict(bert_mini_neighbor_graph.model_dict)
-bert_mini_neighbor = BertModelModular(config)
-overlap = bert_mini_neighbor.load_model_from_source(bert_mini)
+for n in range(graphLib.num_neighbors):
+	# Get neighbor of bert-mini in design space
+	bert_mini_neighbor_graph = graphLib.get_graph(neighbor_hash=bert_mini_graph.neighbors[n])
 
-print(f'{pu.bcolors.OKGREEN}BERT-Mini neighbor\'s model loaded!{pu.bcolors.ENDC}')
+	if bert_mini_neighbor_graph is not None:
+		print(f'{pu.bcolors.OKGREEN}BERT-Mini\'s {ordinal(n)} neighbor found in dataset!{pu.bcolors.ENDC}')
+		print(bert_mini_neighbor_graph, '\n') # prints representation of the neighbor graph
 
-print(f'{pu.bcolors.OKBLUE}\nOverlap with BERT-Mini: {overlap: 0.4f}{pu.bcolors.ENDC}')
+	# Test loading of weights for bert-mini's neighbor
+	print(f'{pu.bcolors.OKBLUE}Loading weights for BERT-Mini\'s neighbor{pu.bcolors.ENDC}\n')
+	config = BertConfig()
+	config.from_model_dict(bert_mini_neighbor_graph.model_dict)
+	bert_mini_neighbor = BertModelModular(config)
+	overlap = bert_mini_neighbor.load_model_from_source(bert_mini)
+
+	if overlap > max_overlap:
+		neighbor_idx_max_overlap = n
+		max_overlap = overlap
+
+	print(f'{pu.bcolors.OKGREEN}BERT-Mini neighbor\'s model loaded!{pu.bcolors.ENDC}')
+
+	print(f'{pu.bcolors.OKBLUE}\nOverlap with BERT-Mini: {overlap: 0.4f}{pu.bcolors.ENDC}\n')
+
+print(f'{pu.bcolors.OKGREEN}Nearest neighbor with max overlap of {max_overlap}:{pu.bcolors.ENDC}')
+print(graphLib.get_graph(neighbor_hash=bert_mini_neighbor_graph.neighbors[neighbor_idx_max_overlap]))
+

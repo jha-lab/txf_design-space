@@ -59,11 +59,15 @@ class GraphLib(object):
 
             # Library of all graphs
             self.library = []
+
+            # Set number of neighbors to 1
+            self.num_neighbors = 1
         else:
             self.datasets = {}
             self.design_space = {}
             self.ops_list = []
             self.library = []
+            self.num_neighbors = 1
 
     def __len__(self):
         """Computes the number of graphs in the library
@@ -109,17 +113,18 @@ class GraphLib(object):
         print(f'{pu.bcolors.OKGREEN}Graph library created!{pu.bcolors.ENDC} ' \
             + f'\n{len(self.library)} graphs within the design space.')
 
-    def build_embeddings(self, embedding_size: int, kernel='WeisfeilerLehman', n_jobs=8):
+    def build_embeddings(self, embedding_size: int, kernel='WeisfeilerLehman', neighbors=10, n_jobs=8):
         """Build the embeddings of all Graphs in GraphLib using MDS
         
         Args:
             embedding_size (int): size of the embedding
-            kernel (str, optional): the kernel to be used for computing the dissimilarity matrix. Can
-            	be any of the following:
-            		- 'WeisfeilerLehman'
-            		- 'NeighborhoodHash'
-            		- 'RandomWalkLabeled'
-            	The default value is 'WeisfeilerLehman'
+            kernel (str, optional): the kernel to be used for computing the dissimilarity 
+                matrix. Can be any of the following:
+                    - 'WeisfeilerLehman'
+                    - 'NeighborhoodHash'
+                    - 'RandomWalkLabeled'
+                The default value is 'WeisfeilerLehman'
+            neighbors (int, optional): number of nearest neighbors to save for every graph
             n_jobs (int, optional): number of parrallel jobs for joblib
         """
         print('Building embeddings for the Graph library')
@@ -134,17 +139,20 @@ class GraphLib(object):
         embeddings = embedding_util.generate_embeddings(diss_mat, embedding_size=embedding_size, n_jobs=n_jobs)
 
         # Get neighboring graph in the embedding space, for all Graphs
-        neighbor_idx = embedding_util.get_neighbors(embeddings)
+        neighbor_idx = embedding_util.get_neighbors(embeddings, neighbors)
 
         # Update embeddings and neighbors of all Graphs in GraphLib
         for i in range(len(self)):
             self.library[i].embedding = embeddings[i, :]
-            self.library[i].neighbor = self.library[int(neighbor_idx[i])].hash
+            self.library[i].neighbors = [self.library[int(neighbor_idx[i, n])].hash for n in range(neighbors)]
+
+        self.num_neighbors = neighbors
 
         print(f'{pu.bcolors.OKGREEN}Embeddings generated, of size: {embedding_size}{pu.bcolors.ENDC}')
 
     def build_naive_embeddings(self):
-    	"""Build the embeddings of all Graphs in GraphLib naively
+    	"""Build the embeddings of all Graphs in GraphLib naively. Only one neighbor
+        is saved for each graph
     	"""
     	print('Building embeddings for the Graph library')
 
@@ -206,13 +214,14 @@ class GraphLib(object):
             embeddings_list = [None for graph in self.library]
 
         with open(file_path, 'w', encoding ='utf8') as json_file:
-            json.dump({'datasets': self.datasets, 
+            json.dump({'datasets': self.datasets,
                         'design_space': self.design_space,
                         'ops_list': self.ops_list,
+                        'num_neighbors': self.num_neighbors, 
                         'model_dicts': [graph.model_dict for graph in self.library],
                         'hashes': [graph.hash for graph in self.library],
                         'embeddings': embeddings_list,
-                        'neighbors': [graph.neighbor for graph in self.library],
+                        'neighbors': [graph.neighbors for graph in self.library],
                         'accuracies': [graph.accuracy for graph in self.library]}, 
                         json_file, ensure_ascii = True)
 
@@ -236,6 +245,7 @@ class GraphLib(object):
             graphLib.datasets = dataset_dict['datasets']
             graphLib.ops_list = dataset_dict['ops_list']
             graphLib.design_space = dataset_dict['design_space']
+            graphLib.num_neighbors = dataset_dict['num_neighbors']
 
             if dataset_dict['embeddings'][0] is not None:
                 embeddings_list = [np.array(embedding) for embedding in dataset_dict['embeddings']]
@@ -247,7 +257,7 @@ class GraphLib(object):
                     graphLib.datasets, graphLib.ops_list, compute_hash=False)
                 graph.hash = dataset_dict['hashes'][i]
                 graph.embedding = embeddings_list[i]
-                graph.neighbor = dataset_dict['neighbors'][i]
+                graph.neighbors = dataset_dict['neighbors'][i]
                 graph.accuracy = dataset_dict['accuracies'][i]
 
                 graphLib.library.append(graph)
@@ -266,7 +276,8 @@ class Graph(object):
             a list of operations
         hash (str): hash for current graph to check isomorphism
         model_dict (dict): dictionary of model hyper-parameter choices for this graph
-        neighbor (str): hash of the nearest neighbor for this graph
+        neighbors (list[str]): hashes of the nearest neighbors for this graph in order of
+            nearest to farther neighbors
         ops_idx (list[int]): list of operation indices
     """
     def __init__(self, model_dict: dict, datasets: list, ops_list: list, compute_hash: bool, hash_algo='md5'):
@@ -299,7 +310,7 @@ class Graph(object):
         self.embedding = None
 
         # Initialize the nearest neighboring graph
-        self.neighbor = None
+        self.neighbors = None
 
         # Initialize accuracies for all datasets
         self.accuracy = {dataset:None for dataset in datasets}

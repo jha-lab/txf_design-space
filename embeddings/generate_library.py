@@ -30,6 +30,11 @@ def main():
         type=int,
         help='dimensionality of embedding',
         default=16)
+    parser.add_argument('--num_neighbors',
+        metavar='',
+        type=int,
+        help='number of neighbors to save for each graph',
+        default=10)
     parser.add_argument('--n_jobs',
         metavar='',
         type=int,
@@ -73,7 +78,7 @@ def main():
 
     # Build embeddings
     graphLib.build_embeddings(embedding_size=args.embedding_size, 
-        kernel=args.kernel, n_jobs=args.n_jobs)
+        kernel=args.kernel, neighbors=args.num_neighbors, n_jobs=args.n_jobs)
     print()
 
     # Save dataset

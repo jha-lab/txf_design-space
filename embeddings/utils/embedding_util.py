@@ -72,12 +72,13 @@ def generate_naive_embeddings(model_dict_list: list, design_space: dict):
 
     return zscore(embeddings, axis=1)
 
-def get_neighbors(embeddings):
+def get_neighbors(embeddings, n: int):
     """Get neighbor indices for all graphs from embeddings
     
     Args:
         embeddings (np.ndarray): embeddings array from generate_embeddings() or
             generate_naive_embeddings()
+        n (int): number of nearest neighbors to return
     
     Returns:
         neighbor_idx (np.ndarray): neighbor indices according to the order in the
@@ -90,6 +91,6 @@ def get_neighbors(embeddings):
     np.fill_diagonal(distance_matrix, np.inf)
 
     # Find neighbors greedily
-    neighbor_idx = np.argmin(distance_matrix, axis=0)
+    neighbor_idx = np.argsort(distance_matrix, axis=1)[:, :n]
 
     return neighbor_idx
