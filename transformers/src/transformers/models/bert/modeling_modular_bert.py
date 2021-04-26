@@ -797,7 +797,7 @@ class BertModelModular(BertPreTrainedModel):
                 #print("-"*3,"Done Loading Source","-"*3)
                 break
 
-        return count*1.0/total
+        return count*1.0/total, count, total
 
             
 
