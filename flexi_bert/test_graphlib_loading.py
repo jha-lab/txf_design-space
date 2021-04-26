@@ -49,14 +49,14 @@ for n in range(graphLib.num_neighbors):
 	config = BertConfig()
 	config.from_model_dict(bert_mini_neighbor_graph.model_dict)
 	bert_mini_neighbor = BertModelModular(config)
-	overlap, count, total = bert_mini_neighbor.load_model_from_source(bert_mini)
+	overlap = bert_mini_neighbor.load_model_from_source(bert_mini)
 
 	if overlap > max_overlap:
 		neighbor_idx_max_overlap = n
 		max_overlap = overlap
 
-	print(f'{pu.bcolors.OKBLUE}Overlap with BERT-Mini: {overlap: 0.4f}{count, total}{pu.bcolors.ENDC}\n')
+	print(f'{pu.bcolors.OKBLUE}Overlap with BERT-Mini: {overlap: 0.4f}{pu.bcolors.ENDC}\n')
 
 print(f'{pu.bcolors.OKGREEN}Nearest neighbor with max overlap of {max_overlap}:{pu.bcolors.ENDC}')
-print(graphLib.get_graph(neighbor_hash=bert_mini_neighbor_graph.neighbors[neighbor_idx_max_overlap]))
+print(graphLib.get_graph(neighbor_hash=bert_mini_graph.neighbors[neighbor_idx_max_overlap]))
 
