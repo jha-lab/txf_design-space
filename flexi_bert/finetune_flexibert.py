@@ -25,12 +25,11 @@ from typing import Optional
 
 import numpy as np
 from datasets import load_dataset, load_metric
-
+from transformers.models.bert.modeling_modular_bert import BertModelModular, BertForSequenceClassificationModular
+from transformers import BertTokenizer, BertConfig
 import transformers
 from transformers import (
     AutoConfig,
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
     DataCollatorWithPadding,
     EvalPrediction,
     HfArgumentParser,
@@ -298,21 +297,14 @@ def finetune(args):
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-        cache_dir=model_args.cache_dir,
-        use_fast=model_args.use_fast_tokenizer,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
-    model = AutoModelForSequenceClassification.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
+    tokenizer = BertTokenizer.from_pretrained('../tokenizer/')
+    bertmodel = BertModelModular.from_pretrained(model_args.model_name_or_path)
+    bertmodel.config.num_labels = num_labels 
+
+    classifier_config = BertConfig.from_pretrained(model_args.model_name_or_path,num_labels=num_labels)
+
+    model = BertForSequenceClassificationModular(classifier_config)
+    model.bert.load_state_dict(bertmodel.state_dict())
 
     # Preprocessing the datasets
     if data_args.task_name is not None:
