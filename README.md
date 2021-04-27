@@ -36,6 +36,6 @@ The computation of the 'nearest' transformer is done using graph embeddings for 
 
 Create an empty directory called /glue_data and run the following command. Downloads all task data expect MNLI which requires a manual download.
 
-'''
+```
 python download_glue_data.py --data_dir glue_data --tasks all
-'''
+```
