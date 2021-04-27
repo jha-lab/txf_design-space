@@ -40,7 +40,7 @@ max_overlap = 0
 
 for n in range(graphLib.num_neighbors):
 	# Get neighbor of bert-mini in design space
-	bert_mini_neighbor_graph = graphLib.get_graph(neighbor_hash=bert_mini_graph.neighbors[n])
+	bert_mini_neighbor_graph = graphLib.get_graph(model_hash=bert_mini_graph.neighbors[n])
 
 	if bert_mini_neighbor_graph is not None:
 		print(f'{pu.bcolors.OKGREEN}BERT-Mini\'s {ordinal(n+1)} neighbor found in dataset!{pu.bcolors.ENDC}')
