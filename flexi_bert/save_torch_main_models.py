@@ -1,5 +1,6 @@
 import sys
 sys.path.append('../transformers/src/')
+sys.path.append('../embeddings/')
 
 import torch
 
@@ -7,6 +8,13 @@ from transformers import  BertConfig,  BertModel
 
 from transformers.models.bert.modeling_modular_bert import BertModelModular
 
+from library import Graph, GraphLib
+from utils import print_util as pu
+
+
+graphLib = GraphLib.load_from_dataset('../dataset/dataset_small.json')
+
+#BertBase s
 
 bert_base = BertModel.from_pretrained('bert-base-uncased')
 
@@ -24,9 +32,21 @@ model_state_dict = bert_base.state_dict()
 
 modular_state_dict.update(model_state_dict)
 
-torch.save(modular_state_dict, '../main_models/bert_base.pth')
+model_modular.load_state_dict(modular_state_dict)
+
+bert_base_graph = graphLib.get_graph(model_dict=model_dict_bert_base)
+
+if bert_base_graph is not None:
+	print(f'{pu.bcolors.OKGREEN}BERT-Base found in dataset!{pu.bcolors.ENDC}')
+	print(bert_base_graph, '\n')
+
+model_modular.save_pretrained("../models/"+str(bert_base_graph.hash)+'/')
+
+#torch.save(modular_state_dict, '../main_models/bert_base.pth')
 
 print("Bert Base Modularized")
+
+#BertSmall
 
 
 bert_small = BertModel.from_pretrained('google/bert_uncased_L-4_H-512_A-8')
@@ -45,9 +65,23 @@ model_state_dict = bert_small.state_dict()
 
 modular_state_dict.update(model_state_dict)
 
-torch.save(modular_state_dict, '../main_models/bert_small.pth')
+model_modular.load_state_dict(modular_state_dict)
+
+#torch.save(modular_state_dict, '../main_models/bert_small.pth')
+
+bert_small_graph = graphLib.get_graph(model_dict=model_dict_bert_small)
+
+if bert_small_graph is not None:
+	print(f'{pu.bcolors.OKGREEN}BERT-Small found in dataset!{pu.bcolors.ENDC}')
+	print(bert_small_graph, '\n')
+
+model_modular.save_pretrained("../models/"+str(bert_small_graph.hash)+'/')
+
+#torch.save(modular_state_dict, '../main_models/bert_base.pth')
 
 print("Bert Small Modularized")
+
+#BertMedium
 
 
 bert_medium = BertModel.from_pretrained('google/bert_uncased_L-8_H-512_A-8')
@@ -66,11 +100,23 @@ model_state_dict = bert_medium.state_dict()
 
 modular_state_dict.update(model_state_dict)
 
-torch.save(modular_state_dict, '../main_models/bert_medium.pth')
+model_modular.load_state_dict(modular_state_dict)
+
+bert_medium_graph = graphLib.get_graph(model_dict=model_dict_bert_medium)
+
+if bert_medium_graph is not None:
+	print(f'{pu.bcolors.OKGREEN}BERT-medium found in dataset!{pu.bcolors.ENDC}')
+	print(bert_medium_graph, '\n')
+
+model_modular.save_pretrained("../models/"+str(bert_medium_graph.hash)+'/')
+
+
+#torch.save(modular_state_dict, '../main_models/bert_medium.pth')
 
 print("Bert Medium Modularized")
 
 
+#BertMini
 
 bert_mini = BertModel.from_pretrained('google/bert_uncased_L-4_H-256_A-4')
 
@@ -88,9 +134,22 @@ model_state_dict = bert_mini.state_dict()
 
 modular_state_dict.update(model_state_dict)
 
-torch.save(modular_state_dict, '../main_models/bert_mini.pth')
+#torch.save(modular_state_dict, '../main_models/bert_mini.pth')
+
+model_modular.load_state_dict(modular_state_dict)
+
+bert_mini_graph = graphLib.get_graph(model_dict=model_dict_bert_mini)
+
+if bert_mini_graph is not None:
+	print(f'{pu.bcolors.OKGREEN}BERT-medium found in dataset!{pu.bcolors.ENDC}')
+	print(bert_mini_graph, '\n')
+
+model_modular.save_pretrained("../models/"+str(bert_mini_graph.hash)+'/')
 
 print("Bert Mini Modularized")
+
+
+#BertTiny
 
 
 bert_tiny = BertModel.from_pretrained('google/bert_uncased_L-2_H-128_A-2')
@@ -109,10 +168,21 @@ model_state_dict = bert_tiny.state_dict()
 
 modular_state_dict.update(model_state_dict)
 
-torch.save(modular_state_dict, '../main_models/bert_tiny.pth')
+#torch.save(modular_state_dict, '../main_models/bert_tiny.pth')
+
+model_modular.load_state_dict(modular_state_dict)
+
+bert_medium_graph = graphLib.get_graph(model_dict=model_dict_bert_tiny)
+
+if bert_medium_graph is not None:
+	print(f'{pu.bcolors.OKGREEN}BERT-tiny found in dataset!{pu.bcolors.ENDC}')
+	print(bert_tiny_graph, '\n')
+
+model_modular.save_pretrained("../models/"+str(bert_tiny_graph.hash)+'/')
 
 print("Bert Tiny Modularized")
 
+#Bert2-256
 
 bert_2_256 = BertModel.from_pretrained('google/bert_uncased_L-2_H-256_A-4')
 
@@ -130,10 +200,22 @@ model_state_dict = bert_2_256.state_dict()
 
 modular_state_dict.update(model_state_dict)
 
-torch.save(modular_state_dict, '../main_models/bert_L-2_H-256_A-4.pth')
+#torch.save(modular_state_dict, '../main_models/bert_L-2_H-256_A-4.pth')
+
+model_modular.load_state_dict(modular_state_dict)
+
+bert_2_256_graph = graphLib.get_graph(model_dict=model_dict_bert_2_256)
+
+if bert_2_256_graph is not None:
+	print(f'{pu.bcolors.OKGREEN}BERT-tiny found in dataset!{pu.bcolors.ENDC}')
+	print(bert_2_256_graph, '\n')
+
+model_modular.save_pretrained("../models/"+str(bert_2_256_graph.hash)+'/')
 
 print("Bert L-2/H-256/A-4 Modularized")
 
+
+#Bert4_128
 
 bert_4_128 = BertModel.from_pretrained('google/bert_uncased_L-4_H-128_A-2')
 
@@ -151,7 +233,17 @@ model_state_dict = bert_4_128.state_dict()
 
 modular_state_dict.update(model_state_dict)
 
-torch.save(modular_state_dict, '../main_models/bert_L-4_H-128_A-2.pth')
+#torch.save(modular_state_dict, '../main_models/bert_L-4_H-128_A-2.pth')
+
+model_modular.load_state_dict(modular_state_dict)
+
+bert_4_128_graph = graphLib.get_graph(model_dict=model_dict_bert_4_128)
+
+if bert_4_128_graph is not None:
+	print(f'{pu.bcolors.OKGREEN}BERT-4-128 found in dataset!{pu.bcolors.ENDC}')
+	print(bert_4_128_graph, '\n')
+
+model_modular.save_pretrained("../models/"+str(bert_4_128_graph.hash)+'/')
 
 print("Bert L-4/H-128/A-2 Modularized")
 
