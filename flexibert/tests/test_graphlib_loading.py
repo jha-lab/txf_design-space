@@ -18,7 +18,7 @@ from utils import print_util as pu
 model_dict_bert_mini = {'l':4, 'a':[4]*4, 'f':[4*256]*4, 'h':[256]*4, 's':['sdp']*4}
 
 graphLib = GraphLib.load_from_dataset('../../dataset/dataset_small.json')
-bert_mini_graph = graphLib.get_graph(model_dict=model_dict_bert_mini)
+bert_mini_graph, _ = graphLib.get_graph(model_dict=model_dict_bert_mini)
 
 if bert_mini_graph is not None:
 	print(f'{pu.bcolors.OKGREEN}BERT-Mini found in dataset!{pu.bcolors.ENDC}')
@@ -40,7 +40,7 @@ max_overlap = 0
 
 for n in range(graphLib.num_neighbors):
 	# Get neighbor of bert-mini in design space
-	bert_mini_neighbor_graph = graphLib.get_graph(model_hash=bert_mini_graph.neighbors[n])
+	bert_mini_neighbor_graph, _ = graphLib.get_graph(model_hash=bert_mini_graph.neighbors[n])
 
 	if bert_mini_neighbor_graph is not None:
 		print(f'{pu.bcolors.OKGREEN}BERT-Mini\'s {ordinal(n+1)} neighbor found in dataset!{pu.bcolors.ENDC}')
@@ -59,5 +59,5 @@ for n in range(graphLib.num_neighbors):
 	print(f'{pu.bcolors.OKBLUE}Overlap with BERT-Mini: {overlap: 0.4f}{pu.bcolors.ENDC}\n')
 
 print(f'{pu.bcolors.OKGREEN}Nearest neighbor with max overlap of {max_overlap: 0.4f}:{pu.bcolors.ENDC}')
-print(graphLib.get_graph(neighbor_hash=bert_mini_graph.neighbors[neighbor_idx_max_overlap]))
+print(graphLib.get_graph(model_hash=bert_mini_graph.neighbors[neighbor_idx_max_overlap])[0])
 

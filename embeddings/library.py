@@ -182,7 +182,7 @@ class GraphLib(object):
             	loaded
         
         Returns:
-            Graph object
+            Graph object, model index
         
         Raises:
             ValueError: if neither model_hash nor model_dict are provided
@@ -191,14 +191,14 @@ class GraphLib(object):
         	if type(model_hash) != str:
         		raise ValueError('Dictionary provided for model_hash. Use keyword argument')
         	hashes = [graph.hash for graph in self.library]
-        	graph_idx = hashes.index(model_hash)
-        	return self.library[graph_idx]
+        	model_idx = hashes.index(model_hash)
+        	return self.library[model_idx], model_idx
         elif model_dict is not None:
         	if type(model_dict) != dict:
         		raise ValueError('String provided for model_dict. Use keyword argument')
         	model_dicts = [graph.model_dict for graph in self.library]
         	model_idx = model_dicts.index(model_dict)
-        	return self.library[model_idx]
+        	return self.library[model_idx], model_idx
         else:
         	raise ValueError('Neither model_hash nor model_dict was provided')
 
