@@ -12,16 +12,16 @@ import shlex
 
 def training(hash_model,task_ID):
 
-	args = "--model_name_or_path {} \
+	a = "--model_name_or_path {} \
 	--task_name {} \
 	--do_train \
 	--do_eval \
-	--data_dir ../glue_data/{}/ \
 	--max_seq_length 128 \
 	--per_gpu_train_batch_size 32 \
 	--learning_rate 2e-5 \
 	--num_train_epochs 3.0 \
-	--output_dir {}".format('../models'+hash_model+'/',task_ID,task_ID,'../models'+hash_model+'/')
+        --overwrite_output_dir\
+	--output_dir {}".format('../models/'+hash_model+'/',task_ID,'../models/'+hash_model+'/')
 
 	return shlex.split(a)
 
@@ -34,9 +34,7 @@ bert_mini_graph = graphLib.get_graph(model_dict=model_dict_bert_mini)
 
 bert_mini_hash = str(bert_mini_graph.hash)
 
-task1 = "SST-2"
-
-task2 = "QNLI"
+task1 = "sst2"
 
 
 args_train = training(bert_mini_hash,task1)
@@ -44,12 +42,4 @@ args_train = training(bert_mini_hash,task1)
 
 metrics = finetune(args_train)
 
-
-#print(f'BERT mini accuracy on SST-2 {metrics['acc']: 0.2f}')
-
-args_train = training(bert_mini_hash,task2)
-
-metrics = finetune(args_train)
-
-
-#print(f'BERT mini accuracy on QNLI {metrics['acc']: 0.2f}')
+print(f"BERT mini accuracy on SST-2 {metrics['eval_accuracy']: 0.2f}")
