@@ -23,6 +23,8 @@ import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
+main_dir = os.path.abspath(os.path.dirname(__file__)).split('flexibert')[0]
+
 import numpy as np
 from datasets import load_dataset, load_metric
 from transformers.models.bert.modeling_modular_bert import BertModelModular, BertForSequenceClassificationModular
@@ -297,7 +299,7 @@ def finetune(args):
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    tokenizer = BertTokenizer.from_pretrained('../tokenizer/')
+    tokenizer = BertTokenizer.from_pretrained(main_dir+'tokenizer/')
     bertmodel = BertModelModular.from_pretrained(model_args.model_name_or_path)
     bertmodel.config.num_labels = num_labels 
 

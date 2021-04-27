@@ -1,10 +1,8 @@
 import sys
-sys.path.append('../transformers/src/')
+sys.path.append('../../transformers/src/')
 
 import torch
-
 from transformers import  BertConfig
-
 from transformers.models.bert.modeling_modular_bert import BertModelModular
 
 model_dict_bert_mini = {'l':4,'a':[4]*4,'f':[4*256]*4,'h':[256]*4,'s':['sdp']*4}
@@ -15,7 +13,11 @@ config.from_model_dict(model_dict_bert_mini)
 
 bert_mini = BertModelModular(config)
 
-bert_mini.load_state_dict(torch.load('../main_models/bert_mini.pth'))
+# bert_mini.load_state_dict(torch.load('../main_models/bert_mini.pth'))
+
+# Removed old main_model pytorch model and added new model loading function using
+# the hash of BERT-Mini
+bert_mini.from_pretrained('../../models/pretrained/76ffa8a09f33ab99f10a786007cebaa6/')
 
 #Test 1
 
@@ -35,7 +37,7 @@ print("Model 1 loaded with fraction:", percent)
 
 #Test 2
 
-model_dict_target = {'l':5,'a':[4,4,4,4,12],'f':[1024,1024,1024,512,256],'h':[256,256,256,256,512],'s':['sdp','wma','sdp','wma','sdp']}
+model_dict_target = {'l':5,'a':[4,4,4,4,8],'f':[1024,1024,1024,512,256],'h':[256,256,256,256,512],'s':['sdp','wma','sdp','wma','sdp']}
 
 config = BertConfig()
 config.from_model_dict(model_dict_target)
