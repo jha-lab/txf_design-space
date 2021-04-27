@@ -8,20 +8,22 @@ from transformers.models.bert.modeling_modular_bert import BertModelModular
 from library import Graph, GraphLib
 from utils import print_util as pu
 from finetune_flexibert import finetune
-
+import shlex
 
 def training(hash_model,task_ID):
 
-	return "--model_name_or_path {} \
-	  --task_name {} \
-	  --do_train \
-	  --do_eval \
-	  --data_dir ../glue_data/{}/ \
-	  --max_seq_length 128 \
-	  --per_gpu_train_batch_size 32 \
-	  --learning_rate 2e-5 \
-	  --num_train_epochs 3.0 \
-	  --output_dir {}".format('../models'+hash_model+'/',task_ID,task_ID,'../models'+hash_model+'/')
+	args = "--model_name_or_path {} \
+	--task_name {} \
+	--do_train \
+	--do_eval \
+	--data_dir ../glue_data/{}/ \
+	--max_seq_length 128 \
+	--per_gpu_train_batch_size 32 \
+	--learning_rate 2e-5 \
+	--num_train_epochs 3.0 \
+	--output_dir {}".format('../models'+hash_model+'/',task_ID,task_ID,'../models'+hash_model+'/')
+
+	return shlex.split(a)
 
 
 # Testing if bert-mini is in design_space_small
