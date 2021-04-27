@@ -34,8 +34,14 @@ The computation of the 'nearest' transformer is done using graph embeddings for 
 
 ## Downloading GLUE data
 
-Create an empty directory called /glue_data and run the following command. Downloads all task data expect MNLI which requires a manual download.
+Install datasets from hugging face
+```
+pip install datasets
+```
+
+HPC doesnt allow downloads while running a job. Therefore download data for GLUE task by running this via a python script
 
 ```
-python download_glue_data.py --data_dir glue_data --tasks all
+from datasets import load_dataset
+load_dataset("glue",task_name)
 ```
