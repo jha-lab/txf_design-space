@@ -95,4 +95,4 @@ conda activate txf_design-space
 
 python run_surrogate_model.py --task ${task} --surrogate_model_file ${surrogate_model_file}" > $job_file
 
-# sbatch $job_file
+sbatch $job_file
