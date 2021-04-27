@@ -10,7 +10,7 @@ sys.path.append('../transformers/src/')
 sys.path.append('../embeddings/')
 
 import logging
-logging.basicConfig(level=logging.ERROR)
+logging.disable(logging.INFO)
 
 import argparse
 from multiprocessing import Process, Manager
@@ -48,7 +48,7 @@ def worker(worker_id: int, shared_accuracies: list, model_idx: int, model_hash: 
     # Forcing to train on single GPU
     os.environ["CUDA_VISIBLE_DEVICES"] = str(worker_id)
 
-    Initialize training arguments for fine-tuning
+    # Initialize training arguments for fine-tuning
     training_args = f'--model_name_or_path {models_dir}pretrained/{model_hash}/ \
         --task_name {task} \
         --do_train \
