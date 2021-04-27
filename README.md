@@ -30,3 +30,12 @@ model_dict = {'l': 4, 'h': [256, 256, 256, 256], 'a': [4, 4, 4, 4], 'f': [1024, 
 This dictionary will be converted to a pytorch model for training, where the weights would be transferred from the 'nearest' pre-trained model. This modular simulator is a wrapper over the [huggingface/transformers](https://github.com/huggingface/transformers) repo.
 
 The computation of the 'nearest' transformer is done using graph embeddings for every transformer's computational graph in this design space. 
+
+
+## Downloading GLUE data
+
+Create an empty directory called /glue_data and run the following command. Downloads all task data expect MNLI which requires a manual download.
+
+'''
+python download_glue_data.py --data_dir glue_data --tasks all
+'''
