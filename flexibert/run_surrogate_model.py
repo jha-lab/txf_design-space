@@ -177,6 +177,18 @@ def main():
 
     print(f'{pu.bcolors.OKGREEN}Surrogate model saved to:{pu.bcolors.ENDC} {args.surrogate_model_file}')
 
+    # Pseudo-code for active-learning
+    # 1. Take the argmax (or argsort) of standard deviation from the GP model (will have to 
+    # 	use np.meshgrid) and then find the nearest 8-dimensional embedding of the transformer. 
+    # 2. Find the overlap of this model with the nearest 10 neighbors. If overlap is less 
+    # 	than 0.95, take next most uncertain model (using argsort of standard deviation).
+    # 3. Repeat above two steps asynchronously as-soon-as one model has been trained in the pool
+    # 	of four workers in the cluster node.
+    # 4. Convergence condition: Once 1.96 * max(standard deviation) < 0.001 (i.e. 95% confidence 
+    # 	interval is less than 0.1% accuracy).
+    # # TODO: (extras) hyper-parameter tuning for every new model using ray-tune; reinforcement 
+    # 	learning for faster convergence; use better modeling technique than GP
+
 
 if __name__ == '__main__':
     main()
