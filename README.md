@@ -39,9 +39,10 @@ Install datasets from hugging face
 pip install datasets
 ```
 
-HPC doesnt allow downloads while running a job. Therefore download data for GLUE task by running this via a python script
+HPC doesnt allow downloads while running a job. Therefore download data in cache for a GLUE task by running this via a python script. Eg: for 'sst2'
 
 ```
-from datasets import load_dataset
-load_dataset("glue",task_name)
+from datasets import load_dataset, load_metric
+load_dataset("glue",'sst2')
+load_metric("glue",'sst2')
 ```
