@@ -27,6 +27,7 @@ conda install -c plotly plotly
 
 # Conda prefers pip packages in the end
 pip install grakel
+pip install datasets
 
 ## TODO: create environment.yaml file or requirements.txt
 
