@@ -162,5 +162,6 @@ class BertConfig(PretrainedConfig):
         self.attention_heads_list = model_dict['a']
         self.ff_dim_list = model_dict['f']
         self.similarity_list = model_dict['s']
-        self.hidden_size = model_dict['h'][-1]
+        self.hidden_size = model_dict['h'][-1] 
+        self.num_attention_heads = model_dict['a'][-1]
 
