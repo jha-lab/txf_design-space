@@ -133,7 +133,7 @@ class BertConfig(PretrainedConfig):
         layer_norm_eps=1e-12,
         pad_token_id=0,
         gradient_checkpointing=False,
-        position_embedding_type="absolute",
+        position_embedding_type="relative_key",
         use_cache=True,
         **kwargs
     ):
