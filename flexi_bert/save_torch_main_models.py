@@ -14,8 +14,8 @@ from utils import print_util as pu
 
 graphLib = GraphLib.load_from_dataset('../dataset/dataset_small.json')
 
-#BertBase s
-
+#BertBase 
+'''
 bert_base = BertModel.from_pretrained('bert-base-uncased')
 
 model_dict_bert_base = {'l':12,'a':[8]*12,'f':[4*768]*12,'h':[768]*12,'s':['sdp']*12}
@@ -115,6 +115,7 @@ model_modular.save_pretrained("../models/"+str(bert_medium_graph.hash)+'/')
 
 print("Bert Medium Modularized")
 
+'''
 
 #BertMini
 
@@ -172,9 +173,9 @@ modular_state_dict.update(model_state_dict)
 
 model_modular.load_state_dict(modular_state_dict)
 
-bert_medium_graph = graphLib.get_graph(model_dict=model_dict_bert_tiny)
+bert_tiny_graph = graphLib.get_graph(model_dict=model_dict_bert_tiny)
 
-if bert_medium_graph is not None:
+if bert_tiny_graph is not None:
 	print(f'{pu.bcolors.OKGREEN}BERT-tiny found in dataset!{pu.bcolors.ENDC}')
 	print(bert_tiny_graph, '\n')
 
@@ -207,7 +208,7 @@ model_modular.load_state_dict(modular_state_dict)
 bert_2_256_graph = graphLib.get_graph(model_dict=model_dict_bert_2_256)
 
 if bert_2_256_graph is not None:
-	print(f'{pu.bcolors.OKGREEN}BERT-tiny found in dataset!{pu.bcolors.ENDC}')
+	print(f'{pu.bcolors.OKGREEN}BERT-2-256 found in dataset!{pu.bcolors.ENDC}')
 	print(bert_2_256_graph, '\n')
 
 model_modular.save_pretrained("../models/"+str(bert_2_256_graph.hash)+'/')
