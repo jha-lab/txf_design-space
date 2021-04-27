@@ -1,16 +1,16 @@
 import sys
 sys.path.append('../transformers/src/')
 sys.path.append('../embeddings/')
-
+sys.path.append('../flexi_bert')
 import torch
 from transformers import  BertConfig
 from transformers.models.bert.modeling_modular_bert import BertModelModular
 from library import Graph, GraphLib
 from utils import print_util as pu
-from fine_tune_flexibert import finetune
+from finetune_flexibert import finetune
 
 
-def training(hash_model,task_ID)
+def training(hash_model,task_ID):
 
 	return "--model_name_or_path {} \
 	  --task_name {} \
@@ -43,11 +43,11 @@ args_train = training(bert_mini_hash,task1)
 metrics = finetune(args_train)
 
 
-print(f'BERT mini accuracy on SST-2 {metrics['acc']:0.2f}')
+#print(f'BERT mini accuracy on SST-2 {metrics['acc']: 0.2f}')
 
 args_train = training(bert_mini_hash,task2)
 
 metrics = finetune(args_train)
 
 
-print(f'BERT mini accuracy on QNLI {metrics['acc']:0.2f}')
+#print(f'BERT mini accuracy on QNLI {metrics['acc']: 0.2f}')
