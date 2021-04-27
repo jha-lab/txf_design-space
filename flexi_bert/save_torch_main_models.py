@@ -4,13 +4,15 @@ sys.path.append('../embeddings/')
 
 import torch
 
-from transformers import  BertConfig,  BertModel
+from transformers import  BertConfig,  BertModel, BertTokenizer
 
 from transformers.models.bert.modeling_modular_bert import BertModelModular
 
 from library import Graph, GraphLib
 from utils import print_util as pu
 
+
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
 graphLib = GraphLib.load_from_dataset('../dataset/dataset_small.json')
 
@@ -147,6 +149,8 @@ if bert_mini_graph is not None:
 
 model_modular.save_pretrained("../models/"+str(bert_mini_graph.hash)+'/')
 
+tokenizer.save_pretrained("../models/"+str(bert_mini_graph.hash)+'/')
+
 print("Bert Mini Modularized")
 
 
@@ -181,6 +185,8 @@ if bert_tiny_graph is not None:
 
 model_modular.save_pretrained("../models/"+str(bert_tiny_graph.hash)+'/')
 
+tokenizer.save_pretrained("../models/"+str(bert_tiny_graph.hash)+'/')
+
 print("Bert Tiny Modularized")
 
 #Bert2-256
@@ -212,6 +218,9 @@ if bert_2_256_graph is not None:
 	print(bert_2_256_graph, '\n')
 
 model_modular.save_pretrained("../models/"+str(bert_2_256_graph.hash)+'/')
+
+
+tokenizer.save_pretrained("../models/"+str(bert_2_256_graph.hash)+'/')
 
 print("Bert L-2/H-256/A-4 Modularized")
 
@@ -245,6 +254,8 @@ if bert_4_128_graph is not None:
 	print(bert_4_128_graph, '\n')
 
 model_modular.save_pretrained("../models/"+str(bert_4_128_graph.hash)+'/')
+
+tokenizer.save_pretrained("../models/"+str(bert_4_128_graph.hash)+'/')
 
 print("Bert L-4/H-128/A-2 Modularized")
 
