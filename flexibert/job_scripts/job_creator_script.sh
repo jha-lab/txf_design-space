@@ -74,12 +74,16 @@ fi
 job_file="job_surrogate_model_${numTasks}.slurm"
 surrogate_model_file="../dataset/surrogate_models/gp_${task}.pkl"
 
+cd ..
+
 # Load GLUE dataset using the internet
 python load_glue_datset.py --task $task
 
+cd job_scripts/
+
 # Create SLURM job script to train surrogate model
 echo "#!/bin/bash
-#SBATCH --job-name=txf_design_space         # create a short name for your job
+#SBATCH --job-name=flexibert_${task}        # create a short name for your job
 #SBATCH --nodes=1                           # node count
 #SBATCH --ntasks=1                          # total number of tasks across all nodes
 #SBATCH --cpus-per-task=16                  # cpu-cores per task (>1 if multi-threaded tasks)
@@ -92,6 +96,8 @@ echo "#!/bin/bash
 module purge
 module load anaconda3/2020.7
 conda activate txf_design-space
+
+cd ..
 
 python run_surrogate_model.py --task ${task} --surrogate_model_file ${surrogate_model_file}" > $job_file
 

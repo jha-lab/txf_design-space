@@ -16,4 +16,6 @@ module purge
 module load anaconda3/2020.7
 conda activate txf_design-space
 
+cd ..
+
 python run_surrogate_model.py --task sst2
