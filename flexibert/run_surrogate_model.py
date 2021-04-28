@@ -229,7 +229,7 @@ def main():
         while worker_id_free is None:
             for worker_id in jobs:
                 if jobs[worker_id][1] is None or not jobs[worker_id][1].is_alive():
-                    if jobs[worker_id][1] is not None: jobs[worker_id][1].join()
+                    # if jobs[worker_id][1] is not None: jobs[worker_id][1].join()
                     worker_id_free = worker_id
                     jobs[worker_id] = (None, None)
             time.sleep(1)
