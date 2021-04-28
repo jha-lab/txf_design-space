@@ -301,7 +301,7 @@ def finetune(args):
     )
     tokenizer = BertTokenizer.from_pretrained(main_dir+'tokenizer/')
     bertmodel = BertModelModular.from_pretrained(model_args.model_name_or_path)
-    bertmodel.config.num_labels = num_labels 
+    #bertmodel.config.num_labels = num_labels 
 
     classifier_config = BertConfig.from_pretrained(model_args.model_name_or_path,num_labels=num_labels)
 

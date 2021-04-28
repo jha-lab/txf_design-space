@@ -269,7 +269,11 @@ def main():
                 continue
 
             # Check overlap with neighors
-            overlap, trained = [], []
+            #overlap, trained = [], []
+
+            is_test = False
+            max_overlap = 0
+
             for neighbor in graphLib.library[model_idx].neighbors:
                 neighbor_graph, neighbor_idx = graphLib.get_graph(model_hash=neighbor)
 
@@ -281,19 +285,34 @@ def main():
                 config.from_model_dict(neighbor_graph.model_dict)
                 neighbor_model = BertModelModular(config)
 
-                overlap.append(current_model.load_model_from_source(neighbor_model))
-                trained.append(neighbor_idx in trained_ids)
+                overlap = current_model.load_model_from_source(neighbor_model)
+
+                if overlap > OVERLAP_THRESHOLD and (neighbor_idx in trained_ids):
+
+                    is_test = True
+
+                    if overlap > max_overlap:
+                        
+
+                        max_overlap = overlap
+                        #Save pretrained model of the current model after loading weights from finetuned model of the neighbor
+                        nbd_model = BertModelModular.from_pretrained(f'{args.models_dir}{args.task}/{neighbor}/')
+                        current_model.load_model_from_source(nbd_model)
+                        current_model.save_pretrained(f'{args.models_dir}pretrained/{graphLib.library[model_idx].hash}/')
+
 
             # Effective overlap is the overlap between the current model and its neighbor if
             # the neighbor has been trained
-            effective_overlap = [overlap[i] if trained[i] == True else 0 for i in range(len(overlap))]
+            #effective_overlap = [overlap[i] if trained[i] == True else 0 for i in range(len(overlap))]
 
             # Test current model only if effective overlap with any one of the neighbors is greater
             # than the overlap threshold
-            test_model_idx = [True if ef_ov > OVERLAP_THRESHOLD else False for ef_ov in effective_overlap]
+            #test_model_idx = [True if ef_ov > OVERLAP_THRESHOLD else False for ef_ov in effective_overlap]
+
+
 
             if not DEBUG:
-                if True in test_model_idx:
+                if is_test:
                     # Choose current model index
                     break
             else:
