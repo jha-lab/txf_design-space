@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=txf_design-space         # create a short name for your job
+#SBATCH --job-name=flexibert_sst2           # create a short name for your job
 #SBATCH --nodes=1                  	    	# node count
 #SBATCH --ntasks=1                  	    # total number of tasks across all nodes
 #SBATCH --cpus-per-task=16                  # cpu-cores per task (>1 if multi-threaded tasks)
