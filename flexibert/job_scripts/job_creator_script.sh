@@ -26,7 +26,7 @@ Help()
    echo "Flags:"
    echo -e "${YELLOW}-t${ENDC} | ${YELLOW}--task${ENDC} [default = ${GREEN}\"sst2\"${ENDC}] \t\t Name of GLUE task"
    echo -e "${YELLOW}-c${ENDC} | ${YELLOW}--cluster${ENDC} [default = ${GREEN}\"tiger\"${ENDC}] \t Selected cluster - adroit or tiger"
-   echo -e "${YELLOW}-i${ENDC} | ${YELLOW}--id${ENDC} [default = ${GREEN}\"stuli\"${ENDC}] \t\t Selected PU-ID to email slurm updates"
+   echo -e "${YELLOW}-i${ENDC} | ${YELLOW}--id${ENDC} [default = ${GREEN}\"stuli\"${ENDC}] \t\t Selected PU-NetID to email slurm updates"
    echo -e "${YELLOW}-h${ENDC} | ${YELLOW}--help${ENDC} \t\t\t\t Call this help message"
    echo
 }
@@ -99,6 +99,6 @@ conda activate txf_design-space
 
 cd ..
 
-python run_surrogate_model.py --task ${task} --surrogate_model_file ${surrogate_model_file}" > $job_file
+python run_surrogate_model.py --task ${task} --models_dir /scratch/gpfs/${id}/models/ --surrogate_model_file ${surrogate_model_file}" > $job_file
 
 sbatch $job_file

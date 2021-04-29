@@ -37,7 +37,7 @@ GLUE_TASKS_DATASET = ['CoLA', 'MNLI-mm', 'MRPC', 'QNLI', 'QQP', 'RTE', 'SST-2', 
 CONF_INTERVAL = 0.001 # Corresponds to 0.1% accuracy for 95% confidence interval
 OVERLAP_THRESHOLD = 0.9 # Corresponds to the minimum overlap for model to be considered
 
-DEBUG = True
+DEBUG = False
 
 
 def worker(worker_id: int, 
@@ -70,10 +70,11 @@ def worker(worker_id: int,
         --task_name {task} \
         --do_train \
         --do_eval \
+        --save_total_limit 2 \
         --max_seq_length 128 \
-        --per_gpu_train_batch_size 32 \
+        --per_gpu_train_batch_size 64 \
         --learning_rate 2e-5 \
-        --num_train_epochs 3.0 \
+        --num_train_epochs 5 \
         --overwrite_output_dir \
         --output_dir {models_dir}{task}/{model_hash}/'
 
