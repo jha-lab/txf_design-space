@@ -71,13 +71,13 @@ else
 	return 1
 fi
 
-job_file="job_surrogate_model_${numTasks}.slurm"
+job_file="job_surrogate_model_${task}.slurm"
 surrogate_model_file="../dataset/surrogate_models/gp_${task}.pkl"
 
 cd ..
 
 # Load GLUE dataset using the internet
-python load_glue_datset.py --task $task
+python load_glue_dataset.py --task $task
 
 cd job_scripts/
 
