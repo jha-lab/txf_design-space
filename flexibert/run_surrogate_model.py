@@ -40,13 +40,20 @@ OVERLAP_THRESHOLD = 0.9 # Corresponds to the minimum overlap for model to be con
 DEBUG = True
 
 
-def worker(worker_id: int, shared_accuracies: list, model_idx: int, model_hash: str, task: str, models_dir: str):
+def worker(worker_id: int, 
+    shared_accuracies: list, 
+    model_idx: int, 
+    from_neighbor: bool, 
+    model_hash: str, 
+    task: str, 
+    models_dir: str):
     """Worker to fine-tune the given model
     
     Args:
         worker_id (int): wroker index in the node, should be from 0 to n_jobs
         shared_accuracies (list): shared accuracies for all workers
         model_idx (int): index for the model in shared_accuracies
+        from_neighbor (bool): True if model was loaded from a fine-tuned neighbor
         model_hash (str): hash of the given model
         task (str): name of the GLUE task for fine-tuning the model on; should
             be in GLUE_TASKS
@@ -55,8 +62,11 @@ def worker(worker_id: int, shared_accuracies: list, model_idx: int, model_hash: 
     # Forcing to train on single GPU
     os.environ["CUDA_VISIBLE_DEVICES"] = str(worker_id)
 
+    model_name_or_path = f'{models_dir}pretrained/{model_hash}' if not from_neighbor \
+        else f'{models_dir}{task}/{model_hash}/' 
+
     # Initialize training arguments for fine-tuning
-    training_args = f'--model_name_or_path {models_dir}pretrained/{model_hash}/ \
+    training_args = f'--model_name_or_path {model_name_or_path} \
         --task_name {task} \
         --do_train \
         --do_eval \
@@ -125,6 +135,9 @@ def main():
     # Instantiate GraphLib object
     graphLib = GraphLib.load_from_dataset(args.dataset_file)
 
+    # New dataset file
+    new_dataset_file = args.dataset_file.split('.json')[0] + f'_{args.task}.json'
+
     # First fine-tune all pre-trained models and initialize surrogate model
     pretrained_model_hashes = os.listdir(args.models_dir + 'pretrained/')
 
@@ -132,7 +145,8 @@ def main():
     manager = Manager()
     shared_accuracies = manager.list([None for _ in range(len(graphLib))])
     
-    if not DEBUG:
+    # If new dataset file exists, pretrained models have already been fine-tuned
+    if not os.path.exists(new_dataset_file):
         # Instantiate processes list
         procs = []
 
@@ -143,6 +157,7 @@ def main():
         	proc = Process(target=worker, args=(i, 
                                             shared_accuracies,
                                             model_idx,
+                                            False,
                                             pretrained_model_hashes[i],
                                             args.task,
                                             args.models_dir))
@@ -158,27 +173,36 @@ def main():
         	graphLib.library[i].accuracy[GLUE_TASKS_DATASET[GLUE_TASKS.index(args.task)]] = shared_accuracies[i]
 
         # Save new GraphLib object into dataset file
-        new_dataset_file = args.dataset_file.split('.json')[0] + f'_{args.task}.json'
         graphLib.save_dataset(new_dataset_file)
         print()
     
     # Load new GraphLib object from updated dataset
-    new_dataset_file = args.dataset_file.split('.json')[0] + f'_{args.task}.json'
     graphLib = GraphLib.load_from_dataset(new_dataset_file)
 
     # Re-load shared accuracies
     for i in range(len(graphLib)):
         shared_accuracies[i] = graphLib.library[i].accuracy[GLUE_TASKS_DATASET[GLUE_TASKS.index(args.task)]]
 
+    # If this code was interrupted during fine-tuning of models, the new surrogate model 
+    # should recover from trained accuracies of all currently fune-tuned models
+    finetuned_model_hashes = os.listdir(args.models_dir + f'{args.task}/')
+    for model_hash in finetuned_model_hashes:
+        graph, _ = graphLib.get_graph(model_hash=model_hash)
+
+        # Check if the accuracy of this model was not updated into the dataset, then this wasn't fine-tuned
+        if graph.accuracy[GLUE_TASKS_DATASET[GLUE_TASKS.index(args.task)]] is None:
+            finetuned_model_hashes.remove(model_hash)
+
+
     # Initialize the surrogate model with fine-tuned models
     surrogate_model = GP(n_restarts_optimizer=10, random_state=random_seed)
 
     # Get input and output for training surrogate model
     embedding_size = graphLib.library[0].embedding.shape[0]
-    X = np.zeros((len(pretrained_model_hashes), embedding_size))
-    y = np.zeros(len(pretrained_model_hashes))
-    for i in range(len(pretrained_model_hashes)):
-        graph, _ = graphLib.get_graph(model_hash=pretrained_model_hashes[i])
+    X = np.zeros((len(finetuned_model_hashes), embedding_size))
+    y = np.zeros(len(finetuned_model_hashes))
+    for i in range(len(finetuned_model_hashes)):
+        graph, _ = graphLib.get_graph(model_hash=finetuned_model_hashes[i])
         X[i, :] = graph.embedding
         y[i] = graph.accuracy[GLUE_TASKS_DATASET[GLUE_TASKS.index(args.task)]]
 
@@ -209,7 +233,8 @@ def main():
     # 4. Convergence condition: Once 1.96 * max(standard deviation) < 0.001 (i.e. 95% confidence 
     # 	interval is less than 0.1% accuracy).
     # # TODO: (extras) hyper-parameter tuning for every new model using ray-tune; reinforcement 
-    # 	learning for faster convergence; use better modeling technique than GP
+    # 	learning for faster convergence; use better modeling technique than GP; self-supervised
+    #   embeddings; model both aleatoric and epistemic uncertainty in surrogate model
     
     # Get all input points for the design space
     X_ds = np.zeros((len(graphLib), embedding_size))
@@ -229,7 +254,7 @@ def main():
         while worker_id_free is None:
             for worker_id in jobs:
                 if jobs[worker_id][1] is None or not jobs[worker_id][1].is_alive():
-                    # if jobs[worker_id][1] is not None: jobs[worker_id][1].join()
+                    if jobs[worker_id][1] is not None: jobs[worker_id][1].join()
                     worker_id_free = worker_id
                     jobs[worker_id] = (None, None)
             time.sleep(1)
@@ -239,9 +264,14 @@ def main():
             + f'{sum(acc is not None for acc in shared_accuracies)}')
         print()
 
-        # Update graphLib object with new accuraies
+        # Update GraphLib object with new accuraies
         for i in range(len(shared_accuracies)):
             graphLib.library[i].accuracy[GLUE_TASKS_DATASET[GLUE_TASKS.index(args.task)]] = shared_accuracies[i]
+
+        # Save new GraphLib object into dataset file
+        if not DEBUG:
+            graphLib.save_dataset(new_dataset_file)
+            print()
 
         # Update surrogate model
         trained_ids = [idx for idx, acc in enumerate(shared_accuracies) if acc is not None]
@@ -257,73 +287,74 @@ def main():
         # Get model indices for determining next queried architecture
         model_ids = np.argsort(std_ds)[::-1]
 
+        # Initialize train_model to False, if True, then the selected model will be trained
+        train_model = False
+
         # Get next model_idx to be queried for training
-        model_idx = -1
         for i in range(len(graphLib)):
             model_idx = model_ids[i]
 
-            print(f'Checking model index: {model_idx}')
+            # print(f'Checking model index: {model_idx}')
 
             # Check if this model is already in training
             if model_idx in [worker[0] for worker_id, worker in jobs.items()]:
+                # If model is already in training, go to next most uncertaint model
                 continue
 
-            # Check overlap with neighors
-            #overlap, trained = [], []
+            # Initialize the config for current model in consideration
+            model_config = BertConfig()
+            model_config.from_model_dict(graphLib.library[model_idx].model_dict)
 
-            is_test = False
+            # Initialize max_overlap to zero
             max_overlap = 0
+
+            # Initialize chosen neighor (hash) to ''
+            chosen_neighbor = ''
 
             for neighbor in graphLib.library[model_idx].neighbors:
                 neighbor_graph, neighbor_idx = graphLib.get_graph(model_hash=neighbor)
 
-                config = BertConfig()
-                config.from_model_dict(graphLib.library[model_idx].model_dict)
-                current_model = BertModelModular(config)
+                # Neighbor selected should be trained
+                if neighbor_idx not in trained_ids: continue 
 
-                config = BertConfig()
-                config.from_model_dict(neighbor_graph.model_dict)
-                neighbor_model = BertModelModular(config)
+                # Initialize current model
+                current_model = BertModelModular(model_config)
 
+                # Initialize neighbor model
+                neighbor_config = BertConfig()
+                neighbor_config.from_model_dict(neighbor_graph.model_dict)
+                neighbor_model = BertModelModular(neighbor_config)
+
+                # Get overlap from neighboring model
                 overlap = current_model.load_model_from_source(neighbor_model)
 
-                if overlap > OVERLAP_THRESHOLD and (neighbor_idx in trained_ids):
-
-                    is_test = True
-
+                if overlap >= OVERLAP_THRESHOLD:
+                    train_model = True
                     if overlap > max_overlap:
-                        
-
                         max_overlap = overlap
-                        #Save pretrained model of the current model after loading weights from finetuned model of the neighbor
-                        nbd_model = BertModelModular.from_pretrained(f'{args.models_dir}{args.task}/{neighbor}/')
-                        current_model.load_model_from_source(nbd_model)
-                        current_model.save_pretrained(f'{args.models_dir}pretrained/{graphLib.library[model_idx].hash}/')
+                        chosen_neighbor = neighbor
 
-
-            # Effective overlap is the overlap between the current model and its neighbor if
-            # the neighbor has been trained
-            #effective_overlap = [overlap[i] if trained[i] == True else 0 for i in range(len(overlap))]
-
-            # Test current model only if effective overlap with any one of the neighbors is greater
-            # than the overlap threshold
-            #test_model_idx = [True if ef_ov > OVERLAP_THRESHOLD else False for ef_ov in effective_overlap]
-
-
-
-            if not DEBUG:
-                if is_test:
-                    # Choose current model index
-                    break
-            else:
-                # Choose this model index as the next query regardless of overlap
+            # Choose current model index if it is selected for training
+            if train_model:
+                # Save pretrained model of the current model after loading weights from the
+                # fine-tuned model of the chosen neighbor
+                if not DEBUG:
+                    chosen_neighbor_model = BertModelModular.from_pretrained(
+                        f'{args.models_dir}{args.task}/{chosen_neighbor}/')
+                    current_model.load_model_from_source(chosen_neighbor_model)
+                    current_model.save_pretrained(
+                        f'{args.models_dir}{args.task}/{graphLib.library[model_idx].hash}/')
                 break
+            else:
+                # Look for the next most uncertaint model
+                continue           
 
-        if model_idx == -1:
+        # Check that atleast one model is selected for training
+        if not train_model:
             if 1.96 * np.amax(std_ds) > CONF_INTERVAL:
                 raise ValueError('No model found for next iteration even when convergence has not reached!')
             else:
-                print(f'{pu.bcolors.OKGREEN}Convergence criterion reached!{pu.bcolors.ENDC}')
+                # Convergence criterion reached
                 break
 
         print(f'{pu.bcolors.OKBLUE}Training model:{pu.bcolors.ENDC}\n{graphLib.library[model_idx]}')
@@ -332,6 +363,7 @@ def main():
         proc = Process(target=worker, args=(worker_id_free, 
                                         shared_accuracies,
                                         model_idx,
+                                        True,
                                         graphLib.library[model_idx].hash,
                                         args.task,
                                         args.models_dir))
