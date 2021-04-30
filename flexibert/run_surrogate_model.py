@@ -44,27 +44,46 @@ DEBUG = False
 def worker(worker_id: int, 
     shared_accuracies: list, 
     model_idx: int, 
-    from_neighbor: bool, 
-    model_hash: str, 
+    model_dict: dict,
+    model_hash: str,
     task: str, 
-    models_dir: str):
+    models_dir: str,
+    chosen_neighbor_hash: str = None):
     """Worker to fine-tune the given model
     
     Args:
         worker_id (int): wroker index in the node, should be from 0 to n_jobs
         shared_accuracies (list): shared accuracies for all workers
         model_idx (int): index for the model in shared_accuracies
-        from_neighbor (bool): True if model was loaded from a fine-tuned neighbor
+        model_dict (dict): model dictionary
         model_hash (str): hash of the given model
         task (str): name of the GLUE task for fine-tuning the model on; should
             be in GLUE_TASKS
         models_dir (str): path to "models" directory containing "pretrained" sub-directory
+        chosen_neighbor_hash (str, optional): hash of the chosen neighbor
     """
     # Forcing to train on single GPU
     os.environ["CUDA_VISIBLE_DEVICES"] = str(worker_id)
 
-    model_name_or_path = f'{models_dir}pretrained/{model_hash}' if not from_neighbor \
-        else f'{models_dir}{task}/{model_hash}/' 
+    print(os.getpid(),"working")
+
+    if chosen_neighbor_hash is not None:
+        # Load weights of current model using the fine-tuned neighbor that was chosen
+        model_config = BertConfig()
+        model_config.from_model_dict(model_dict)
+        chosen_neighbor_model = BertModelModular.from_pretrained(
+            f'{models_dir}{task}/{chosen_neighbor_hash}/')
+        current_model = BertModelModular(model_config)
+        current_model.load_model_from_source(chosen_neighbor_model)
+        current_model.save_pretrained(
+            f'{models_dir}{task}/{model_hash}/')
+
+        # Initialize the variable model_name_or_path
+        model_name_or_path = f'{models_dir}{task}/{model_hash}/' 
+    else:
+        model_name_or_path = f'{models_dir}pretrained/{model_hash}'
+
+    print('current model saved')
 
     # Initialize training arguments for fine-tuning
     training_args = f'--model_name_or_path {model_name_or_path} \
@@ -155,14 +174,15 @@ def main():
         # Fine-tune four pretrained models in the design space
         print(f'{pu.bcolors.OKBLUE}Fine-tuning four pretrained models in the design space{pu.bcolors.ENDC}')
         for i in range(len(pretrained_model_hashes)):
-            _, model_idx = graphLib.get_graph(model_hash=pretrained_model_hashes[i])
+            model_graph, model_idx = graphLib.get_graph(model_hash=pretrained_model_hashes[i])
             proc = Process(target=worker, args=(i, 
-                                            shared_accuracies,
-                                            model_idx,
-                                            False,
-                                            pretrained_model_hashes[i],
-                                            args.task,
-                                            args.models_dir))
+                                shared_accuracies, 
+                                model_idx, 
+                                model_graph.model_dict,
+                                model_graph.hash,
+                                args.task, 
+                                args.models_dir,
+                                None))
             procs.append(proc)
             proc.start()
 
@@ -248,8 +268,8 @@ def main():
 
     # Create a dictionary of workers, every worker points to a tuple of model
     # index and process pointer
-    jobs = {0: (None, None), 1: (None, None), 2: (None, None), 3: (None, None)} 
-    # jobs = {0: (None, None)}
+    # jobs = {0: (None, None), 1: (None, None), 2: (None, None), 3: (None, None)} 
+    jobs = {0: (None, None)}
 
     while 1.96 * np.amax(std_ds) > CONF_INTERVAL:
         # Wait till a worker is free
@@ -337,18 +357,8 @@ def main():
                         max_overlap = overlap
                         chosen_neighbor = neighbor
 
-            # Choose current model index if it is selected for training
             if train_model:
-                # Save pretrained model of the current model after loading weights from the
-                # fine-tuned model of the chosen neighbor
-                if not DEBUG:
-                    chosen_neighbor_model = BertModelModular.from_pretrained(
-                        f'{args.models_dir}{args.task}/{chosen_neighbor}/')
-
-                    current_model = BertModelModular(model_config)
-                    current_model.load_model_from_source(chosen_neighbor_model)
-                    current_model.save_pretrained(
-                        f'{args.models_dir}{args.task}/{graphLib.library[model_idx].hash}/')
+                # Choose current model index if it is selected for training
                 break
             else:
                 # Look for the next most uncertain model
@@ -367,12 +377,13 @@ def main():
 
         # worker(worker_id_free, shared_accuracies, model_idx, True, graphLib.library[model_idx].hash, args.task, args.models_dir)
         proc = Process(target=worker, args=(worker_id_free, 
-                                        shared_accuracies,
-                                        model_idx,
-                                        True,
-                                        graphLib.library[model_idx].hash,
-                                        args.task,
-                                        args.models_dir))
+                                shared_accuracies, 
+                                model_idx, 
+                                graphLib.library[model_idx].model_dict,
+                                graphLib.library[model_idx].hash,
+                                args.task, 
+                                args.models_dir,
+                                chosen_neighbor))
         proc.daemon = True
         jobs[worker_id_free] = (model_idx, proc)
         proc.start()
