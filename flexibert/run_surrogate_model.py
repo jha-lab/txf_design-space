@@ -10,7 +10,7 @@ sys.path.append('../transformers/src/')
 sys.path.append('../embeddings/')
 
 import logging
-logging.disable(logging.INFO)
+# logging.disable(logging.INFO)
 
 import argparse
 from multiprocessing import Process, Manager
@@ -19,6 +19,7 @@ import numpy as np
 import pickle
 import time
 import random
+import pdb
 
 import torch
 from transformers import  BertConfig
@@ -72,7 +73,7 @@ def worker(worker_id: int,
         --do_eval \
         --save_total_limit 2 \
         --max_seq_length 128 \
-        --per_gpu_train_batch_size 64 \
+        --per_device_train_batch_size 64 \
         --learning_rate 2e-5 \
         --num_train_epochs 5 \
         --overwrite_output_dir \
@@ -154,16 +155,16 @@ def main():
         # Fine-tune four pretrained models in the design space
         print(f'{pu.bcolors.OKBLUE}Fine-tuning four pretrained models in the design space{pu.bcolors.ENDC}')
         for i in range(len(pretrained_model_hashes)):
-        	_, model_idx = graphLib.get_graph(model_hash=pretrained_model_hashes[i])
-        	proc = Process(target=worker, args=(i, 
+            _, model_idx = graphLib.get_graph(model_hash=pretrained_model_hashes[i])
+            proc = Process(target=worker, args=(i, 
                                             shared_accuracies,
                                             model_idx,
                                             False,
                                             pretrained_model_hashes[i],
                                             args.task,
                                             args.models_dir))
-        	procs.append(proc)
-        	proc.start()
+            procs.append(proc)
+            proc.start()
 
         # Join finished processes
         for proc in procs:
@@ -186,14 +187,14 @@ def main():
 
     # If this code was interrupted during fine-tuning of models, the new surrogate model 
     # should recover from trained accuracies of all currently fune-tuned models
-    finetuned_model_hashes = os.listdir(args.models_dir + f'{args.task}/')
-    for model_hash in finetuned_model_hashes:
+    finetuned_model_hashes_old = os.listdir(args.models_dir + f'{args.task}/')
+    finetuned_model_hashes = []
+    for model_hash in finetuned_model_hashes_old:
         graph, _ = graphLib.get_graph(model_hash=model_hash)
 
         # Check if the accuracy of this model was not updated into the dataset, then this wasn't fine-tuned
-        if graph.accuracy[GLUE_TASKS_DATASET[GLUE_TASKS.index(args.task)]] is None:
-            finetuned_model_hashes.remove(model_hash)
-
+        if graph.accuracy[GLUE_TASKS_DATASET[GLUE_TASKS.index(args.task)]] is not None:
+            finetuned_model_hashes.append(model_hash)
 
     # Initialize the surrogate model with fine-tuned models
     surrogate_model = GP(n_restarts_optimizer=10, random_state=random_seed)
@@ -248,6 +249,7 @@ def main():
     # Create a dictionary of workers, every worker points to a tuple of model
     # index and process pointer
     jobs = {0: (None, None), 1: (None, None), 2: (None, None), 3: (None, None)} 
+    # jobs = {0: (None, None)}
 
     while 1.96 * np.amax(std_ds) > CONF_INTERVAL:
         # Wait till a worker is free
@@ -342,12 +344,14 @@ def main():
                 if not DEBUG:
                     chosen_neighbor_model = BertModelModular.from_pretrained(
                         f'{args.models_dir}{args.task}/{chosen_neighbor}/')
+
+                    current_model = BertModelModular(model_config)
                     current_model.load_model_from_source(chosen_neighbor_model)
                     current_model.save_pretrained(
                         f'{args.models_dir}{args.task}/{graphLib.library[model_idx].hash}/')
                 break
             else:
-                # Look for the next most uncertaint model
+                # Look for the next most uncertain model
                 continue           
 
         # Check that atleast one model is selected for training
@@ -361,6 +365,7 @@ def main():
         print(f'{pu.bcolors.OKBLUE}Training model:{pu.bcolors.ENDC}\n{graphLib.library[model_idx]}')
         print()
 
+        # worker(worker_id_free, shared_accuracies, model_idx, True, graphLib.library[model_idx].hash, args.task, args.models_dir)
         proc = Process(target=worker, args=(worker_id_free, 
                                         shared_accuracies,
                                         model_idx,
@@ -368,6 +373,7 @@ def main():
                                         graphLib.library[model_idx].hash,
                                         args.task,
                                         args.models_dir))
+        proc.daemon = True
         jobs[worker_id_free] = (model_idx, proc)
         proc.start()
 
