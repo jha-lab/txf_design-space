@@ -10,9 +10,11 @@ sys.path.append('../transformers/src/')
 sys.path.append('../embeddings/')
 
 import logging
-# logging.disable(logging.INFO)
+logging.disable(logging.INFO)
+logging.disable(logging.WARNING)
 
 import argparse
+import multiprocessing as mp
 from multiprocessing import Process, Manager
 from sklearn.gaussian_process import GaussianProcessRegressor as GP
 import numpy as np
@@ -35,7 +37,7 @@ from utils import print_util as pu
 GLUE_TASKS = ['cola', 'mnli', 'mrpc', 'qnli', 'qqp', 'rte', 'sst2', 'stsb', 'wnli']
 GLUE_TASKS_DATASET = ['CoLA', 'MNLI-mm', 'MRPC', 'QNLI', 'QQP', 'RTE', 'SST-2', 'STS-B', 'WNLI']
 
-CONF_INTERVAL = 0.001 # Corresponds to 0.1% accuracy for 95% confidence interval
+CONF_INTERVAL = 0.005 # Corresponds to 0.5% accuracy for 95% confidence interval
 OVERLAP_THRESHOLD = 0.9 # Corresponds to the minimum overlap for model to be considered
 
 DEBUG = False
@@ -65,8 +67,6 @@ def worker(worker_id: int,
     # Forcing to train on single GPU
     os.environ["CUDA_VISIBLE_DEVICES"] = str(worker_id)
 
-    print(os.getpid(),"working")
-
     if chosen_neighbor_hash is not None:
         # Load weights of current model using the fine-tuned neighbor that was chosen
         model_config = BertConfig()
@@ -83,8 +83,6 @@ def worker(worker_id: int,
     else:
         model_name_or_path = f'{models_dir}pretrained/{model_hash}'
 
-    print('current model saved')
-
     # Initialize training arguments for fine-tuning
     training_args = f'--model_name_or_path {model_name_or_path} \
         --task_name {task} \
@@ -92,7 +90,7 @@ def worker(worker_id: int,
         --do_eval \
         --save_total_limit 2 \
         --max_seq_length 128 \
-        --per_device_train_batch_size 64 \
+        --per_device_train_batch_size 32 \
         --learning_rate 2e-5 \
         --num_train_epochs 5 \
         --overwrite_output_dir \
@@ -152,6 +150,9 @@ def main():
     random_seed = 1
 
     assert args.task in GLUE_TASKS, f'GLUE task should be in: {GLUE_TASKS}'
+
+    # Set overlap threshold
+    current_overlap_threshold = OVERLAP_THRESHOLD
 
     # Instantiate GraphLib object
     graphLib = GraphLib.load_from_dataset(args.dataset_file)
@@ -268,8 +269,8 @@ def main():
 
     # Create a dictionary of workers, every worker points to a tuple of model
     # index and process pointer
-    # jobs = {0: (None, None), 1: (None, None), 2: (None, None), 3: (None, None)} 
-    jobs = {0: (None, None)}
+    jobs = {0: (None, None), 1: (None, None), 2: (None, None), 3: (None, None)} 
+    # jobs = {0: (None, None)}
 
     while 1.96 * np.amax(std_ds) > CONF_INTERVAL:
         # Wait till a worker is free
@@ -351,7 +352,7 @@ def main():
                 # Get overlap from neighboring model
                 overlap = current_model.load_model_from_source(neighbor_model)
 
-                if overlap >= OVERLAP_THRESHOLD:
+                if overlap >= current_overlap_threshold:
                     train_model = True
                     if overlap > max_overlap:
                         max_overlap = overlap
@@ -367,15 +368,51 @@ def main():
         # Check that atleast one model is selected for training
         if not train_model:
             if 1.96 * np.amax(std_ds) > CONF_INTERVAL:
+                if not DEBUG:
+                    # Save the fitted model
+                    if not os.path.exists('../dataset/surrogate_models/'):
+                        os.mkdir('../dataset/surrogate_models/')
+                    with open(args.surrogate_model_file, 'wb') as surrogate_model_file:
+                        pickle.dump(surrogate_model, surrogate_model_file)
+                    print(f'{pu.bcolors.OKGREEN}Surrogate model saved to:{pu.bcolors.ENDC} {args.surrogate_model_file}')
+
                 raise ValueError('No model found for next iteration even when convergence has not reached!')
             else:
                 # Convergence criterion reached
                 break
 
+        if model_idx in trained_ids:
+            print(f'{pu.bcolors.WARNING}Selected model index already trained, reducing overlap constraint{pu.bcolors.ENDC}')
+            current_overlap_threshold -= 0.01
+            print(f'{pu.bcolors.WARNING}New overlap constraint:{pu.bcolors.ENDC} {current_overlap_threshold}')
+            continue
+
+        if current_overlap_threshold < 0: 
+            if not DEBUG:
+                # Save the fitted model
+                if not os.path.exists('../dataset/surrogate_models/'):
+                    os.mkdir('../dataset/surrogate_models/')
+                with open(args.surrogate_model_file, 'wb') as surrogate_model_file:
+                    pickle.dump(surrogate_model, surrogate_model_file)
+                print(f'{pu.bcolors.OKGREEN}Surrogate model saved to:{pu.bcolors.ENDC} {args.surrogate_model_file}')
+
+            raise ValueError('Overlap constraint reached below zero, even when convergence has not reached!')
+
+        print(f'{pu.bcolors.OKGREEN}Selected model index:{pu.bcolors.ENDC} {model_idx} with std: {std_ds[model_idx]}')
+        # print(f'{pu.bcolors.OKGREEN}Trained model indices:{pu.bcolors.ENDC} {trained_ids}')
+        # print(f'{pu.bcolors.OKGREEN}With accuracies:{pu.bcolors.ENDC} {np.array(shared_accuracies)[trained_ids]}')
+
         print(f'{pu.bcolors.OKBLUE}Training model:{pu.bcolors.ENDC}\n{graphLib.library[model_idx]}')
         print()
 
-        # worker(worker_id_free, shared_accuracies, model_idx, True, graphLib.library[model_idx].hash, args.task, args.models_dir)
+        # worker(worker_id_free, 
+        #     shared_accuracies, 
+        #     model_idx, 
+        #     graphLib.library[model_idx].model_dict,
+        #     graphLib.library[model_idx].hash,
+        #     args.task, 
+        #     args.models_dir,
+        #     chosen_neighbor)
         proc = Process(target=worker, args=(worker_id_free, 
                                 shared_accuracies, 
                                 model_idx, 
@@ -405,8 +442,6 @@ def main():
 
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn')
     main()
-
-
-
 
