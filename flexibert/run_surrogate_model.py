@@ -90,7 +90,7 @@ def worker(worker_id: int,
         --do_eval \
         --save_total_limit 2 \
         --max_seq_length 128 \
-        --per_device_train_batch_size 32 \
+        --per_device_train_batch_size 64 \
         --learning_rate 2e-5 \
         --num_train_epochs 5 \
         --overwrite_output_dir \
@@ -270,7 +270,9 @@ def main():
     # Create a dictionary of workers, every worker points to a tuple of model
     # index and process pointer
     jobs = {0: (None, None), 1: (None, None), 2: (None, None), 3: (None, None)} 
-    # jobs = {0: (None, None)}
+
+    # Count the number of times overlap contraint tended to values below zero
+    count_overlap_below_zero = 0
 
     while 1.96 * np.amax(std_ds) > CONF_INTERVAL:
         # Wait till a worker is free
@@ -354,7 +356,7 @@ def main():
 
                 if overlap >= current_overlap_threshold:
                     train_model = True
-                    if overlap > max_overlap:
+                    if overlap >= max_overlap:
                         max_overlap = overlap
                         chosen_neighbor = neighbor
 
@@ -384,23 +386,26 @@ def main():
         if model_idx in trained_ids:
             print(f'{pu.bcolors.WARNING}Selected model index already trained, reducing overlap constraint{pu.bcolors.ENDC}')
             current_overlap_threshold -= 0.01
+            if current_overlap_threshold < 0:
+            	current_overlap_threshold = 0
+            	print(f'{pu.bcolors.WARNING}Overlap constraint below zero! Use more neighbors in dataset file{pu.bcolors.ENDC}')
+
+            	count_overlap_below_zero += 1
+
+            	if count_overlap_below_zero > 1 and not DEBUG:
+	                # Save the fitted model
+	                if not os.path.exists('../dataset/surrogate_models/'):
+	                    os.mkdir('../dataset/surrogate_models/')
+	                with open(args.surrogate_model_file, 'wb') as surrogate_model_file:
+	                    pickle.dump(surrogate_model, surrogate_model_file)
+	                print(f'{pu.bcolors.OKGREEN}Surrogate model saved to:{pu.bcolors.ENDC} {args.surrogate_model_file}')
+
+	                raise ValueError('Overlap constraint tried to go below zero twice, even when convergence has not reached!')
+
             print(f'{pu.bcolors.WARNING}New overlap constraint:{pu.bcolors.ENDC} {current_overlap_threshold}')
             continue
 
-        if current_overlap_threshold < 0: 
-            if not DEBUG:
-                # Save the fitted model
-                if not os.path.exists('../dataset/surrogate_models/'):
-                    os.mkdir('../dataset/surrogate_models/')
-                with open(args.surrogate_model_file, 'wb') as surrogate_model_file:
-                    pickle.dump(surrogate_model, surrogate_model_file)
-                print(f'{pu.bcolors.OKGREEN}Surrogate model saved to:{pu.bcolors.ENDC} {args.surrogate_model_file}')
-
-            raise ValueError('Overlap constraint reached below zero, even when convergence has not reached!')
-
         print(f'{pu.bcolors.OKGREEN}Selected model index:{pu.bcolors.ENDC} {model_idx} with std: {std_ds[model_idx]}')
-        # print(f'{pu.bcolors.OKGREEN}Trained model indices:{pu.bcolors.ENDC} {trained_ids}')
-        # print(f'{pu.bcolors.OKGREEN}With accuracies:{pu.bcolors.ENDC} {np.array(shared_accuracies)[trained_ids]}')
 
         print(f'{pu.bcolors.OKBLUE}Training model:{pu.bcolors.ENDC}\n{graphLib.library[model_idx]}')
         print()
