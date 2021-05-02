@@ -317,104 +317,105 @@ def main():
         train_model = False
 
         # Check for points in the design space where the predictions are way off the current limits
-        if np.amax(y_ds) > max(shared_accuracies) + 5 * np.amax(std_ds):
-        	model_idx = int(np.argmax(y_ds))
+        if np.amax(y_ds) > np.amax(np.array(shared_accuracies)[trained_ids]) + 5 * np.amax(std_ds):
+        	model_ids = np.argsort(y_ds)[::-1]
         	print(f'{pu.bcolors.WARNING}Found point with predicted accuracy too high!{pu.bcolors.ENDC}')
-        elif np.amin(y_ds) < min(shared_accuracies) - 5 * np.amax(std_ds):
-        	model_idx = int(np.argmin(y_ds))
+        elif np.amin(y_ds) < np.amin(np.array(shared_accuracies)[trained_ids]) - 5 * np.amax(std_ds):
+        	model_ids = np.argsort(y_ds)
         	print(f'{pu.bcolors.WARNING}Found point with predicted accuracy too low!{pu.bcolors.ENDC}')
-        else:
-	        # Get next model_idx to be queried for training
-	        for i in range(len(graphLib)):
-	            model_idx = model_ids[i]
 
-	            # print(f'Checking model index: {model_idx}')
+        # Get next model_idx to be queried for training
+        for i in range(len(graphLib)):
+            model_idx = model_ids[i]
 
-	            # Check if this model is already in training
-	            if model_idx in [worker[0] for worker_id, worker in jobs.items()]:
-	                # If model is already in training, go to next most uncertaint model
-	                continue
+            # print(f'Checking model index: {model_idx}')
 
-	            # Initialize the config for current model in consideration
-	            model_config = BertConfig()
-	            model_config.from_model_dict(graphLib.library[model_idx].model_dict)
+            # Check if this model is already in training
+            if model_idx in [worker[0] for worker_id, worker in jobs.items()]:
+                # If model is already in training, go to next most uncertaint model
+                continue
 
-	            # Initialize max_overlap to zero
-	            max_overlap = 0
+            # Initialize the config for current model in consideration
+            model_config = BertConfig()
+            model_config.from_model_dict(graphLib.library[model_idx].model_dict)
 
-	            # Initialize chosen neighor (hash) to ''
-	            chosen_neighbor = ''
+            # Initialize max_overlap to zero
+            max_overlap = 0
 
-	            for neighbor in graphLib.library[model_idx].neighbors:
-	                neighbor_graph, neighbor_idx = graphLib.get_graph(model_hash=neighbor)
+            # Initialize chosen neighor (hash) to ''
+            chosen_neighbor = ''
 
-	                # Neighbor selected should be trained
-	                if neighbor_idx not in trained_ids: continue 
+            for neighbor in graphLib.library[model_idx].neighbors:
+                neighbor_graph, neighbor_idx = graphLib.get_graph(model_hash=neighbor)
 
-	                # Initialize current model
-	                current_model = BertModelModular(model_config)
+                # Neighbor selected should be trained
+                if neighbor_idx not in trained_ids: continue 
 
-	                # Initialize neighbor model
-	                neighbor_config = BertConfig()
-	                neighbor_config.from_model_dict(neighbor_graph.model_dict)
-	                neighbor_model = BertModelModular(neighbor_config)
+                # Initialize current model
+                current_model = BertModelModular(model_config)
 
-	                # Get overlap from neighboring model
-	                overlap = current_model.load_model_from_source(neighbor_model)
+                # Initialize neighbor model
+                neighbor_config = BertConfig()
+                neighbor_config.from_model_dict(neighbor_graph.model_dict)
+                neighbor_model = BertModelModular(neighbor_config)
 
-	                if overlap >= current_overlap_threshold:
-	                    train_model = True
-	                    if overlap >= max_overlap:
-	                        max_overlap = overlap
-	                        chosen_neighbor = neighbor
+                # Get overlap from neighboring model
+                overlap = current_model.load_model_from_source(neighbor_model)
 
-	            if train_model:
-	                # Choose current model index if it is selected for training
-	                break
-	            else:
-	                # Look for the next most uncertain model
-	                continue
+                if overlap >= current_overlap_threshold:
+                    train_model = True
+                    if overlap >= max_overlap:
+                        max_overlap = overlap
+                        chosen_neighbor = neighbor
 
-	        # Check that atleast one model is selected for training
-	        if not train_model:
-	            if 1.96 * np.amax(std_ds) > CONF_INTERVAL:
-	                if not DEBUG:
-	                    # Save the fitted model
-	                    if not os.path.exists('../dataset/surrogate_models/'):
-	                        os.mkdir('../dataset/surrogate_models/')
-	                    with open(args.surrogate_model_file, 'wb') as surrogate_model_file:
-	                        pickle.dump(surrogate_model, surrogate_model_file)
-	                    print(f'{pu.bcolors.OKGREEN}Surrogate model saved to:{pu.bcolors.ENDC} {args.surrogate_model_file}')
+            if train_model:
+                # Choose current model index if it is selected for training
+                break
+            else:
+                # Look for the next most uncertain model
+                continue
 
-	                raise ValueError('No model found for next iteration even when convergence has not reached!')
-	            else:
-	                # Convergence criterion reached
-	                break
+        # Check that atleast one model is selected for training
+        if not train_model:
+            if 1.96 * np.amax(std_ds) > CONF_INTERVAL:
+                if not DEBUG:
+                    # Save the fitted model
+                    if not os.path.exists('../dataset/surrogate_models/'):
+                        os.mkdir('../dataset/surrogate_models/')
+                    with open(args.surrogate_model_file, 'wb') as surrogate_model_file:
+                        pickle.dump(surrogate_model, surrogate_model_file)
+                    print(f'{pu.bcolors.OKGREEN}Surrogate model saved to:{pu.bcolors.ENDC} {args.surrogate_model_file}')
 
-	        if model_idx in trained_ids:
-	            print(f'{pu.bcolors.WARNING}Selected model index already trained, reducing overlap constraint{pu.bcolors.ENDC}')
-	            current_overlap_threshold -= 0.01
-	            
-	            if current_overlap_threshold < 0:
-	            	current_overlap_threshold = 0
-	            	print(f'{pu.bcolors.WARNING}Overlap constraint below zero! Use more neighbors in dataset file{pu.bcolors.ENDC}')
+                raise ValueError('No model found for next iteration even when convergence has not reached!')
+            else:
+                # Convergence criterion reached
+                break
 
-	            	count_overlap_below_zero += 1
+        if model_idx in trained_ids:
+            print(f'{pu.bcolors.WARNING}Selected model index already trained, reducing overlap constraint{pu.bcolors.ENDC}')
+            current_overlap_threshold -= 0.01
+            
+            if current_overlap_threshold < 0:
+            	current_overlap_threshold = 0
+            	print(f'{pu.bcolors.WARNING}Overlap constraint below zero! Use more neighbors in dataset file{pu.bcolors.ENDC}')
 
-	            	if count_overlap_below_zero > 1 and not DEBUG:
-		                # Save the fitted model
-		                if not os.path.exists('../dataset/surrogate_models/'):
-		                    os.mkdir('../dataset/surrogate_models/')
-		                with open(args.surrogate_model_file, 'wb') as surrogate_model_file:
-		                    pickle.dump(surrogate_model, surrogate_model_file)
-		                print(f'{pu.bcolors.OKGREEN}Surrogate model saved to:{pu.bcolors.ENDC} {args.surrogate_model_file}')
+            	count_overlap_below_zero += 1
 
-		                raise ValueError('Overlap constraint tried to go below zero twice, even when convergence has not reached!')
+            	if count_overlap_below_zero > 1 and not DEBUG:
+	                # Save the fitted model
+	                if not os.path.exists('../dataset/surrogate_models/'):
+	                    os.mkdir('../dataset/surrogate_models/')
+	                with open(args.surrogate_model_file, 'wb') as surrogate_model_file:
+	                    pickle.dump(surrogate_model, surrogate_model_file)
+	                print(f'{pu.bcolors.OKGREEN}Surrogate model saved to:{pu.bcolors.ENDC} {args.surrogate_model_file}')
 
-	            print(f'{pu.bcolors.WARNING}New overlap constraint:{pu.bcolors.ENDC} {current_overlap_threshold}')
-	            continue
+	                print(f'{pu.bcolors.WARNING}Overlap constraint going below zero again, even when convergence has not reached!{pu.bcolors.ENDC}')
 
-        print(f'{pu.bcolors.OKGREEN}Selected model index:{pu.bcolors.ENDC} {model_idx} with std: {std_ds[model_idx]}')
+            print(f'{pu.bcolors.WARNING}New overlap constraint:{pu.bcolors.ENDC} {current_overlap_threshold}')
+            continue
+
+        print(f'{pu.bcolors.OKGREEN}Selected model index:{pu.bcolors.ENDC} {model_idx}')
+        print(f'\t\twith standard deviation: {std_ds[model_idx]}\n\t\tand predicted accuracy: {y_ds[model_idx]}\n')
 
         print(f'{pu.bcolors.OKBLUE}Training model:{pu.bcolors.ENDC}\n{graphLib.library[model_idx]}')
         print()
