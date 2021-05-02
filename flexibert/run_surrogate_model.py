@@ -409,7 +409,7 @@ def main():
 	                    pickle.dump(surrogate_model, surrogate_model_file)
 	                print(f'{pu.bcolors.OKGREEN}Surrogate model saved to:{pu.bcolors.ENDC} {args.surrogate_model_file}')
 
-	                raise ValueError('Overlap constraint tried to go below zero twice, even when convergence has not reached!')
+	                print(f'{pu.bcolors.WARNING}Overlap constraint going below zero again, even when convergence has not reached!{pu.bcolors.ENDC}')
 
             print(f'{pu.bcolors.WARNING}New overlap constraint:{pu.bcolors.ENDC} {current_overlap_threshold}')
             continue
