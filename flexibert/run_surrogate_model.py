@@ -345,11 +345,6 @@ def main():
             # Initialize chosen neighor (hash) to ''
             chosen_neighbor = ''
 
-            if current_overlap_threshold == 0:
-                train_model = True
-                chosen_neighbor = graphLib.library[model_idx].neighbors[0]
-                break
-
             for neighbor in graphLib.library[model_idx].neighbors:
                 neighbor_graph, neighbor_idx = graphLib.get_graph(model_hash=neighbor)
 
