@@ -150,27 +150,29 @@ class GraphLib(object):
 
         print(f'{pu.bcolors.OKGREEN}Embeddings generated, of size: {embedding_size}{pu.bcolors.ENDC}')
 
-    def build_naive_embeddings(self):
-    	"""Build the embeddings of all Graphs in GraphLib naively. Only one neighbor
+    def build_naive_embeddings(self, neighbors=10, compute_zscore=True):
+        """Build the embeddings of all Graphs in GraphLib naively. Only one neighbor
         is saved for each graph
-    	"""
-    	print('Building embeddings for the Graph library')
+        """
+        print('Building embeddings for the Graph library')
 
-    	# Create list of model dictionaries
-    	model_dict_list = [graph.model_dict for graph in self.library]
+        # Create list of model dictionaries
+        model_dict_list = [graph.model_dict for graph in self.library]
 
-    	# Generate naive embeddings
-    	embeddings = embedding_util.generate_naive_embeddings(model_dict_list, self.design_space)
+        # Generate naive embeddings
+        embeddings = embedding_util.generate_naive_embeddings(model_dict_list, self.design_space, compute_zscore=compute_zscore)
 
         # Get neighboring graph in the embedding space, for all Graphs
-    	neighbor_idx = embedding_util.get_neighbors(embeddings)
+        neighbor_idx = embedding_util.get_neighbors(embeddings, neighbors)
 
         # Update embeddings and neighbors of all Graphs in GraphLib
-    	for i in range(len(self)):
+        for i in range(len(self)):
             self.library[i].embedding = embeddings[i, :]
-            self.library[i].neighbor = self.library[int(neighbor_idx[i])].hash
+            self.library[i].neighbor = [self.library[int(neighbor_idx[i, n])].hash for n in range(neighbors)]
 
-    	print(f'{pu.bcolors.OKGREEN}Embeddings generated, of size: {embeddings.shape[1]}{pu.bcolors.ENDC}')
+        self.num_neighbors = neighbors
+
+        print(f'{pu.bcolors.OKGREEN}Embeddings generated, of size: {embeddings.shape[1]}{pu.bcolors.ENDC}')
 
     def get_graph(self, model_hash=None, model_dict=None) -> 'Graph':
         """Return a Graph object in the library from hash

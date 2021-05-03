@@ -34,13 +34,14 @@ def generate_embeddings(dissimilarity_matrix, embedding_size: int, n_init=4, max
     return embeddings
 
 
-def generate_naive_embeddings(model_dict_list: list, design_space: dict):
+def generate_naive_embeddings(model_dict_list: list, design_space: dict, compute_zscore=True):
     """Generate embeddings by flattening the model dictionary
     
     Args:
         model_dict_list (list): list of model dictionaries
         design_space (dict): the design space dictionary containing span
             of all the hyper-parameters, extracted from the yaml file
+        compute_zscore (bool, optional): to compute the zscore or not
     
     Returns:
         embeddings (np.ndarray): ndarray of embeddings of shape (len(model_dict_list), embedding_size)
@@ -70,7 +71,10 @@ def generate_naive_embeddings(model_dict_list: list, design_space: dict):
                     val = sim_dict[model_dict_list[i]['s'][j]] 
                 embeddings[i][1 + 4*k + j] = val
 
-    return zscore(embeddings, axis=1)
+    if compute_zscore:
+        return zscore(embeddings, axis=1)
+    else:
+        return embeddings
 
 def get_neighbors(embeddings, n: int):
     """Get neighbor indices for all graphs from embeddings
