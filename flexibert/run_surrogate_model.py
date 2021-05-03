@@ -273,8 +273,10 @@ def main():
 
     # Count the number of times overlap contraint tended to values below zero
     count_overlap_below_zero = 0
+    hashes = [graph.hash for graph in graphLib.library]
+    beyond_std = True
 
-    while 1.96 * np.amax(std_ds) > CONF_INTERVAL:
+    while 1.96 * np.amax(std_ds) > CONF_INTERVAL or beyond_std:
         # Wait till a worker is free
         worker_id_free = None
         while worker_id_free is None:
@@ -317,11 +319,14 @@ def main():
         train_model = False
 
         # Check for points in the design space where the predictions are way off the current limits
+        beyond_std = False
         if np.amax(y_ds) > np.amax(np.array(shared_accuracies)[trained_ids]) + 5 * np.amax(std_ds):
         	model_ids = np.argsort(y_ds)[::-1]
+        	beyond_std = True
         	print(f'{pu.bcolors.WARNING}Found point with predicted accuracy too high!{pu.bcolors.ENDC}')
         elif np.amin(y_ds) < np.amin(np.array(shared_accuracies)[trained_ids]) - 5 * np.amax(std_ds):
         	model_ids = np.argsort(y_ds)
+        	beyon_std = True
         	print(f'{pu.bcolors.WARNING}Found point with predicted accuracy too low!{pu.bcolors.ENDC}')
 
         # Get next model_idx to be queried for training
@@ -345,7 +350,13 @@ def main():
             # Initialize chosen neighor (hash) to ''
             chosen_neighbor = ''
 
-            for neighbor in graphLib.library[model_idx].neighbors:
+            # Generate list of hashes to search
+            if current_overlap_threshold < 0.5:
+            	model_hashes = [hashes[i] for i in range(len(hashes)) if i != model_idx]
+            else:
+            	model_hashes = graphLib.library[model_idx].neighbors
+
+            for neighbor in model_hashes:
                 neighbor_graph, neighbor_idx = graphLib.get_graph(model_hash=neighbor)
 
                 # Neighbor selected should be trained
@@ -445,6 +456,9 @@ def main():
 
     print(f'{pu.bcolors.OKGREEN}Convergence criterion reached!{pu.bcolors.ENDC}')
     print()
+
+    for worker_id in jobs:
+    	if jobs[worker_id][1] is not None: jobs[worker_id][1].join()
 
     if not DEBUG:
         # Save the fitted model
