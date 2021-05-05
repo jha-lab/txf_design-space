@@ -4,7 +4,7 @@
 
 import yaml
 import numpy as np
-from itertools import combinations_with_replacement
+import itertools
 from tqdm.contrib.itertools import product
 from utils import graph_util, embedding_util, print_util as pu
 import json
@@ -82,22 +82,30 @@ class GraphLib(object):
         return f'{pu.bcolors.HEADER}Graph Library with design space:{pu.bcolors.ENDC}\n{self.design_space}' \
             + f'\n{pu.bcolors.HEADER}Number of graphs:{pu.bcolors.ENDC} {len(self.library)}'
 
-    def build_library(self, check_isomorphism=False):
+    def build_library(self, check_isomorphism=False, increasing=True):
         """Build the GraphLib library
         
         Args:
             check_isomorphism (bool, optional): if True, isomorphism is checked 
                 for every graph. Default is False, to save compute time.
-        
-        Raises:
+            increasing (bool, optional): if True, only increasing sizes are considered 
+				through the network.
+        	
+        No Longer Raises:
             AssertionError: if two graphs are found with the same hash. Only if check_isomorphism is True
         """
         print('Creating Graph library')
         for layers in self.design_space['encoder_layers']:
-            possible_a = list(combinations_with_replacement(self.design_space['attention_heads'], layers))
-            possible_h = list(combinations_with_replacement(self.design_space['hidden_size'], layers))
-            possible_s = list(combinations_with_replacement(self.design_space['similarity_metric'], layers))
-            possible_f = list(combinations_with_replacement(self.design_space['feed-forward_hidden'], layers))
+        	if increasing:
+        		possible_a = list(itertools.combinations_with_replacement(self.design_space['attention_heads'], repeat=layers))
+	            possible_h = list(itertools.combinations_with_replacement(self.design_space['hidden_size'], repeat=layers))
+	            possible_s = list(itertools.combinations_with_replacement(self.design_space['similarity_metric'], repeat=layers))
+	            possible_f = list(itertools.combinations_with_replacement(self.design_space['feed-forward_hidden'], repeat=layers))
+	        else:
+	            possible_a = list(itertools.product(self.design_space['attention_heads'], repeat=layers))
+	            possible_h = list(itertools.product(self.design_space['hidden_size'], repeat=layers))
+	            possible_s = list(itertools.product(self.design_space['similarity_metric'], repeat=layers))
+	            possible_f = list(itertools.product(self.design_space['feed-forward_hidden'], repeat=layers))
             for a, h, s, f in product(possible_a, possible_h, possible_s, possible_f, \
                     desc=f'Generating transformers with {layers} encoder layers'):
                 model_dict = {'l': layers, 'a': list(a), 'h': list(h), 's': list(s), 'f': list(f)}
