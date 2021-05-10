@@ -89,23 +89,23 @@ class GraphLib(object):
             check_isomorphism (bool, optional): if True, isomorphism is checked 
                 for every graph. Default is False, to save compute time.
             increasing (bool, optional): if True, only increasing sizes are considered 
-				through the network.
-        	
+                through the network.
+            
         No Longer Raises:
             AssertionError: if two graphs are found with the same hash. Only if check_isomorphism is True
         """
         print('Creating Graph library')
         for layers in self.design_space['encoder_layers']:
-        	if increasing:
-        		possible_a = list(itertools.combinations_with_replacement(self.design_space['attention_heads'], repeat=layers))
-	            possible_h = list(itertools.combinations_with_replacement(self.design_space['hidden_size'], repeat=layers))
-	            possible_s = list(itertools.combinations_with_replacement(self.design_space['similarity_metric'], repeat=layers))
-	            possible_f = list(itertools.combinations_with_replacement(self.design_space['feed-forward_hidden'], repeat=layers))
-	        else:
-	            possible_a = list(itertools.product(self.design_space['attention_heads'], repeat=layers))
-	            possible_h = list(itertools.product(self.design_space['hidden_size'], repeat=layers))
-	            possible_s = list(itertools.product(self.design_space['similarity_metric'], repeat=layers))
-	            possible_f = list(itertools.product(self.design_space['feed-forward_hidden'], repeat=layers))
+            if increasing:
+                possible_a = list(itertools.combinations_with_replacement(self.design_space['attention_heads'], repeat=layers))
+                possible_h = list(itertools.combinations_with_replacement(self.design_space['hidden_size'], repeat=layers))
+                possible_s = list(itertools.combinations_with_replacement(self.design_space['similarity_metric'], repeat=layers))
+                possible_f = list(itertools.combinations_with_replacement(self.design_space['feed-forward_hidden'], repeat=layers))
+            else:
+                possible_a = list(itertools.product(self.design_space['attention_heads'], repeat=layers))
+                possible_h = list(itertools.product(self.design_space['hidden_size'], repeat=layers))
+                possible_s = list(itertools.product(self.design_space['similarity_metric'], repeat=layers))
+                possible_f = list(itertools.product(self.design_space['feed-forward_hidden'], repeat=layers))
             for a, h, s, f in product(possible_a, possible_h, possible_s, possible_f, \
                     desc=f'Generating transformers with {layers} encoder layers'):
                 model_dict = {'l': layers, 'a': list(a), 'h': list(h), 's': list(s), 'f': list(f)}
@@ -187,9 +187,9 @@ class GraphLib(object):
         
         Args:
             model_hash (str, optional): hash of the graph in
-            	the library
+                the library
             model_dict (dict, optional): model_dict of the graph to be
-            	loaded
+                loaded
         
         Returns:
             Graph object, model index
@@ -198,19 +198,19 @@ class GraphLib(object):
             ValueError: if neither model_hash nor model_dict are provided
         """
         if model_hash is not None:
-        	if type(model_hash) != str:
-        		raise ValueError('Dictionary provided for model_hash. Use keyword argument')
-        	hashes = [graph.hash for graph in self.library]
-        	model_idx = hashes.index(model_hash)
-        	return self.library[model_idx], model_idx
+            if type(model_hash) != str:
+                raise ValueError('Dictionary provided for model_hash. Use keyword argument')
+            hashes = [graph.hash for graph in self.library]
+            model_idx = hashes.index(model_hash)
+            return self.library[model_idx], model_idx
         elif model_dict is not None:
-        	if type(model_dict) != dict:
-        		raise ValueError('String provided for model_dict. Use keyword argument')
-        	model_dicts = [graph.model_dict for graph in self.library]
-        	model_idx = model_dicts.index(model_dict)
-        	return self.library[model_idx], model_idx
+            if type(model_dict) != dict:
+                raise ValueError('String provided for model_dict. Use keyword argument')
+            model_dicts = [graph.model_dict for graph in self.library]
+            model_idx = model_dicts.index(model_dict)
+            return self.library[model_idx], model_idx
         else:
-        	raise ValueError('Neither model_hash nor model_dict was provided')
+            raise ValueError('Neither model_hash nor model_dict was provided')
 
     def save_dataset(self, file_path: str):
         """Saves dataset of all transformers in the design space
