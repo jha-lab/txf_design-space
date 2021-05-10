@@ -23,7 +23,6 @@ This repository has been forked from [huggingface/transformers](https://github.c
 ```
 git clone https://github.com/shikhartuli/txf_design-space.git
 cd txf_design-space
-
 ```
 ### Setup python environment  
 
