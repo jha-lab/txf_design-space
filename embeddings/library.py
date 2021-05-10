@@ -97,10 +97,10 @@ class GraphLib(object):
         print('Creating Graph library')
         for layers in self.design_space['encoder_layers']:
             if increasing:
-                possible_a = list(itertools.combinations_with_replacement(self.design_space['attention_heads'], repeat=layers))
-                possible_h = list(itertools.combinations_with_replacement(self.design_space['hidden_size'], repeat=layers))
-                possible_s = list(itertools.combinations_with_replacement(self.design_space['similarity_metric'], repeat=layers))
-                possible_f = list(itertools.combinations_with_replacement(self.design_space['feed-forward_hidden'], repeat=layers))
+                possible_a = list(itertools.combinations_with_replacement(self.design_space['attention_heads'], layers))
+                possible_h = list(itertools.combinations_with_replacement(self.design_space['hidden_size'], layers))
+                possible_s = list(itertools.combinations_with_replacement(self.design_space['similarity_metric'], layers))
+                possible_f = list(itertools.combinations_with_replacement(self.design_space['feed-forward_hidden'], layers))
             else:
                 possible_a = list(itertools.product(self.design_space['attention_heads'], repeat=layers))
                 possible_h = list(itertools.product(self.design_space['hidden_size'], repeat=layers))
