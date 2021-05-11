@@ -74,7 +74,7 @@ print(graphLib.get_graph(model_dict))
 
 ## Replicating results
 
-To replicate the results in the submitted [report](https://github.com/shikhartuli/txf_design-space/blob/main/FlexiBERT.pdf), a surrogate model will have to be trained over the design space of Transformer architectures. This can be done by running the file: `flexibert/run_surrogate_model.py`.
+To replicate the results in the submitted report, a surrogate model will have to be trained over the design space of Transformer architectures. This can be done by running the file: `flexibert/run_surrogate_model.py`.
 
 *For more details, on usage of the surrogate modeling code, use:* `python run_surrogate_model.py --help`.
 
@@ -93,9 +93,9 @@ python run_surrogate_model.py --task sst2 --models_dir ../models/ --surrogate_mo
 
 This process has been automated as well. Once the dataset has been stored to `dataset/dataset_small.json` containing the Transformer `GraphLib` object, to run the surrogate modeling framework on a multi-GPU cluster node, use `flexibert/job_scripts/job_creator_script.sh`. Since the cluster nodes do not support internet connection, this script automatically downloads the given GLUE dataset before forwarding the slurm request.
 
-For more details on how to use this script, check: `source flexibert/job_scripts/job_creator_script.sh --help`. Currently, these scripts only support running on **Adroit/Tiger clusters** at Princeton University.
+*For more details on how to use this script, check:* `source flexibert/job_scripts/job_creator_script.sh --help`. 
 
-More information about these clusters and their usage can be found at the [Princeton Research Computing website](https://researchcomputing.princeton.edu/systems-and-services/available-systems).
+Currently, these scripts only support running on **Adroit/Tiger clusters** at Princeton University. More information about these clusters and their usage can be found at the [Princeton Research Computing website](https://researchcomputing.princeton.edu/systems-and-services/available-systems).
 
 ## Colab
 
