@@ -121,11 +121,15 @@ class GraphLib(object):
         print(f'{pu.bcolors.OKGREEN}Graph library created!{pu.bcolors.ENDC} ' \
             + f'\n{len(self.library)} graphs within the design space.')
 
-    def build_embeddings(self, embedding_size: int, kernel='WeisfeilerLehman', neighbors=10, n_jobs=8):
+    def build_embeddings(self, embedding_size: int, algo='MDS', kernel='WeisfeilerLehman', neighbors=10, n_jobs=8):
         """Build the embeddings of all Graphs in GraphLib using MDS
         
         Args:
             embedding_size (int): size of the embedding
+            algo (str): algorithm to use for generating embeddings. Can be any
+            	of the following:
+            		- 'MDS'
+            		- 'GD'
             kernel (str, optional): the kernel to be used for computing the dissimilarity 
                 matrix. Can be any of the following:
                     - 'WeisfeilerLehman'
@@ -143,8 +147,11 @@ class GraphLib(object):
         # Generate dissimilarity_matrix using the specified kernel
         diss_mat = graph_util.generate_dissimilarity_matrix(graph_list, kernel=kernel, n_jobs=n_jobs)
 
-        # Generate embeddings using MDS
-        embeddings = embedding_util.generate_embeddings(diss_mat, embedding_size=embedding_size, n_jobs=n_jobs)
+        # Generate embeddings using MDS or GD
+        if algo == 'MDS':
+        	embeddings = embedding_util.generate_mds_embeddings(diss_mat, embedding_size=embedding_size, n_jobs=n_jobs)
+        else:
+        	embeddings = embedding_util.generate_grad_embeddings(diss_mat, embedding_size=embedding_size, silent=True)
 
         # Get neighboring graph in the embedding space, for all Graphs
         neighbor_idx = embedding_util.get_neighbors(embeddings, neighbors)

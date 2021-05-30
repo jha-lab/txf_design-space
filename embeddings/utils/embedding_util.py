@@ -7,8 +7,14 @@ from sklearn.manifold import MDS
 from sklearn.metrics import pairwise_distances
 from scipy.stats import zscore
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
 
-def generate_embeddings(dissimilarity_matrix, embedding_size: int, n_init=4, max_iter=1000, n_jobs=8):
+
+def generate_mds_embeddings(dissimilarity_matrix, embedding_size: int, n_init=4, max_iter=1000, n_jobs=8):
     """Generate embeddings using Multi-Dimensional Scaling (SMACOF algorithm)
     
     Args:
@@ -30,6 +36,98 @@ def generate_embeddings(dissimilarity_matrix, embedding_size: int, n_init=4, max
 
     # Fit the embedding
     embeddings = embedding_func.fit_transform(dissimilarity_matrix)
+
+    return embeddings
+
+
+def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs = 5, silent: bool = False):
+    """Generate embeddings using Gradient Descent on GPU
+    
+    Args:
+        dissimilarity_matrix (np.ndarray): input dissimilarity matrix
+        embedding_size (int): size of the embedding
+        epochs (int): number of epochs
+        silent (bool, optional): whether to suppress output
+    
+    Returns:
+        embeddings (np.ndarray): ndarray of embeddings of shape (len(dissimilarity_matrix), embedding_size)
+    """
+    # Create the model which learns graph embeddings
+    class GraphEmbeddingModel(nn.Module):
+        def __init__(self, num_graphs, embedding_size):
+            super().__init__()
+            self.embeddings = nn.Embedding(num_graphs, embedding_size)
+
+        def forward(self, model_idx_pairs):
+            embeddings_first = self.embeddings(model_idx_pairs[:, 0])
+            embeddings_second = self.embeddings(model_idx_pairs[:, 1])
+            distances = F.pairwise_distance(embeddings_first, embeddings_second)
+            return distances
+
+    # Create distance dataset
+    class DistanceDataset(Dataset):
+        def __init__(self, distance_matrix):
+            super().__init__()
+            self.num_pairs = int(0.5 * len(distance_matrix) * (len(distance_matrix) - 1))
+            self.graph_pairs = torch.zeros([self.num_pairs, 2], dtype=torch.int64)
+            self.labels = torch.zeros(self.num_pairs)
+
+            count = 0
+            for i in range(len(distance_matrix)):
+                for j in range(i+1, len(distance_matrix)):
+                    self.graph_pairs[count, :] = torch.Tensor([i, j])
+                    self.labels[count] = distance_matrix[i, j]
+                    count += 1 
+
+        def __getitem__(self, pair_idx):
+            return {'graph_pairs': self.graph_pairs[pair_idx, :], 
+                    'labels': self.labels[pair_idx]}
+
+        def __len__(self):
+            return self.num_pairs
+
+    # Create dataloader
+    train_loader = DataLoader(DistanceDataset(dissimilarity_matrix), 
+        batch_size=1024, shuffle=True, pin_memory=True)
+
+    device = torch.device("cuda")
+
+    # Instantiate the model
+    model = GraphEmbeddingModel(len(dissimilarity_matrix), embedding_size)
+    model.to(device)
+    model.train()
+
+    # Instantiate the optimizer
+    optimizer = optim.Adam(model.parameters(), lr=0.002)
+
+    losses = []
+    report_interval = 100
+
+    # Run training
+    for epoch in range(epochs):
+        print(f'Epoch: {epoch}')
+
+        for i, data_batch in enumerate(train_loader):
+            graph_pairs = data_batch['graph_pairs'].to(device, non_blocking=True)
+            labels = data_batch['labels'].to(device, non_blocking=True)
+
+            optimizer.zero_grad()
+            logits = model(graph_pairs)
+            loss = F.mse_loss(logits, labels)
+            loss.backward()
+            optimizer.step()
+
+            losses.append(loss.item())
+
+            if not silent and i > 0 and i % report_interval == 0:
+                print(f'\t[{i: 6d}/{len(train_loader): 6d}] Loss: {np.mean(losses[-report_interval:]): 0.6f}')
+
+    embeddings = np.zeros((len(dissimilarity_matrix), embedding_size))
+
+    model.to("cpu")
+    with torch.no_grad():
+        for i in range(len(dissimilarity_matrix)):
+            embeddings[i, :] = model.embeddings.weight[i].numpy()
 
     return embeddings
 
