@@ -40,18 +40,22 @@ def generate_mds_embeddings(dissimilarity_matrix, embedding_size: int, n_init=4,
     return embeddings
 
 
-def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs = 5, silent: bool = False):
+def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs: int = 10, 
+		batch_size: int = 1024, silent: bool = False):
     """Generate embeddings using Gradient Descent on GPU
     
     Args:
         dissimilarity_matrix (np.ndarray): input dissimilarity matrix
         embedding_size (int): size of the embedding
-        epochs (int): number of epochs
+        epochs (int, optional): number of epochs
+        batch_size (int, optional): batch size for the number of pairs to consider
         silent (bool, optional): whether to suppress output
     
     Returns:
         embeddings (np.ndarray): ndarray of embeddings of shape (len(dissimilarity_matrix), embedding_size)
     """
+    torch.manual_seed(0)
+    
     # Create the model which learns graph embeddings
     class GraphEmbeddingModel(nn.Module):
         def __init__(self, num_graphs, embedding_size):
@@ -88,7 +92,7 @@ def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs =
 
     # Create dataloader
     train_loader = DataLoader(DistanceDataset(dissimilarity_matrix), 
-        batch_size=1024, shuffle=True, pin_memory=True)
+        batch_size=batch_size, shuffle=True, pin_memory=True)
 
     device = torch.device("cuda")
 
@@ -99,6 +103,9 @@ def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs =
 
     # Instantiate the optimizer
     optimizer = optim.Adam(model.parameters(), lr=0.002)
+
+    # Instantiate the scheduler
+    scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 10)
 
     losses = []
     report_interval = 100
@@ -116,6 +123,7 @@ def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs =
             loss = F.mse_loss(logits, labels)
             loss.backward()
             optimizer.step()
+            scheduler.step(epoch + i/len(train_loader))
 
             losses.append(loss.item())
 
