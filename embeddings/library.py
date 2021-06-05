@@ -135,6 +135,7 @@ class GraphLib(object):
                     - 'WeisfeilerLehman'
                     - 'NeighborhoodHash'
                     - 'RandomWalkLabeled'
+                    - 'GraphEditDistance'
                 The default value is 'WeisfeilerLehman'
             neighbors (int, optional): number of nearest neighbors to save for every graph
             n_jobs (int, optional): number of parrallel jobs for joblib

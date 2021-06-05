@@ -4,7 +4,13 @@
 
 import numpy as np
 import hashlib
+
 from grakel import Graph, WeisfeilerLehman, NeighborhoodHash, RandomWalkLabeled
+import networkx as nx
+import re
+from tqdm.notebook import tqdm
+
+SUPPORTED_KERNELS = ['WeisfeilerLehman', 'NeighborhoodHash', 'RandomWalkLabeled', 'GraphEditDistance']
 
 
 def model_dict_to_graph(model_dict, ops_list):
@@ -170,31 +176,88 @@ def hash_graph(matrix, ops, algo='md5'):
     return fingerprint
 
 
-def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', n_jobs=8):
+def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', ops_list:list = None, n_jobs=8):
     """Generate the dissimilarity matrix which is N x N, for N graphs 
     in the design space
     
     Args:
-        graph_list (list[tuple]): list of graphs, which are 
-        	tuples of adjacency matrix and ops
+        graph_list (list): list of graphs, which are 
+            tuples of adjacency matrix and ops
         kernel (str, optional): the kernel to be used for computing the dissimilarity matrix. The
-        	default value is 'WeisfeilerLehman'
+            default value is 'WeisfeilerLehman'
+        ops_list (list[str], optional): list of operations supported. Required when kernel = 'GraphEditDistance'
         n_jobs (int, optional): number of parrallel jobs for joblib
     
     Returns:
         dissimilarity_matrix (np.ndarray): dissimilarity matrix
     """
-    grakel_graph_list = []
-    for graph in graph_list:
-    	grakel_graph_list.append(Graph(graph[0], 
-    		node_labels={idx:op for idx, op in zip(range(len(graph[1])), graph[1])}))
 
-    # Instantiate kernel function based on choice of distance kernel
-    kernel_func = eval(f'{kernel}(n_jobs={n_jobs}, normalize=True)')
+    assert kernel in SUPPORTED_KERNELS, f'Kernel {kernel} is not supported yet. Use either of: {SUPPORTED_KERNELS}'
+    
+    if kernel in ['WeisfeilerLehman', 'NeighborhoodHash', 'RandomWalkLabeled']:
+        grakel_graph_list = []
+        for graph in graph_list:
+        	grakel_graph_list.append(Graph(graph[0], 
+        		node_labels={idx:op for idx, op in zip(range(len(graph[1])), graph[1])}))
 
-    # Generate similarity matrix based on kernel function
-    similarity_matrix = kernel_func.fit_transform(grakel_graph_list)
+        # Instantiate kernel function based on choice of distance kernel
+        kernel_func = eval(f'{kernel}(n_jobs={n_jobs}, normalize=True)')
 
-    dissimilarity_matrix = 1 - similarity_matrix
+        # Generate similarity matrix based on kernel function
+        similarity_matrix = kernel_func.fit_transform(grakel_graph_list)
+
+        dissimilarity_matrix = 1 - similarity_matrix
+
+    elif kernel == 'GraphEditDistance':
+        assert ops_list is not None, '"ops_list" is required when kernel = "GraphEditDistance"'
+
+        sorted_ops_list = ['input', 'output', 'add_norm']
+        att_sizes = set([int(re.search('h([0-9]+)', a).group(0)[1:]) for a in ops_list if a.startswith('a_')])
+        f_sizes = set([int(re.search('f([0-9]+)', f).group(0)[1:]) for f in ops_list if f.startswith('f')])
+
+        for f in f_sizes:
+            sorted_ops_list.append(f'f{f}')
+
+        for a in att_sizes:
+            sorted_ops_list.append(f'a_h{a}_s-sdp')
+            sorted_ops_list.append(f'a_h{a}_s-wma')
+
+        # TODO: add support for more basic operations
+
+        def node_subst_cost(node1, node2):
+            if node1['label'] == node2['label']:
+                return 0
+            else:
+                return abs(sorted_ops_list.index(node1['label']) - sorted_ops_list.index(node2['label']))
+            
+        def node_cost(node):
+            return sorted_ops_list.index(node['label'])
+
+        def edge_cost(edge):
+            return 0.1
+
+        nx_graph_list = []
+
+        for graph in graph_list:
+            nx_graph = nx.DiGraph(graph[0])
+            nx.set_node_attributes(nx_graph, {i:label for i, label in enumerate(graph[1])}, 'label')
+
+            nx_graph_list.append(nx_graph)
+
+        dissimilarity_matrix = np.zeros((len(graph_list), len(graph_list)))
+
+        # TODO: add support for parallel workers
+
+        for i in tqdm(range(len(graph_list)), desc='Generating dissimilarity matrix'):
+            for j in range(i + 1, len(graph_list)):
+                dissimilarity_matrix[i, j] = nx.graph_edit_distance(nx_graph_list[i], nx_graph_list[j],
+                                                                    node_subst_cost=node_subst_cost, 
+                                                                    node_del_cost=node_cost, 
+                                                                    node_ins_cost=node_cost, 
+                                                                    edge_del_cost=edge_cost,
+                                                                    edge_ins_cost=edge_cost,
+                                                                    timeout=10)
+
+        dissimilarity_matrix = dissimilarity_matrix + np.transpose(dissimilarity_matrix)
 
     return dissimilarity_matrix
