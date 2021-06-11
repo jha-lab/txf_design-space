@@ -17,9 +17,10 @@ architecture:
     - 128
   attention_heads:
     - 2
+    - 4
   encoder_layers:
-    - 1
     - 2
+    - 4
   feed-forward_hidden:
     - 2048
     - 4096

@@ -41,7 +41,7 @@ def generate_mds_embeddings(dissimilarity_matrix, embedding_size: int, n_init=4,
 
 
 def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs: int = 10, 
-		batch_size: int = 1024, silent: bool = False):
+		batch_size: int = 1024, n_jobs=8, silent: bool = False):
     """Generate embeddings using Gradient Descent on GPU
     
     Args:
@@ -49,6 +49,7 @@ def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs: 
         embedding_size (int): size of the embedding
         epochs (int, optional): number of epochs
         batch_size (int, optional): batch size for the number of pairs to consider
+        n_jobs (int, optional): number of parallel jobs	
         silent (bool, optional): whether to suppress output
     
     Returns:
@@ -92,7 +93,7 @@ def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs: 
 
     # Create dataloader
     train_loader = DataLoader(DistanceDataset(dissimilarity_matrix), 
-        batch_size=batch_size, shuffle=True, pin_memory=True)
+        batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=n_jobs)
 
     device = torch.device("cuda")
 

@@ -152,7 +152,7 @@ class GraphLib(object):
         if algo == 'MDS':
         	embeddings = embedding_util.generate_mds_embeddings(diss_mat, embedding_size=embedding_size, n_jobs=n_jobs)
         else:
-        	embeddings = embedding_util.generate_grad_embeddings(diss_mat, embedding_size=embedding_size, silent=True)
+        	embeddings = embedding_util.generate_grad_embeddings(diss_mat, embedding_size=embedding_size, n_jobs=n_jobs, silent=True)
 
         # Get neighboring graph in the embedding space, for all Graphs
         neighbor_idx = embedding_util.get_neighbors(embeddings, neighbors)
