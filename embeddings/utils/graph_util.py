@@ -8,7 +8,10 @@ import hashlib
 from grakel import Graph, WeisfeilerLehman, NeighborhoodHash, RandomWalkLabeled
 import networkx as nx
 import re
+
 from tqdm.notebook import tqdm
+from itertools import combinations
+from joblib import Parallel, delayed
 
 SUPPORTED_KERNELS = ['WeisfeilerLehman', 'NeighborhoodHash', 'RandomWalkLabeled', 'GraphEditDistance']
 
@@ -176,7 +179,7 @@ def hash_graph(matrix, ops, algo='md5'):
     return fingerprint
 
 
-def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', ops_list:list = None, n_jobs=8):
+def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', ops_list:list = None, n_jobs=8, approx=1):
     """Generate the dissimilarity matrix which is N x N, for N graphs 
     in the design space
     
@@ -185,8 +188,9 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
             tuples of adjacency matrix and ops
         kernel (str, optional): the kernel to be used for computing the dissimilarity matrix. The
             default value is 'WeisfeilerLehman'
-        ops_list (list[str], optional): list of operations supported. Required when kernel = 'GraphEditDistance'
+        ops_list (list, optional): list of operations supported. Required when kernel = 'GraphEditDistance'
         n_jobs (int, optional): number of parrallel jobs for joblib
+        approx (int, optional): number of approximations to be implemented. Used when kernel = 'GraphEditDistance'
     
     Returns:
         dissimilarity_matrix (np.ndarray): dissimilarity matrix
@@ -224,32 +228,30 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 
         # TODO: add support for more basic operations
 
-        def node_subst_cost(node1, node2):
-            if node1['label'] == node2['label']:
-                return 0
-            else:
-                return abs(sorted_ops_list.index(node1['label']) - sorted_ops_list.index(node2['label']))
-            
-        def node_cost(node):
-            return sorted_ops_list.index(node['label'])
-
-        def edge_cost(edge):
-            return 0.1
-
         nx_graph_list = []
 
         for graph in graph_list:
             nx_graph = nx.DiGraph(graph[0])
             nx.set_node_attributes(nx_graph, {i:label for i, label in enumerate(graph[1])}, 'label')
-
             nx_graph_list.append(nx_graph)
 
         dissimilarity_matrix = np.zeros((len(graph_list), len(graph_list)))
 
-        # TODO: add support for parallel workers
+        def get_ged(i, j, dissimilarity_matrix, nx_graph_list, sorted_ops_list, approx=approx):
 
-        for i in tqdm(range(len(graph_list)), desc='Generating dissimilarity matrix'):
-            for j in range(i + 1, len(graph_list)):
+            def node_subst_cost(node1, node2):
+                if node1['label'] == node2['label']:
+                    return 0
+                else:
+                    return abs(sorted_ops_list.index(node1['label']) - sorted_ops_list.index(node2['label']))
+                
+            def node_cost(node):
+                return sorted_ops_list.index(node['label'])
+
+            def edge_cost(edge):
+                return 0.1
+
+            if approx == 0:
                 dissimilarity_matrix[i, j] = nx.graph_edit_distance(nx_graph_list[i], nx_graph_list[j],
                                                                     node_subst_cost=node_subst_cost, 
                                                                     node_del_cost=node_cost, 
@@ -257,6 +259,24 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
                                                                     edge_del_cost=edge_cost,
                                                                     edge_ins_cost=edge_cost,
                                                                     timeout=10)
+            else:
+                count = 0
+                approx_dist = 0
+                for dist in nx.optimize_graph_edit_distance(nx_graph_list[i], nx_graph_list[j],
+                                                            node_subst_cost=node_subst_cost, 
+                                                            node_del_cost=node_cost, 
+                                                            node_ins_cost=node_cost, 
+                                                            edge_del_cost=edge_cost,
+                                                            edge_ins_cost=edge_cost):
+                    approx_dist = dist
+                    count += 1
+                    if count == approx: break
+
+                dissimilarity_matrix[i, j] = approx_dist
+
+        Parallel(n_jobs=n_jobs, prefer='threads', require='sharedmem')(
+            delayed(get_ged)(i, j, dissimilarity_matrix, nx_graph_list, sorted_ops_list) \
+                for i, j in tqdm(list(combinations(range(len(graph_list)), 2)), desc='Generating dissimilarity matrix'))
 
         dissimilarity_matrix = dissimilarity_matrix + np.transpose(dissimilarity_matrix)
 
