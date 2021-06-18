@@ -37,8 +37,10 @@ The model architectures are restricted in the following ranges for the respectiv
 - `dataset` in the GLUE benchmark tasks: [CoLA, SST-2, MRPC, STS-B, QQP, MNLI-mm, QNLI, RTE, WNLI]
 - `h`, the hidden size in: [128, **256**, 512]
 - `a`, the number of attention heads in: [2, **4**, 8]
+- `t`, the type of attention used in: [linear(l), **self attention (sa)**, dynamic convolution (c)]
 - `l`, the number of encoder layers in: [2, **4**, 6]
 - `f`, the inner-layer dimensionality of the feed-forward layer in: [512, **1024**, 2048, 4096]
+- `nff`, the number of feedforward stacks in [**1**, 2, 3]
 - `s`, the similarity metric in: [**scaled dot-product (sdp)**, weighted multiplicative attention (wma)]
 
 *The hyperparameter values in bold text correspond to the design choices in BERT-mini. Nine pre-trained models within this design space can be found at this repo:* [google-research/bert](https://github.com/google-research/bert).
