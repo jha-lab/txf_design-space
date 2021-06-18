@@ -67,6 +67,7 @@ conda activate txf_design-space
 git clone https://github.com/huggingface/transformers.git
 cd transformers
 pip install -e .
+pip install torch-dct
 
 # Add other packages and enabling extentions
 conda install -c conda-forge tqdm ipywidgets matplotlib

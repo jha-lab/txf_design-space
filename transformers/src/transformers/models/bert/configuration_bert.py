@@ -132,12 +132,19 @@ class BertConfig(PretrainedConfig):
         initializer_range=0.02,
         layer_norm_eps=1e-12,
         pad_token_id=0,
+        head_ratio=2,
+        conv_kernel_size=9,
+        num_groups=1,
         gradient_checkpointing=False,
         position_embedding_type="relative_key",
         use_cache=True,
         **kwargs
     ):
-        super().__init__(pad_token_id=pad_token_id, **kwargs)
+        super().__init__(pad_token_id=pad_token_id, 
+            is_encoder_decoder=is_encoder_decoder,
+            bos_token_id=bos_token_id,
+            eos_token_id=eos_token_id,
+            **kwargs)
 
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
@@ -154,14 +161,19 @@ class BertConfig(PretrainedConfig):
         self.gradient_checkpointing = gradient_checkpointing
         self.position_embedding_type = position_embedding_type
         self.use_cache = use_cache
+        self.head_ratio = head_ratio
+        self.conv_kernel_size = conv_kernel_size
+        self.num_groups = num_groups
+       
 
     def from_model_dict(self,model_dict):
 
         self.num_hidden_layers = model_dict['l']
+        self.attention_type = model_dict['t'] #options = 'l','sa','c'
         self.hidden_dim_list = model_dict['h']
         self.attention_heads_list = model_dict['a']
         self.ff_dim_list = model_dict['f']
-        self.similarity_list = model_dict['s']
+        self.similarity_list = model_dict['s'] #options = if 'sa'-->'sdp'/'wma' , elif 'l'-->dft'/'dct'
         self.hidden_size = model_dict['h'][-1] 
         self.num_attention_heads = model_dict['a'][-1]
 
