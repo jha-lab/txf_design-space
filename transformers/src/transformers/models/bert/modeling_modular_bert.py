@@ -22,6 +22,7 @@ import os
 import warnings
 from dataclasses import dataclass
 from typing import Optional, Tuple
+import copy 
 
 import torch
 import torch.utils.checkpoint
@@ -499,16 +500,28 @@ class BertAttentionModular(nn.Module):
 class BertIntermediateModular(nn.Module):
     def __init__(self, config, layer_id):
         super().__init__()
+
         self.dense = nn.Linear(config.hidden_dim_list[layer_id], config.ff_dim_list[layer_id])
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
+        modules = []
+
+        modules.append(self.dense)
+        modules.append(self.intermediate_act_fn)
+
+        for i in range(config.nff_list[layer_id]-1):
+
+            modules.append(nn.Linear(config.ff_dim_list[layer_id], config.ff_dim_list[layer_id]))
+            modules.append(self.intermediate_act_fn)
+
+        self.sequential = nn.Sequential(*modules)
+
     def forward(self, hidden_states):
-        hidden_states = self.dense(hidden_states)
-        hidden_states = self.intermediate_act_fn(hidden_states)
-        return hidden_states
+       
+        return self.sequential(hidden_states)
 
 
 class BertOutputModular(nn.Module):
@@ -879,10 +892,29 @@ class ConvBertIntermediateModular(nn.Module):
         else:
             self.intermediate_act_fn = config.hidden_act
 
+        
+        modules = []
+        
+        modules.append(self.dense)
+        modules.append(self.intermediate_act_fn)
+
+        for i in range(config.nff_list[layer_id]-1):
+
+            if config.num_groups == 1:
+                modules.append(nn.Linear(config.ff_dim_list[layer_id], config.ff_dim_list[layer_id]))
+            else:
+               modules.append(GroupedLinearLayer(
+                input_size=config.ff_dim_list[layer_id], output_size=config.ff_dim_list[layer_id], num_groups=config.num_groups
+            ))
+
+            modules.append(self.intermediate_act_fn)
+
+        self.sequential = nn.Sequential(*modules)
+
     def forward(self, hidden_states):
-        hidden_states = self.dense(hidden_states)
-        hidden_states = self.intermediate_act_fn(hidden_states)
-        return hidden_states
+        
+        return self.sequential(hidden_states)
+
 
 
 class ConvBertOutputModular(nn.Module):
@@ -1299,22 +1331,25 @@ class BertModelModular(BertPreTrainedModel):
 
             #Loading self attention 
 
-            if self.config.hidden_dim_list[i] ==  source_config.hidden_dim_list[i] and self.config.attention_heads_list[i] ==  source_config.attention_heads_list[i]:
-                self.encoder.layer[i].attention.load_state_dict(source_model.encoder.layer[i].attention.state_dict())
-                count+=len(source_model.encoder.layer[i].attention.state_dict())
+            
+            if self.config.attention_type[i] == source_config.attention_type[i]:
+                
+                if self.config.hidden_dim_list[i] ==  source_config.hidden_dim_list[i] and self.config.attention_heads_list[i] ==  source_config.attention_heads_list[i]:
+                    self.encoder.layer[i].attention.load_state_dict(source_model.encoder.layer[i].attention.state_dict())
+                    count+=len(source_model.encoder.layer[i].attention.state_dict())
 
-                if self.config.ff_dim_list[i] == source_config.ff_dim_list[i]:
-                    self.encoder.layer[i].intermediate.load_state_dict(source_model.encoder.layer[i].intermediate.state_dict())
-                    count+=len(source_model.encoder.layer[i].intermediate.state_dict())
-                    #print("Intermediate loaded")
+                    if self.config.ff_dim_list[i] == source_config.ff_dim_list[i]:
+                        self.encoder.layer[i].intermediate.load_state_dict(source_model.encoder.layer[i].intermediate.state_dict())
+                        count+=len(source_model.encoder.layer[i].intermediate.state_dict())
+                        #print("Intermediate loaded")
 
-                    if i + 1 < min(self.config.num_hidden_layers,source_config.num_hidden_layers) \
-                        and self.config.hidden_dim_list[i+1] == source_config.hidden_dim_list[i+1]:
-                        self.encoder.layer[i].output.load_state_dict(source_model.encoder.layer[i].output.state_dict())
-                        count+=len(source_model.encoder.layer[i].output.state_dict())
-                        #print("Output loaded")
+                        if i + 1 < min(self.config.num_hidden_layers,source_config.num_hidden_layers) \
+                            and self.config.hidden_dim_list[i+1] == source_config.hidden_dim_list[i+1]:
+                            self.encoder.layer[i].output.load_state_dict(source_model.encoder.layer[i].output.state_dict())
+                            count+=len(source_model.encoder.layer[i].output.state_dict())
+                            #print("Output loaded")
 
-                #print("-"*3,"Loaded Weights for Layer:",i,"-"*3)
+                    #print("-"*3,"Loaded Weights for Layer:",i,"-"*3)
 
             else:
 
