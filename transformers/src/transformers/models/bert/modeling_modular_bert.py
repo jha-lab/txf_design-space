@@ -442,7 +442,7 @@ class BertAttentionModular(nn.Module):
     def __init__(self, config, layer_id):
         super().__init__()
 
-         if not(config.attention_type[layer_id] == 'sa' or config.attention_type[layer_id] == 'l'):
+        if not(config.attention_type[layer_id] == 'sa' or config.attention_type[layer_id] == 'l'):
             raise ValueError(
                 f"Incorrect attention type specified"
             )
@@ -514,7 +514,7 @@ class BertIntermediateModular(nn.Module):
 
         for i in range(config.nff_list[layer_id]-1):
 
-            modules.append(nn.Linear(config.ff_dim_list[layer_id], config.ff_dim_list[layer_id]))
+            modules.append(nn.Linear(config.ff_dim_list[layer_id], cosnfig.ff_dim_list[layer_id]))
             modules.append(self.intermediate_act_fn)
 
         self.sequential = nn.Sequential(*modules)
