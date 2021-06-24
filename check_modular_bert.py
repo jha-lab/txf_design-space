@@ -7,7 +7,7 @@ from transformers.models.bert.modeling_modular_bert import BertModelModular
 
 import torch
 
-model_dict = {'l':3,'a':[2,4,8],'f':[512,1024,4096],'h':[512,1024,256],'s':['sdp','wma','sdp']}
+model_dict = {'l':3, 't': ['c','l','sa'], 'a':[2,4,8],'f':[512,1024,4096],'h':[512,1024,256], 'nff':[2,1,1],'s':['c','dft','sdp']}
 
 config = BertConfig()
 
