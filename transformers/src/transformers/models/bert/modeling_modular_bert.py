@@ -503,7 +503,12 @@ class BertIntermediateModular(nn.Module):
 
         self.dense = nn.Linear(config.hidden_dim_list[layer_id], config.ff_dim_list[layer_id])
         if isinstance(config.hidden_act, str):
-            self.intermediate_act_fn = ACT2FN[config.hidden_act]
+            
+            if config.hidden_act == "gelu":
+                self.intermediate_act_fn = nn.GELU()
+
+            else:
+                self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
@@ -693,7 +698,7 @@ class ConvBertSelfAttentionModular(nn.Module):
             config, config.hidden_dim_list[layer_id], self.all_head_size, self.conv_kernel_size
         )
         self.conv_kernel_layer = nn.Linear(self.all_head_size, self.num_attention_heads * self.conv_kernel_size)
-        self.conv_out_layer = nn.Linear( config.hidden_dim_list[layer_id] self.all_head_size)
+        self.conv_out_layer = nn.Linear( config.hidden_dim_list[layer_id], self.all_head_size)
 
         self.unfold = nn.Unfold(
             kernel_size=[self.conv_kernel_size, 1], padding=[int((self.conv_kernel_size - 1) / 2), 0]
@@ -812,10 +817,10 @@ class ConvBertSelfAttentionModular(nn.Module):
 
 
 class ConvBertAttentionModular(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, layer_id):
         super().__init__()
-        self.self = ConvBertSelfAttentionModular(config)
-        self.output = BertSelfOutputModular(config)
+        self.self = ConvBertSelfAttentionModular(config, layer_id)
+        self.output = BertSelfOutputModular(config, layer_id)
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
@@ -888,7 +893,12 @@ class ConvBertIntermediateModular(nn.Module):
                 input_size=config.hidden_dim_list[layer_id], output_size=config.ff_dim_list[layer_id], num_groups=config.num_groups
             )
         if isinstance(config.hidden_act, str):
-            self.intermediate_act_fn = ACT2FN[config.hidden_act]
+            
+            if config.hidden_act == "gelu":
+                self.intermediate_act_fn = nn.GELU()
+
+            else:
+                self.intermediate_act_fn = ACT2FN[config.hidden_act]
         else:
             self.intermediate_act_fn = config.hidden_act
 
@@ -963,7 +973,7 @@ class ConvBertLayerModular(nn.Module):
             assert self.is_decoder, f"{self} should be used as a decoder model if cross attention is added"
             self.crossattention = ConvBertAttentionModular(config,layer_id)
         self.intermediate = ConvBertIntermediateModular(config,layer_id)
-        self.output = ConvBertOutputModular(config,layer_id)
+        self.output = ConvBertOutputModular(config,layer_id,last_layer)
 
     def forward(
         self,
