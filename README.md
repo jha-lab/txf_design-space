@@ -48,7 +48,7 @@ The model architectures are restricted in the following ranges for the respectiv
 Every model will be represented by a model card (referred to by the a dictionary `model_dict`). An example dictionary for BERT-mini is as follows:
 
 ```
-model_dict = {'l': 4, 'h': [256, 256, 256, 256], 'a': [4, 4, 4, 4], 'f': [1024, 1024, 1024, 1024], 's': ['sdp', 'sdp', 'sdp', 'sdp']}
+model_dict = {'l': 4, 't':['sa', 'sa', 'sa', 'sa'], 'h': [256, 256, 256, 256], 'a': [4, 4, 4, 4], 'f': [1024, 1024, 1024, 1024], 'nff': [1, 1, 1, 1], 's': ['sdp', 'sdp', 'sdp', 'sdp']}
 ```
 
 This dictionary is converted to a pytorch model for training, where the weights are transferred from the 'nearest' pre-trained model. This modular simulator is a wrapper over the [huggingface/transformers](https://github.com/huggingface/transformers) repo. Implementation details can be found at `transformers/src/transformers/models/bert/modeling_modular_bert.py`.
