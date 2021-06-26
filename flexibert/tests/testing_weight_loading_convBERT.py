@@ -8,15 +8,13 @@ from transformers import  BertConfig,  ConvBertModel, BertTokenizer
 
 from transformers.models.bert.modeling_modular_bert import BertModelModular
 
-from library import Graph, GraphLib
-from utils import print_util as pu
 
 #Modularizing pretrained convBERT models and testing weight loading
 
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
-conv_bert_base = ConvBertModel.from_pretrained('YituTech/conv-bert-bas')
+conv_bert_base = ConvBertModel.from_pretrained('YituTech/conv-bert-base')
 
 model_dict_convbert_base = {'l':12, 't': ['c']*12, 'a':[12]*12,'f':[3072]*12,'h':[768]*12, 'nff':[1]*12,'s':['c']*12}
 
@@ -47,7 +45,7 @@ config.from_model_dict(model_dict_random_model)
 
 bert_target = BertModelModular(config)
 
-percent = bert_target.load_model_from_source(conv_bert_base)
+percent = bert_target.load_model_from_source(model_modular)
 
 print("Random Model loaded with fraction:", percent)
 
