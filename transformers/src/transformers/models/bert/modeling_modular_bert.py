@@ -15,7 +15,7 @@
 # limitations under the License.
 """PyTorch BERT model. """
 
-#Modified by Bhishma Dedhia for spawning modular BERT 
+#Modified by: Bhishma Dedhia
 
 import math
 import os
@@ -28,7 +28,7 @@ import torch
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import CrossEntropyLoss, MSELoss
-import torch_dct as dct
+
 
 from ...activations import ACT2FN
 from ...file_utils import (
@@ -57,6 +57,7 @@ from ...modeling_utils import (
 )
 from ...utils import logging
 from .configuration_bert import BertConfig
+from .dct import dct_2d
 from .modeling_bert import BertPreTrainedModel, BertForPreTrainingOutput
 
 
@@ -413,7 +414,7 @@ class BertLinearAttentionModular(nn.Module):
             context_layer += fft_output
 
         elif self.sim == 'dct':
-            dct_output = torch_dct.dct_2d(hidden_states)
+            dct_output = dct_2d(hidden_states)
             #Add fft to relative position embeddings
             context_layer += dct_output
 
@@ -983,7 +984,9 @@ class ConvBertLayerModular(nn.Module):
         encoder_hidden_states=None,
         encoder_attention_mask=None,
         output_attentions=False,
+        past_key_value=None,
     ):
+
         self_attention_outputs = self.attention(
             hidden_states,
             attention_mask,
@@ -1482,6 +1485,7 @@ class BertModelModular(BertPreTrainedModel):
             inputs_embeds=inputs_embeds,
             past_key_values_length=past_key_values_length,
         )
+        
         encoder_outputs = self.encoder(
             embedding_output,
             attention_mask=extended_attention_mask,
