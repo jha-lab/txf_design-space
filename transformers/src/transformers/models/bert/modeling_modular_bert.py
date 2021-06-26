@@ -520,7 +520,7 @@ class BertIntermediateModular(nn.Module):
 
         for i in range(config.nff_list[layer_id]-1):
 
-            modules.append(nn.Linear(config.ff_dim_list[layer_id], cosnfig.ff_dim_list[layer_id]))
+            modules.append(nn.Linear(config.ff_dim_list[layer_id], config.ff_dim_list[layer_id]))
             modules.append(self.intermediate_act_fn)
 
         self.sequential = nn.Sequential(*modules)
@@ -1351,7 +1351,7 @@ class BertModelModular(BertPreTrainedModel):
                     self.encoder.layer[i].attention.load_state_dict(source_model.encoder.layer[i].attention.state_dict())
                     count+=len(source_model.encoder.layer[i].attention.state_dict())
 
-                    if self.config.ff_dim_list[i] == source_config.ff_dim_list[i]:
+                    if self.config.ff_dim_list[i] == source_config.ff_dim_list[i] and self.config.nff_list[i] == source_config.nff_list[i] :
                         self.encoder.layer[i].intermediate.load_state_dict(source_model.encoder.layer[i].intermediate.state_dict())
                         count+=len(source_model.encoder.layer[i].intermediate.state_dict())
                         #print("Intermediate loaded")
