@@ -37,18 +37,18 @@ The model architectures are restricted in the following ranges for the respectiv
 - `dataset` in the GLUE benchmark tasks: [CoLA, SST-2, MRPC, STS-B, QQP, MNLI-mm, QNLI, RTE, WNLI]
 - `h`, the hidden size in: [128, **256**, 512]
 - `a`, the number of attention heads in: [2, **4**, 8]
-- `t`, the type of attention used in: [linear(l), **self attention (sa)**, dynamic convolution (c)]
+- `o`, the type of operation used in: [linear(l), **self attention (sa)**, dynamic convolution (c)]
 - `l`, the number of encoder layers in: [2, **4**, 6]
 - `f`, the inner-layer dimensionality of the feed-forward layer in: [512, **1024**, 2048, 4096]
 - `nff`, the number of feedforward stacks in [**1**, 2, 3]
-- `s`, the similarity metric in: [**scaled dot-product (sdp)**, weighted multiplicative attention (wma)]
+- `p`, the operation parameters, i.e. the similarity metric in self-attention or linear operation type or convolution kernel size in: [**scaled dot-product (sdp)**, weighted multiplicative attention (wma), discrete fourier transform (dft), discrete cosine transform (dct), ... (more TBD)]
 
 *The hyperparameter values in bold text correspond to the design choices in BERT-mini. Nine pre-trained models within this design space can be found at this repo:* [google-research/bert](https://github.com/google-research/bert).
 
 Every model will be represented by a model card (referred to by the a dictionary `model_dict`). An example dictionary for BERT-mini is as follows:
 
 ```
-model_dict = {'l': 4, 't':['sa', 'sa', 'sa', 'sa'], 'h': [256, 256, 256, 256], 'a': [4, 4, 4, 4], 'f': [1024, 1024, 1024, 1024], 'nff': [1, 1, 1, 1], 's': ['sdp', 'sdp', 'sdp', 'sdp']}
+model_dict = {'l': 4, 'o': ['sa', 'sa', 'sa', 'sa'], 'h': [256, 256, 256, 256], 'a': [4, 4, 4, 4], 'f': [[1024], [1024], [1024], [1024]], 'nff': [1, 1, 1, 1], 'p': ['sdp', 'sdp', 'sdp', 'sdp']}
 ```
 
 This dictionary is converted to a pytorch model for training, where the weights are transferred from the 'nearest' pre-trained model. This modular simulator is a wrapper over the [huggingface/transformers](https://github.com/huggingface/transformers) repo. Implementation details can be found at `transformers/src/transformers/models/bert/modeling_modular_bert.py`.
