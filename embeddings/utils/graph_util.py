@@ -76,9 +76,11 @@ def model_dict_to_graph(model_dict, ops_list):
             for h in range(attention[layer]):
                 matrix[i][i + 1 + h] = 1 # Input to all attention heads
                 matrix[i + 1 + h][i + 1 + attention[layer]] = 1 # attention head to add_norm
+            matrix[i][i + 1 + attention[layer]] = 1 # residual to add_norm
             i += attention[layer] + 1 # Re-instate i to add_norm
             matrix[i][i + 1] = 1 # add_norm to feed_forward
             matrix[i + 1][i + 2] = 1 # feed_forward to add_norm
+            matrix[i][i + 2] = 1 # residual to add_norm
             i += 2 # Re-instate i to add_norm as output of current encoder layer
     matrix[-2][-1] = 1 # add_norm to output
  
