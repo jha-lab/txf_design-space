@@ -32,21 +32,24 @@ def model_dict_to_graph(model_dict, ops_list):
         AssertionError: if a sanity check fails
     """
     layers = model_dict.get('l')
+    operation = model_dict.get('o')
     hidden = model_dict.get('h')
-    attention = model_dict.get('a')
+    num_heads = model_dict.get('n')
     feed_forward = model_dict.get('f')
-    similarity = model_dict.get('s')
+    num_feed_forward = model_dict.get('nff')
+    parameter = model_dict.get('p')
 
-    assert layers == len(hidden) == len(attention) == len(feed_forward) == len(similarity), \
+    assert layers == len(operation) == len(hidden) == len(num_heads) == len(feed_forward) == len(parameter), \
         f'Input model_dict is incorrect:\n{model_dict}'
 
     V = 1 # One vertex for the input
     for layer in range(layers):
-        # Input goes into a few attention heads
-        # Then, the output of multi-head attention goes to add-norm
+        # Input goes into a few operation heads
+        # Then, the output of the operation block goes to add-norm
         # This then goes to a feed-forward layer
-        # Finally, we have the last add-norm layer after the feed-forward layer
-        V += attention[layer] + 1 + 1 + 1
+        # Then we have the last add-norm layer after the feed-forward layer
+        # These feed-forward layers and add-norm blocks are stacked multiple times
+        V += num_heads[layer] + 1 + (1 + 1) * num_feed_forward[layer]
     V += 1 # Finally, the output vertex
 
     matrix = np.zeros((V, V), dtype=int)
@@ -54,16 +57,20 @@ def model_dict_to_graph(model_dict, ops_list):
     # Generate operations list
     ops = ['input']
     for layer in range(layers): 
-        for head in range(attention[layer]):
-            op = f'a_h{hidden[layer]}_s-{similarity[layer]}'
+        for head in range(num_heads[layer]):
+            op = f'{operation[layer]}_h{hidden[layer]}_p-{parameter[layer]}'
             if op not in ops_list:
                 raise ValueError(f'Operation: {op}, not in ops_list')
             else:
                 ops.append(op)
-        op = f'f{feed_forward[layer]}'
-        if op not in ops_list:
-            raise ValueError(f'Operation: {op}, not in ops_list')
-        ops.extend(['add_norm', op, 'add_norm'])
+        ops.append('add_norm')        
+        assert len(feed_forward[layer]) == num_feed_forward[layer], \
+            f'"nff" for layer: {layer+1} doesn\'t match length of list in "f"'
+        for f in range(num_feed_forward[layer]):
+            op = f'f{feed_forward[layer][f]}'
+            if op not in ops_list:
+                raise ValueError(f'Operation: {op}, not in ops_list')
+            ops.extend([op, 'add_norm'])
     ops.append('output')
 
     assert len(ops) == V, \
@@ -73,15 +80,16 @@ def model_dict_to_graph(model_dict, ops_list):
     i = 0
     while i < len(ops) - 2:
         for layer in range(layers):
-            for h in range(attention[layer]):
-                matrix[i][i + 1 + h] = 1 # Input to all attention heads
-                matrix[i + 1 + h][i + 1 + attention[layer]] = 1 # attention head to add_norm
-            matrix[i][i + 1 + attention[layer]] = 1 # residual to add_norm
-            i += attention[layer] + 1 # Re-instate i to add_norm
-            matrix[i][i + 1] = 1 # add_norm to feed_forward
-            matrix[i + 1][i + 2] = 1 # feed_forward to add_norm
-            matrix[i][i + 2] = 1 # residual to add_norm
-            i += 2 # Re-instate i to add_norm as output of current encoder layer
+            for h in range(num_heads[layer]):
+                matrix[i][i + 1 + h] = 1 # Input to all operation heads
+                matrix[i + 1 + h][i + 1 + num_heads[layer]] = 1 # operation head to add_norm
+            matrix[i][i + 1 + num_heads[layer]] = 1 # residual to add_norm
+            i += num_heads[layer] + 1 # Re-instate i to add_norm
+            for f in range(num_feed_forward[layer]):
+                matrix[i][i + 1] = 1 # add_norm to feed_forward
+                matrix[i + 1][i + 2] = 1 # feed_forward to add_norm
+                matrix[i][i + 2] = 1 # residual to add_norm
+                i += 2 # Re-instate i to add_norm as output of current encoder layer
     matrix[-2][-1] = 1 # add_norm to output
  
     assert is_upper_tri(matrix), \
