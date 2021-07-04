@@ -1,5 +1,4 @@
-# Design space containing only BERT-tiny
-# Only for testing purposes
+# Design space for testing purposes
 
 datasets:
   - CoLA
@@ -15,15 +14,31 @@ datasets:
 architecture:
   hidden_size:
     - 128
-  attention_heads:
+    - 256
+  num_heads:
     - 2
     - 4
   encoder_layers:
     - 2
     - 4
+  operation_types:
+    - sa
+    - l
+    - c
+  number_of_feed-forward_stacks:
+    - 1
+    - 2
   feed-forward_hidden:
     - 2048
     - 4096
-  similarity_metric:
-    - sdp
-    - wma
+  operation_parameters:
+    sa:
+      - sdp
+      - wma
+    l:
+      - dft
+      - dct
+    c:
+      - 4
+      - 8
+      - 16
