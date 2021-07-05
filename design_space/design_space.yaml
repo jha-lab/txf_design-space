@@ -17,7 +17,7 @@ architecture:
     - 128
     - 256
     - 512
-  attention_heads:
+  num_heads:
     - 2
     - 4
     - 8
@@ -25,11 +25,27 @@ architecture:
     - 2
     - 4
     - 6
+  operation_types:
+    - sa
+    - l
+    - c
+  number_of_feed-forward_stacks:
+    - 1
+    - 2 # An extra
+    - 3 # An extra
   feed-forward_hidden:
     - 512
     - 1024
     - 2048
     - 4096 # An extra
-  similarity_metric:
-    - sdp
-    - wma # An extra
+  operation_parameters:
+    sa:
+      - sdp
+      - wma # An extra
+    l:
+      - dft # An extra
+      - dct # An extra
+    c:
+      - 5 # An extra
+      - 9 # An extra
+      - 13 # An extra
