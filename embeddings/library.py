@@ -22,7 +22,7 @@ class GraphLib(object):
 		ops_list (list[str]): list of all possible operation blocks in the computational graph
 	"""
 	
-	def __init__(self, design_space=None, dataset: str):
+	def __init__(self, design_space=None, dataset: str = None):
 		"""Init GraphLib instance with design_space
 		
 		Args:
@@ -38,7 +38,8 @@ class GraphLib(object):
 					config = yaml.safe_load(config_file)
 				except yaml.YAMLError as exc:
 					print(exc)
-				assert dataset in config.get('datasets'), 'Provided dataset is not supported'
+				if dataset:
+					assert dataset in config.get('datasets'), 'Provided dataset is not supported'	
 				self.dataset = dataset
 				self.design_space = config.get('architecture')
 
@@ -84,7 +85,7 @@ class GraphLib(object):
 		return f'{pu.bcolors.HEADER}Graph Library with design space:{pu.bcolors.ENDC}\n{self.design_space}' \
 			+ f'\n{pu.bcolors.HEADER}Number of graphs:{pu.bcolors.ENDC} {len(self.library)}'
 
-	def build_library(self, create_graphs=True, check_isomorphism=False, increasing=True, heterogeneous_feed_forward=False):
+	def build_library(self, create_graphs=True, check_isomorphism=False, increasing=False, heterogeneous_feed_forward=False):
 		"""Build the GraphLib library
 		
 		Args:
@@ -326,7 +327,7 @@ class Graph(object):
 			nearest to farther neighbors
 		ops_idx (list[int]): list of operation indices
 	"""
-	def __init__(self, model_dict: dict, ops_list: list, compute_hash: bool, hash_algo='md5'):
+	def __init__(self, model_dict: dict, ops_list: list, compute_hash: bool, hash_algo='sha256'):
 		"""Init a Graph instance from model_dict
 		
 		Args:

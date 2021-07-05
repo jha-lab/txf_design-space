@@ -20,11 +20,21 @@ def main():
         metavar='',
         type=str,
         help='path to store the dataset')
+    parser.add_argument('--dataset',
+        metavar='',
+        type=str,
+        help='name of NLP dataset',
+        default=None)
     parser.add_argument('--kernel',
         metavar='',
         type=str,
         help='kernel for graph similarity computation',
-        default='WeisfeilerLehman')
+        default='GraphEditDistance')
+    parser.add_argument('--algo',
+        metavar='',
+        type=str,
+        help='algorithm for training embeddings',
+        default='GD')
     parser.add_argument('--embedding_size',
         metavar='',
         type=int,
@@ -34,7 +44,7 @@ def main():
         metavar='',
         type=int,
         help='number of neighbors to save for each graph',
-        default=10)
+        default=100)
     parser.add_argument('--n_jobs',
         metavar='',
         type=int,
@@ -46,7 +56,7 @@ def main():
     if not path.exists(args.dataset_file):
         # Create an empty graph library with the hyper-parameter ranges
         # given in the design_space file
-        graphLib = GraphLib(args.design_space_file)
+        graphLib = GraphLib(args.design_space_file, args.dataset)
 
         # Show generated library
         print(f'{pu.bcolors.OKGREEN}Generated empty library{pu.bcolors.ENDC}')
@@ -54,7 +64,7 @@ def main():
         print()
 
         # Generating graph library
-        graphLib.build_library(check_isomorphism=False)
+        graphLib.build_library()
         print()
 
         # Simple test to check isomorphisms, rather than comparing hash for every new graph
@@ -77,7 +87,7 @@ def main():
         print()
 
     # Build embeddings
-    graphLib.build_embeddings(embedding_size=args.embedding_size, 
+    graphLib.build_embeddings(embedding_size=args.embedding_size, algo=args.algo,
         kernel=args.kernel, neighbors=args.num_neighbors, n_jobs=args.n_jobs)
     print()
 
