@@ -14,7 +14,7 @@ class GraphLib(object):
 	"""Graph Library containing all possible graphs within the design space
 	
 	Attributes:
-		datasets (list[str]): list of all dataset being considered for training every graph
+		dataset (str): dataset the library is fine-tuned on
 		design_space (dict): dictionary of design space hyper-parameters
 		hashes_computed (bool): is True is the library generated was checked for isomorphisms 
 			in computed graphs. False otherwise, and all Graph objects have their hashes as empty strings
@@ -22,7 +22,7 @@ class GraphLib(object):
 		ops_list (list[str]): list of all possible operation blocks in the computational graph
 	"""
 	
-	def __init__(self, design_space=None):
+	def __init__(self, design_space=None, dataset: str):
 		"""Init GraphLib instance with design_space
 		
 		Args:
@@ -38,7 +38,8 @@ class GraphLib(object):
 					config = yaml.safe_load(config_file)
 				except yaml.YAMLError as exc:
 					print(exc)
-				self.datasets = config.get('datasets')
+				assert dataset in config.get('datasets'), 'Provided dataset is not supported'
+				self.dataset = dataset
 				self.design_space = config.get('architecture')
 
 			# List of all possible operations in the computation graph
@@ -64,7 +65,7 @@ class GraphLib(object):
 			# Set number of neighbors to 1
 			self.num_neighbors = 1
 		else:
-			self.datasets = {}
+			self.dataset = ''
 			self.design_space = {}
 			self.ops_list = []
 			self.library = []
@@ -122,7 +123,7 @@ class GraphLib(object):
 						for f in itertools.product(self.design_space['feed-forward_hidden'], repeat=layers):
 							model_dict = {'l': layers, 'h': list(h), 'n': list(n), 'o': list(o), \
 								'f': [[f[layer]] *  nff[layer] for layer in range(layers)], 'p': list(p)}
-							if create_graphs: new_graph = Graph(model_dict, self.datasets, self.ops_list, compute_hash=True)
+							if create_graphs: new_graph = Graph(model_dict, self.ops_list, compute_hash=True)
 							count += 1
 							if check_isomorphism:
 								assert new_graph.hash not in [graph.hash for graph in self.library], \
@@ -135,7 +136,7 @@ class GraphLib(object):
 						for f in itertools.product(*[possible_f[nff[layer]-1] for layer in range(layers)]):
 							model_dict = {'l': layers, 'h': list(h), 'n': list(n), 'o': list(o), \
 								'f': f, 'p': list(p)}
-							if create_graphs: new_graph = Graph(model_dict, self.datasets, self.ops_list, compute_hash=True)
+							if create_graphs: new_graph = Graph(model_dict, self.dataset, self.ops_list, compute_hash=True)
 							count += 1
 							if check_isomorphism:
 								assert new_graph.hash not in [graph.hash for graph in self.library], \
@@ -260,7 +261,7 @@ class GraphLib(object):
 			embeddings_list = [None for graph in self.library]
 
 		with open(file_path, 'w', encoding ='utf8') as json_file:
-			json.dump({'datasets': self.datasets,
+			json.dump({'dataset': self.dataset,
 						'design_space': self.design_space,
 						'ops_list': self.ops_list,
 						'num_neighbors': self.num_neighbors, 
@@ -288,7 +289,7 @@ class GraphLib(object):
 		with open(file_path, 'r', encoding ='utf8') as json_file:
 			dataset_dict = json.load(json_file)
 
-			graphLib.datasets = dataset_dict['datasets']
+			graphLib.dataset = dataset_dict['dataset']
 			graphLib.ops_list = dataset_dict['ops_list']
 			graphLib.design_space = dataset_dict['design_space']
 			graphLib.num_neighbors = dataset_dict['num_neighbors']
@@ -299,8 +300,7 @@ class GraphLib(object):
 				embeddings_list = [None for embedding in dataset_dict['embeddings']]
 			
 			for i in range(len(dataset_dict['model_dicts'])):
-				graph = Graph(dataset_dict['model_dicts'][i], 
-					graphLib.datasets, graphLib.ops_list, compute_hash=False)
+				graph = Graph(dataset_dict['model_dicts'][i], graphLib.ops_list, compute_hash=False)
 				graph.hash = dataset_dict['hashes'][i]
 				graph.embedding = embeddings_list[i]
 				graph.neighbors = dataset_dict['neighbors'][i]
@@ -316,7 +316,7 @@ class Graph(object):
 	"""Graph class to represent a computational graph in the design space
 	
 	Attributes:
-		accuracy (dict): dictionary of accuracies for all datasets in consideration
+		accuracy (float): accuracy of the model for the given dataset
 		embedding (np.ndarray): embedding for every graph in the design space
 		graph (tuple(np.ndarray, list[str])): model graph as a tuple of adjacency matrix and 
 			a list of operations
@@ -326,13 +326,12 @@ class Graph(object):
 			nearest to farther neighbors
 		ops_idx (list[int]): list of operation indices
 	"""
-	def __init__(self, model_dict: dict, datasets: list, ops_list: list, compute_hash: bool, hash_algo='md5'):
+	def __init__(self, model_dict: dict, ops_list: list, compute_hash: bool, hash_algo='md5'):
 		"""Init a Graph instance from model_dict
 		
 		Args:
 			model_dict (dict): dictionary with the hyper-parameters for current 
 				model graph
-			datasets (list): list of datasets to keep accuracy for the graph
 			ops_list (list): list of all possible operation blocks in 
 				the computational graph
 			compute_hash (bool): if True, hash is computed, else, is None.
@@ -358,12 +357,12 @@ class Graph(object):
 		# Initialize the nearest neighboring graph
 		self.neighbors = None
 
-		# Initialize accuracies for all datasets
-		self.accuracy = {dataset:None for dataset in datasets}
+		# Initialize accuracy
+		self.accuracy = None
 
 	def __repr__(self):
 		"""Representation of the Graph"""
 		return f'{pu.bcolors.HEADER}Graph model_dict:{pu.bcolors.ENDC} {self.model_dict}\n' \
-			+ f'{pu.bcolors.HEADER}Accuracies:{pu.bcolors.ENDC} {self.accuracy}\n' \
+			+ f'{pu.bcolors.HEADER}Accuracy:{pu.bcolors.ENDC} {self.accuracy}\n' \
 			+ f'{pu.bcolors.HEADER}Embedding:{pu.bcolors.ENDC} {self.embedding}\n' \
 			+ f'{pu.bcolors.HEADER}Hash:{pu.bcolors.ENDC} {self.hash}'
