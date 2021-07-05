@@ -6,8 +6,12 @@ import yaml
 import numpy as np
 import itertools
 from tqdm.contrib.itertools import product
+from joblib import Parallel, delayed
 from utils import graph_util, embedding_util, print_util as pu
 import json
+
+
+PARALLELIZE = False
 
 
 class GraphLib(object):
@@ -22,7 +26,7 @@ class GraphLib(object):
 		ops_list (list[str]): list of all possible operation blocks in the computational graph
 	"""
 	
-	def __init__(self, design_space=None, dataset: str):
+	def __init__(self, design_space=None, dataset: str = None):
 		"""Init GraphLib instance with design_space
 		
 		Args:
@@ -38,7 +42,8 @@ class GraphLib(object):
 					config = yaml.safe_load(config_file)
 				except yaml.YAMLError as exc:
 					print(exc)
-				assert dataset in config.get('datasets'), 'Provided dataset is not supported'
+				if dataset:
+					assert dataset in config.get('datasets'), 'Provided dataset is not supported'	
 				self.dataset = dataset
 				self.design_space = config.get('architecture')
 
@@ -84,7 +89,7 @@ class GraphLib(object):
 		return f'{pu.bcolors.HEADER}Graph Library with design space:{pu.bcolors.ENDC}\n{self.design_space}' \
 			+ f'\n{pu.bcolors.HEADER}Number of graphs:{pu.bcolors.ENDC} {len(self.library)}'
 
-	def build_library(self, create_graphs=True, check_isomorphism=False, increasing=True, heterogeneous_feed_forward=False):
+	def build_library(self, create_graphs=True, check_isomorphism=False, increasing=False, heterogeneous_feed_forward=False):
 		"""Build the GraphLib library
 		
 		Args:
@@ -100,27 +105,34 @@ class GraphLib(object):
 		count = 0
 		for layers in self.design_space['encoder_layers']:
 			possible_o = list(itertools.product(self.design_space['operation_types'], repeat=layers))
+
 			if increasing:
 				possible_n = list(itertools.combinations_with_replacement(self.design_space['num_heads'], layers))
 				possible_h = list(itertools.combinations_with_replacement(self.design_space['hidden_size'], layers))
-				possible_f = [list(itertools.combinations_with_replacement(self.design_space['feed-forward_hidden'], nff)) \
-					for nff in self.design_space['number_of_feed-forward_stacks']]
+				if not heterogeneous_feed_forward:
+					possible_f = list(itertools.product(self.design_space['feed-forward_hidden'], repeat=layers))
+				else:
+					possible_f = [list(itertools.combinations_with_replacement(self.design_space['feed-forward_hidden'], nff)) \
+						for nff in self.design_space['number_of_feed-forward_stacks']]
 				possible_nff = list(itertools.combinations_with_replacement(
 										self.design_space['number_of_feed-forward_stacks'], layers))
 			else:
 				possible_n = list(itertools.product(self.design_space['num_heads'], repeat=layers))
 				possible_h = list(itertools.product(self.design_space['hidden_size'], repeat=layers))
-				possible_f = [list(itertools.product(self.design_space['feed-forward_hidden'], repeat=nff)) \
-					for nff in self.design_space['number_of_feed-forward_stacks']]
+				if not heterogeneous_feed_forward:
+					possible_f = list(itertools.product(self.design_space['feed-forward_hidden'], repeat=layers))
+				else:
+					possible_f = [list(itertools.product(self.design_space['feed-forward_hidden'], repeat=nff)) \
+						for nff in self.design_space['number_of_feed-forward_stacks']]
 				possible_nff = list(itertools.product(
 										self.design_space['number_of_feed-forward_stacks'], repeat=layers))
-			for n, h, o, nff in product(possible_n, possible_h, possible_o, possible_nff, \
-					desc=f'Generating transformers with {layers} encoder layers'):
+
+			def create_graph(self, n, h, o, nff, count):
 				possible_p = itertools.product(*[self.design_space['operation_parameters'][o[layer]] \
 					for layer in range(layers)])
 				for p in possible_p:
 					if not heterogeneous_feed_forward:
-						for f in itertools.product(self.design_space['feed-forward_hidden'], repeat=layers):
+						for f in possible_f:
 							model_dict = {'l': layers, 'h': list(h), 'n': list(n), 'o': list(o), \
 								'f': [[f[layer]] *  nff[layer] for layer in range(layers)], 'p': list(p)}
 							if create_graphs: new_graph = Graph(model_dict, self.ops_list, compute_hash=True)
@@ -146,7 +158,20 @@ class GraphLib(object):
 									+ f'Graph-2: {graph.model_dict for graph in self.library if graph.hash == new_graph.hash}'
 							if create_graphs: self.library.append(new_graph)
 
-		print(f'{pu.bcolors.OKGREEN}{count} graphs created!{pu.bcolors.ENDC} ' \
+				return count
+
+			if not PARALLELIZE:
+				for n, h, o, nff in product(possible_n, possible_h, possible_o, possible_nff, \
+					desc=f'Generating transformers with {layers} encoder layers'):
+					count = create_graph(self, n, h, o, nff, count)
+					# print(f'\r{pu.human_format(count)}', end='')
+			else:
+				with Parallel(n_jobs=8, prefer='threads', require='sharedmem') as parallel:
+					parallel(delayed(create_graph)(self, n, h, o, nff, count) \
+						for n, h, o, nff in product(possible_n, possible_h, possible_o, possible_nff, \
+							desc=f'Generating transformers with {layers} encoder layers'))
+
+		print(f'{pu.bcolors.OKGREEN}Graphs created{": " + str(count) if not PARALLELIZE else ""}!{pu.bcolors.ENDC} ' \
 			+ f'\n{len(self.library)} graphs within the design space in the library.')
 
 	def build_embeddings(self, embedding_size: int, algo='MDS', kernel='WeisfeilerLehman', neighbors=10, n_jobs=8):
@@ -326,7 +351,7 @@ class Graph(object):
 			nearest to farther neighbors
 		ops_idx (list[int]): list of operation indices
 	"""
-	def __init__(self, model_dict: dict, ops_list: list, compute_hash: bool, hash_algo='md5'):
+	def __init__(self, model_dict: dict, ops_list: list, compute_hash: bool, hash_algo='sha256'):
 		"""Init a Graph instance from model_dict
 		
 		Args:
