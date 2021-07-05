@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.manifold import MDS
 from sklearn.metrics import pairwise_distances
 from scipy.stats import zscore
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -41,7 +42,7 @@ def generate_mds_embeddings(dissimilarity_matrix, embedding_size: int, n_init=4,
 
 
 def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs: int = 10, 
-		batch_size: int = 1024, n_jobs=8, silent: bool = False):
+		batch_size: int = 2048, n_jobs=8, silent: bool = False):
     """Generate embeddings using Gradient Descent on GPU
     
     Args:
@@ -112,8 +113,8 @@ def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs: 
     report_interval = 100
 
     # Run training
-    for epoch in range(epochs):
-        print(f'Epoch: {epoch}')
+    for epoch in tqdm(range(epochs), desc='Training embeddings'):
+        if not silent: print(f'Epoch: {epoch}')
 
         for i, data_batch in enumerate(train_loader):
             graph_pairs = data_batch['graph_pairs'].to(device, non_blocking=True)

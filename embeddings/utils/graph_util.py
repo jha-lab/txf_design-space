@@ -9,7 +9,7 @@ from grakel import Graph, WeisfeilerLehman, NeighborhoodHash, RandomWalkLabeled
 import networkx as nx
 import re
 
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 from itertools import combinations
 from joblib import Parallel, delayed
 
@@ -171,7 +171,7 @@ def hash_graph(matrix, ops, algo='md5'):
 
     # Computing this up to the diameter is probably sufficient but since the
     # operation is fast, it is okay to repeat more times.
-    for _ in range(vertices):
+    for _ in range(5):
         new_hashes = []
         for v in range(vertices):
             in_neighbors = [hashes[w] for w in range(vertices) if matrix[w, v]]
@@ -297,9 +297,13 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 
                 dissimilarity_matrix[i, j] = approx_dist
 
-        Parallel(n_jobs=n_jobs, prefer='threads', require='sharedmem')(
-            delayed(get_ged)(i, j, dissimilarity_matrix, nx_graph_list, sorted_ops_list) \
-                for i, j in tqdm(list(combinations(range(len(graph_list)), 2)), desc='Generating dissimilarity matrix'))
+        for i, j in tqdm(list(combinations(range(len(graph_list)), 2)), desc='Generating dissimilarity matrix'):
+            get_ged(i, j, dissimilarity_matrix, nx_graph_list, sorted_ops_list)
+        
+        ## It was found that serial operations are faster
+        # Parallel(n_jobs=n_jobs, prefer='threads', require='sharedmem')(
+        #     delayed(get_ged)(i, j, dissimilarity_matrix, nx_graph_list, sorted_ops_list) \
+        #         for i, j in tqdm(list(combinations(range(len(graph_list)), 2)), desc='Generating dissimilarity matrix'))
 
         dissimilarity_matrix = dissimilarity_matrix + np.transpose(dissimilarity_matrix)
 
