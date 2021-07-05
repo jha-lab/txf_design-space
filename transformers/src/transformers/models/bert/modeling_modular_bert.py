@@ -502,7 +502,7 @@ class BertIntermediateModular(nn.Module):
     def __init__(self, config, layer_id):
         super().__init__()
 
-        self.dense = nn.Linear(config.hidden_dim_list[layer_id], config.ff_dim_list[layer_id])
+        self.dense = nn.Linear(config.hidden_dim_list[layer_id], config.ff_dim_list[layer_id][0])
         if isinstance(config.hidden_act, str):
             
             if config.hidden_act == "gelu":
@@ -518,9 +518,9 @@ class BertIntermediateModular(nn.Module):
         modules.append(self.dense)
         modules.append(self.intermediate_act_fn)
 
-        for i in range(config.nff_list[layer_id]-1):
+        for i in range(len(config.ff_dim_list[layer_id])-1):
 
-            modules.append(nn.Linear(config.ff_dim_list[layer_id], config.ff_dim_list[layer_id]))
+            modules.append(nn.Linear(config.ff_dim_list[layer_id][i], config.ff_dim_list[layer_id][i+1]))
             modules.append(self.intermediate_act_fn)
 
         self.sequential = nn.Sequential(*modules)
@@ -683,7 +683,8 @@ class ConvBertSelfAttentionModular(nn.Module):
             self.num_attention_heads = new_num_attention_heads
             self.head_ratio = config.head_ratio
 
-        self.conv_kernel_size = config.conv_kernel_size
+        self.conv_kernel_size = config.similarity_list[layer_id]
+
         assert (
             config.hidden_dim_list[layer_id] % self.num_attention_heads == 0
         ), "hidden_size should be divisible by num_attention_heads"
@@ -888,10 +889,10 @@ class ConvBertIntermediateModular(nn.Module):
     def __init__(self, config, layer_id):
         super().__init__()
         if config.num_groups == 1:
-            self.dense = nn.Linear(config.hidden_dim_list[layer_id], config.ff_dim_list[layer_id])
+            self.dense = nn.Linear(config.hidden_dim_list[layer_id], config.ff_dim_list[layer_id][0])
         else:
             self.dense = GroupedLinearLayer(
-                input_size=config.hidden_dim_list[layer_id], output_size=config.ff_dim_list[layer_id], num_groups=config.num_groups
+                input_size=config.hidden_dim_list[layer_id], output_size=config.ff_dim_list[layer_id][0], num_groups=config.num_groups
             )
         if isinstance(config.hidden_act, str):
             
@@ -909,13 +910,13 @@ class ConvBertIntermediateModular(nn.Module):
         modules.append(self.dense)
         modules.append(self.intermediate_act_fn)
 
-        for i in range(config.nff_list[layer_id]-1):
+        for i in range(len(config.ff_dim_list[layer_id])-1):
 
             if config.num_groups == 1:
-                modules.append(nn.Linear(config.ff_dim_list[layer_id], config.ff_dim_list[layer_id]))
+                modules.append(nn.Linear(config.ff_dim_list[layer_id][i], config.ff_dim_list[layer_id][i+1]))
             else:
                modules.append(GroupedLinearLayer(
-                input_size=config.ff_dim_list[layer_id], output_size=config.ff_dim_list[layer_id], num_groups=config.num_groups
+                input_size=config.ff_dim_list[layer_id][i], output_size=config.ff_dim_list[layer_id][i+1], num_groups=config.num_groups
             ))
 
             modules.append(self.intermediate_act_fn)
