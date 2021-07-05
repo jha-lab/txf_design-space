@@ -173,7 +173,7 @@ class GraphLib(object):
 		graph_list = [self.library[i].graph for i in range(len(self))]
 
 		# Generate dissimilarity_matrix using the specified kernel
-		diss_mat = graph_util.generate_dissimilarity_matrix(graph_list, kernel=kernel, n_jobs=n_jobs)
+		diss_mat = graph_util.generate_dissimilarity_matrix(graph_list, kernel=kernel, ops_list=self.ops_list, n_jobs=n_jobs)
 
 		# Generate embeddings using MDS or GD
 		if algo == 'MDS':

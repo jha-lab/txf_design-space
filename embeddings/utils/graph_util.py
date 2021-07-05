@@ -187,7 +187,7 @@ def hash_graph(matrix, ops, algo='md5'):
     return fingerprint
 
 
-def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', ops_list:list = None, n_jobs=8, approx=1):
+def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', ops_list: list = None, n_jobs=8, approx=1):
     """Generate the dissimilarity matrix which is N x N, for N graphs 
     in the design space
     
@@ -223,18 +223,33 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
     elif kernel == 'GraphEditDistance':
         assert ops_list is not None, '"ops_list" is required when kernel = "GraphEditDistance"'
 
-        sorted_ops_list = ['input', 'output', 'add_norm']
-        att_sizes = set([int(re.search('h([0-9]+)', a).group(0)[1:]) for a in ops_list if a.startswith('a_')])
+        sorted_ops_list = ['input', 'output', 'add_norm', '']
+        att_sizes = set([int(re.search('h([0-9]+)', op).group(0)[1:]) for op in ops_list if op.startswith('sa_')])
+        lin_sizes = set([int(re.search('h([0-9]+)', op).group(0)[1:]) for op in ops_list if op.startswith('l_')])
+        conv_sizes = set([int(re.search('h([0-9]+)', op).group(0)[1:]) for op in ops_list if op.startswith('c_')])
+        kernel_sizes = set([int(re.search('p-([0-9]+)', op).group(0)[2:]) for op in ops_list if op.startswith('c_')])
         f_sizes = set([int(re.search('f([0-9]+)', f).group(0)[1:]) for f in ops_list if f.startswith('f')])
 
         for f in f_sizes:
             sorted_ops_list.append(f'f{f}')
 
-        for a in att_sizes:
-            sorted_ops_list.append(f'a_h{a}_s-sdp')
-            sorted_ops_list.append(f'a_h{a}_s-wma')
+        sorted_ops_list.append('')
 
-        # TODO: add support for more basic operations
+        for l in lin_sizes:
+            sorted_ops_list.append(f'l_h{l}_p-dft')
+            sorted_ops_list.append(f'l_h{l}_p-dct')
+
+        sorted_ops_list.append('')
+
+        for a in att_sizes:
+            sorted_ops_list.append(f'sa_h{a}_p-sdp')
+            sorted_ops_list.append(f'sa_h{a}_p-wma')
+
+        sorted_ops_list.append('')
+
+        for c in conv_sizes:
+            for k in sorted(kernel_sizes):
+                sorted_ops_list.append(f'c_h{c}_p-{k}')
 
         nx_graph_list = []
 
