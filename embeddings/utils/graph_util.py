@@ -14,6 +14,7 @@ from itertools import combinations
 from joblib import Parallel, delayed
 
 SUPPORTED_KERNELS = ['WeisfeilerLehman', 'NeighborhoodHash', 'RandomWalkLabeled', 'GraphEditDistance']
+PARALLELIZE = False
 
 
 def model_dict_to_graph(model_dict, ops_list):
@@ -209,8 +210,8 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
     if kernel in ['WeisfeilerLehman', 'NeighborhoodHash', 'RandomWalkLabeled']:
         grakel_graph_list = []
         for graph in graph_list:
-        	grakel_graph_list.append(Graph(graph[0], 
-        		node_labels={idx:op for idx, op in zip(range(len(graph[1])), graph[1])}))
+            grakel_graph_list.append(Graph(graph[0], 
+                node_labels={idx:op for idx, op in zip(range(len(graph[1])), graph[1])}))
 
         # Instantiate kernel function based on choice of distance kernel
         kernel_func = eval(f'{kernel}(n_jobs={n_jobs}, normalize=True)')
@@ -260,19 +261,19 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 
         dissimilarity_matrix = np.zeros((len(graph_list), len(graph_list)))
 
-        def get_ged(i, j, dissimilarity_matrix, nx_graph_list, sorted_ops_list, approx=approx):
-
-            def node_subst_cost(node1, node2):
-                if node1['label'] == node2['label']:
-                    return 0
-                else:
-                    return abs(sorted_ops_list.index(node1['label']) - sorted_ops_list.index(node2['label']))
+        def node_subst_cost(node1, node2):
+            if node1['label'] == node2['label']:
+                return 0
+            else:
+                return abs(sorted_ops_list.index(node1['label']) - sorted_ops_list.index(node2['label']))
                 
-            def node_cost(node):
-                return sorted_ops_list.index(node['label'])
+        def node_cost(node):
+            return sorted_ops_list.index(node['label'])
 
-            def edge_cost(edge):
-                return 0.1
+        def edge_cost(edge):
+            return 0.1
+
+        def get_ged(i, j, dissimilarity_matrix, approx=approx):
 
             if approx == 0:
                 dissimilarity_matrix[i, j] = nx.graph_edit_distance(nx_graph_list[i], nx_graph_list[j],
@@ -297,13 +298,13 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 
                 dissimilarity_matrix[i, j] = approx_dist
 
-        for i, j in tqdm(list(combinations(range(len(graph_list)), 2)), desc='Generating dissimilarity matrix'):
-            get_ged(i, j, dissimilarity_matrix, nx_graph_list, sorted_ops_list)
-        
-        ## It was found that serial operations are faster
-        # Parallel(n_jobs=n_jobs, prefer='threads', require='sharedmem')(
-        #     delayed(get_ged)(i, j, dissimilarity_matrix, nx_graph_list, sorted_ops_list) \
-        #         for i, j in tqdm(list(combinations(range(len(graph_list)), 2)), desc='Generating dissimilarity matrix'))
+        if not PARALLELIZE:
+            for i, j in tqdm(list(combinations(range(len(graph_list)), 2)), desc='Generating dissimilarity matrix'):
+                get_ged(i, j, dissimilarity_matrix)
+        else:
+            with Parallel(n_jobs=n_jobs, prefer='threads', require='sharedmem') as parallel:
+                parallel(delayed(get_ged)(i, j, dissimilarity_matrix) \
+                    for i, j in tqdm(list(combinations(range(len(graph_list)), 2)), desc='Generating dissimilarity matrix'))
 
         dissimilarity_matrix = dissimilarity_matrix + np.transpose(dissimilarity_matrix)
 
