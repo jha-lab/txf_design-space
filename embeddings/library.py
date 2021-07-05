@@ -94,9 +94,6 @@ class GraphLib(object):
 		    	through the network.
 		    heterogeneous_feed_forward (bool, optional): if True, feed forward layers are 
 		    	heterogeneous inside each encoder layer, if "nff" for that layer is greater than 1.
-		
-		Raises:
-		    NotImplementedError: Description
 		"""
 		print('Creating Graph library')
 		count = 0
@@ -105,11 +102,15 @@ class GraphLib(object):
 			if increasing:
 				possible_n = list(itertools.combinations_with_replacement(self.design_space['num_heads'], layers))
 				possible_h = list(itertools.combinations_with_replacement(self.design_space['hidden_size'], layers))
+				possible_f = [list(itertools.combinations_with_replacement(self.design_space['feed-forward_hidden'], nff)) \
+					for nff in self.design_space['number_of_feed-forward_stacks']]
 				possible_nff = list(itertools.combinations_with_replacement(
 										self.design_space['number_of_feed-forward_stacks'], layers))
 			else:
 				possible_n = list(itertools.product(self.design_space['num_heads'], repeat=layers))
 				possible_h = list(itertools.product(self.design_space['hidden_size'], repeat=layers))
+				possible_f = [list(itertools.product(self.design_space['feed-forward_hidden'], repeat=nff)) \
+					for nff in self.design_space['number_of_feed-forward_stacks']]
 				possible_nff = list(itertools.product(
 										self.design_space['number_of_feed-forward_stacks'], repeat=layers))
 			for n, h, o, nff in product(possible_n, possible_h, possible_o, possible_nff, \
@@ -120,7 +121,7 @@ class GraphLib(object):
 					if not heterogeneous_feed_forward:
 						for f in itertools.product(self.design_space['feed-forward_hidden'], repeat=layers):
 							model_dict = {'l': layers, 'h': list(h), 'n': list(n), 'o': list(o), \
-								'nff': list(nff), 'f': [[f[layer]] *  nff[layer] for layer in range(layers)], 'p': list(p)}
+								'f': [[f[layer]] *  nff[layer] for layer in range(layers)], 'p': list(p)}
 							if create_graphs: new_graph = Graph(model_dict, self.datasets, self.ops_list, compute_hash=True)
 							count += 1
 							if check_isomorphism:
@@ -131,10 +132,21 @@ class GraphLib(object):
 									+ f'Graph-2: {graph.model_dict for graph in self.library if graph.hash == new_graph.hash}'
 							if create_graphs: self.library.append(new_graph)
 					else:
-						raise NotImplementedError('Heterogeneous feed-forward stacks for each layer are not implemented yet')
+						for f in itertools.product(*[possible_f[nff[layer]-1] for layer in range(layers)]):
+							model_dict = {'l': layers, 'h': list(h), 'n': list(n), 'o': list(o), \
+								'f': f, 'p': list(p)}
+							if create_graphs: new_graph = Graph(model_dict, self.datasets, self.ops_list, compute_hash=True)
+							count += 1
+							if check_isomorphism:
+								assert new_graph.hash not in [graph.hash for graph in self.library], \
+									f'{pu.bcolors.FAIL}Two graphs found with same hash! ' \
+									+ f'Check if they are isomorphic:{pu.bcolors.ENDC}\n' \
+									+ f'Graph-1: {new_graph.model_dict}\n' \
+									+ f'Graph-2: {graph.model_dict for graph in self.library if graph.hash == new_graph.hash}'
+							if create_graphs: self.library.append(new_graph)
 
-		print(f'{pu.bcolors.OKGREEN}{count} graph library created!{pu.bcolors.ENDC} ' \
-			+ f'\n{len(self.library)} graphs within the design space.')
+		print(f'{pu.bcolors.OKGREEN}{count} graphs created!{pu.bcolors.ENDC} ' \
+			+ f'\n{len(self.library)} graphs within the design space in the library.')
 
 	def build_embeddings(self, embedding_size: int, algo='MDS', kernel='WeisfeilerLehman', neighbors=10, n_jobs=8):
 		"""Build the embeddings of all Graphs in GraphLib using MDS

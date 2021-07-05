@@ -36,7 +36,7 @@ def model_dict_to_graph(model_dict, ops_list):
     hidden = model_dict.get('h')
     num_heads = model_dict.get('n')
     feed_forward = model_dict.get('f')
-    num_feed_forward = model_dict.get('nff')
+    num_feed_forward = [len(feed_forward[layer]) for layer in range(layers)]
     parameter = model_dict.get('p')
 
     assert layers == len(operation) == len(hidden) == len(num_heads) == len(feed_forward) == len(parameter), \
@@ -63,9 +63,7 @@ def model_dict_to_graph(model_dict, ops_list):
                 raise ValueError(f'Operation: {op}, not in ops_list')
             else:
                 ops.append(op)
-        ops.append('add_norm')        
-        assert len(feed_forward[layer]) == num_feed_forward[layer], \
-            f'"nff" for layer: {layer+1} doesn\'t match length of list in "f"'
+        ops.append('add_norm')
         for f in range(num_feed_forward[layer]):
             op = f'f{feed_forward[layer][f]}'
             if op not in ops_list:
