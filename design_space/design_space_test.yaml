@@ -20,7 +20,6 @@ architecture:
     - 4
   encoder_layers:
     - 2
-    - 4
   operation_types:
     - sa
     - l
