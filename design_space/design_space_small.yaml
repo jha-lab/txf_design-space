@@ -28,8 +28,8 @@ architecture:
     - c
   number_of_feed-forward_stacks:
     - 1
-    - 2
-    - 3
+    - 2 # An extra
+    - 3 # An extra
   feed-forward_hidden:
     - 512
     - 1024
@@ -42,6 +42,6 @@ architecture:
       - dft # An extra
       - dct # An extra
     c:
-      - 4 # An extra
-      - 8 # An extra
-      - 16 # An extra
+      - 5 # An extra
+      - 9 # An extra
+      - 13 # An extra

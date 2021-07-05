@@ -38,6 +38,6 @@ architecture:
       - dft
       - dct
     c:
-      - 4
-      - 8
-      - 16
+      - 5
+      - 9
+      - 13
