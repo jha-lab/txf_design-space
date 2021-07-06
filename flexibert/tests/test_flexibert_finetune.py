@@ -11,10 +11,10 @@ from utils import print_util as pu
 from finetune_flexibert import finetune
 import shlex
 
-def training(hash_model,task_ID):
+def training(dataset_name,model_dict):
 
-	a = "--model_name_or_path {} \
-	--task_name {} \
+	a = "--dataset_name {}\
+	--model_dict {} \
 	--do_train \
 	--do_eval \
 	--max_seq_length 128 \

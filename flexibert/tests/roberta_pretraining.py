@@ -72,6 +72,12 @@ class ModelArguments:
             "Don't set if you want to train a model from scratch."
         },
     )
+    model_dict: Optional[dict] = field(
+    	default=None,
+        metadata={
+            "help": "Model dictionary for modularization"
+        },
+    )
     model_type: Optional[str] = field(
         default=None,
         metadata={"help": "If training from scratch, pass a model type from the list: " + ", ".join(MODEL_TYPES)},
@@ -288,12 +294,11 @@ def pretrain(args):
         logger.warning("You are instantiating a new config instance from scratch.")
     '''
 
-    config = BertConfig.from_pretrained(model_args.model_name_or_path)
-    
-    bertmodel = BertModelModular.from_pretrained(model_args.model_name_or_path)
-    model = BertForMaskedLMModular(config)
-    model.bert.load_state_dict(bertmodel.state_dict())
+    tokenizer = RobertaTokenizer.from_pretrained(main_dir+'roberta_tokenizer/')
 
+    config = BertConfig(vocab_size = tokenizer.vocab_size)
+ 	config.from_model_dict(model_args.model_dict)
+    model = BertForMaskedLMModular(config)
     '''
     tokenizer_kwargs = {
         "cache_dir": model_args.cache_dir,
@@ -312,8 +317,7 @@ def pretrain(args):
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
    '''
-   	tokenizer = RobertaTokenizer.from_pretrained(main_dir+'roberta_tokenizer/')
-
+   	'''
     if model_args.model_name_or_path:
         model = AutoModelForMaskedLM.from_pretrained(
             model_args.model_name_or_path,
@@ -326,6 +330,7 @@ def pretrain(args):
     else:
         logger.info("Training new model from scratch")
         model = BertForMaskedLM.from_config(config)
+    '''
 
     model.resize_token_embeddings(len(tokenizer))
 
@@ -490,11 +495,9 @@ def pretrain(args):
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
 
+    return metrics
+
 
 def _mp_fn(index):
     # For xla_spawn (TPUs)
-    main()
-
-
-if __name__ == "__main__":
     main()
