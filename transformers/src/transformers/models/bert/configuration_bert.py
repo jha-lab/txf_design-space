@@ -172,12 +172,12 @@ class BertConfig(PretrainedConfig):
     def from_model_dict(self,model_dict):
 
         self.num_hidden_layers = model_dict['l']
-        self.attention_type = model_dict['t'] #options = 'l','sa','c'
+        self.attention_type = model_dict['o'] #options = 'l','sa','c'
         self.hidden_dim_list = model_dict['h']
-        self.attention_heads_list = model_dict['a']
+        self.attention_heads_list = model_dict['n']
         self.ff_dim_list = model_dict['f']
         #self.nff_list = model_dict['nff']
-        self.similarity_list = model_dict['s'] #options = if 'sa'-->'sdp'/'wma' , elif 'l'-->dft'/'dct'
-        self.hidden_size = model_dict['h'][-1] 
-        self.num_attention_heads = model_dict['a'][-1]
+        self.similarity_list = model_dict['p'] #options = if 'sa'-->'sdp'/'wma' , elif 'l'-->'dft'/'dct', elif 'c' --> 5,9,13
+        #self.hidden_size = model_dict['h'][-1] 
+        #self.num_attention_heads = model_dict['a'][-1]
 
