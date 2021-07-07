@@ -89,10 +89,16 @@ class GraphLib(object):
 		return f'{pu.bcolors.HEADER}Graph Library with design space:{pu.bcolors.ENDC}\n{self.design_space}' \
 			+ f'\n{pu.bcolors.HEADER}Number of graphs:{pu.bcolors.ENDC} {len(self.library)}'
 
-	def build_library(self, create_graphs=True, check_isomorphism=False, increasing=False, heterogeneous_feed_forward=False):
+	def build_library(self, 
+		layers_per_stack=1, 
+		create_graphs=True, 
+		check_isomorphism=False, 
+		increasing=False, 
+		heterogeneous_feed_forward=False):
 		"""Build the GraphLib library
 		
 		Args:
+		    layers_per_stack (int, optional): the number of layers in the stack
 		    create_graphs (bool, optional): creates grapha and adds to library
 		    check_isomorphism (bool, optional): if True, isomorphism is checked 
 		    	for every graph. Default is False, to save compute time.
@@ -101,47 +107,58 @@ class GraphLib(object):
 		    heterogeneous_feed_forward (bool, optional): if True, feed forward layers are 
 		    	heterogeneous inside each encoder layer, if "nff" for that layer is greater than 1.
 		"""
+		def _get_stack(lst: list, repeat: int):
+			return list(itertools.chain.from_iterable(itertools.repeat(x, repeat) for x in lst))
+
 		print('Creating Graph library')
 		count = 0
-		for layers in self.design_space['encoder_layers']:
-			possible_o = list(itertools.product(self.design_space['operation_types'], repeat=layers))
+
+		assert [layers % layers_per_stack for layers in self.design_space['encoder_layers']] == [0 for layers in \
+			self.design_space['encoder_layers']], f'All layers in design space should be divisible by {layers_per_stack}'
+
+		layer_stacks = [layers // layers_per_stack for layers in self.design_space['encoder_layers']]
+
+		for stacks in layer_stacks:
+			possible_o = list(itertools.product(self.design_space['operation_types'], repeat=stacks))
 
 			if increasing:
-				possible_n = list(itertools.combinations_with_replacement(self.design_space['num_heads'], layers))
-				possible_h = list(itertools.combinations_with_replacement(self.design_space['hidden_size'], layers))
+				possible_n = list(itertools.combinations_with_replacement(self.design_space['num_heads'], stacks))
+				possible_h = list(itertools.combinations_with_replacement(self.design_space['hidden_size'], stacks))
 				if not heterogeneous_feed_forward:
-					possible_f = list(itertools.product(self.design_space['feed-forward_hidden'], repeat=layers))
+					possible_f = list(itertools.product(self.design_space['feed-forward_hidden'], repeat=stacks))
 				else:
 					possible_f = [list(itertools.combinations_with_replacement(self.design_space['feed-forward_hidden'], nff)) \
 						for nff in self.design_space['number_of_feed-forward_stacks']]
 				possible_nff = list(itertools.combinations_with_replacement(
-										self.design_space['number_of_feed-forward_stacks'], layers))
+										self.design_space['number_of_feed-forward_stacks'], stacks))
 			else:
-				possible_n = list(itertools.product(self.design_space['num_heads'], repeat=layers))
-				possible_h = list(itertools.product(self.design_space['hidden_size'], repeat=layers))
+				possible_n = list(itertools.product(self.design_space['num_heads'], repeat=stacks))
+				possible_h = list(itertools.product(self.design_space['hidden_size'], repeat=stacks))
 				if not heterogeneous_feed_forward:
-					possible_f = list(itertools.product(self.design_space['feed-forward_hidden'], repeat=layers))
+					possible_f = list(itertools.product(self.design_space['feed-forward_hidden'], repeat=stacks))
 				else:
 					possible_f = [list(itertools.product(self.design_space['feed-forward_hidden'], repeat=nff)) \
 						for nff in self.design_space['number_of_feed-forward_stacks']]
 				possible_nff = list(itertools.product(
-										self.design_space['number_of_feed-forward_stacks'], repeat=layers))
+										self.design_space['number_of_feed-forward_stacks'], repeat=stacks))
 
 			def create_graph(self, n, h, o, nff, count):
-				possible_p = itertools.product(*[self.design_space['operation_parameters'][o[layer]] \
-					for layer in range(layers)])
+				possible_p = itertools.product(*[self.design_space['operation_parameters'][o[stack]] \
+					for stack in range(stacks)])
 				if not create_graphs:
 					if not heterogeneous_feed_forward:
 						count += len(list(possible_p)) * len(list(possible_f))
 					else:
-						count += len(list(possible_p)) * len(list(itertools.product(*[possible_f[nff[layer]-1] \
-							for layer in range(layers)])))
+						count += len(list(possible_p)) * len(list(itertools.product(*[possible_f[nff[stack]-1] \
+							for stack in range(stacks)])))
 					return count
 				for p in possible_p:
 					if not heterogeneous_feed_forward:
 						for f in possible_f:
-							model_dict = {'l': layers, 'h': list(h), 'n': list(n), 'o': list(o), \
-								'f': [[f[layer]] *  nff[layer] for layer in range(layers)], 'p': list(p)}
+							model_dict = {'l': stacks * layers_per_stack, 'h': _get_stack(list(h), layers_per_stack), \
+								'n': _get_stack(list(n), layers_per_stack), 'o': _get_stack(list(o), layers_per_stack), \
+								'f': _get_stack([[f[stack]] *  nff[stack] for stack in range(stacks)], layers_per_stack), \
+								'p': _get_stack(list(p), layers_per_stack)}
 							new_graph = Graph(model_dict, self.ops_list, compute_hash=True)
 							count += 1
 							if check_isomorphism:
@@ -152,9 +169,11 @@ class GraphLib(object):
 									+ f'Graph-2: {graph.model_dict for graph in self.library if graph.hash == new_graph.hash}'
 							self.library.append(new_graph)
 					else:
-						for f in itertools.product(*[possible_f[nff[layer]-1] for layer in range(layers)]):
-							model_dict = {'l': layers, 'h': list(h), 'n': list(n), 'o': list(o), \
-								'f': f, 'p': list(p)}
+						for f in itertools.product(*[possible_f[nff[stack]-1] for stack in range(stacks)]):
+							model_dict = {'l': stacks * layers_per_stack, 'h': _get_stack(list(h), layers_per_stack), \
+								'n': _get_stack(list(n), layers_per_stack), 'o': _get_stack(list(o), layers_per_stack), \
+								'f': _get_stack(list(f), layers_per_stack), \
+								'p': _get_stack(list(p), layers_per_stack)}
 							new_graph = Graph(model_dict, self.dataset, self.ops_list, compute_hash=True)
 							count += 1
 							if check_isomorphism:
@@ -169,14 +188,14 @@ class GraphLib(object):
 
 			if not PARALLELIZE:
 				for n, h, o, nff in product(possible_n, possible_h, possible_o, possible_nff, \
-					desc=f'Generating transformers with {layers} encoder layers'):
+					desc=f'Generating transformers with {stacks * layers_per_stack} encoder layers'):
 					count = create_graph(self, n, h, o, nff, count)
 					# print(f'\r{pu.human_format(count)}', end='')
 			else:
 				with Parallel(n_jobs=8, prefer='threads', require='sharedmem') as parallel:
 					parallel(delayed(create_graph)(self, n, h, o, nff, count) \
 						for n, h, o, nff in product(possible_n, possible_h, possible_o, possible_nff, \
-							desc=f'Generating transformers with {layers} encoder layers'))
+							desc=f'Generating transformers with {stacks * layers_per_stack} encoder layers'))
 
 		print(f'{pu.bcolors.OKGREEN}Graphs created{": " + str(count) if not PARALLELIZE else ""}!{pu.bcolors.ENDC} ' \
 			+ f'\n{len(self.library)} graphs within the design space in the library.')
