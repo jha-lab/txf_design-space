@@ -130,12 +130,19 @@ class GraphLib(object):
 			def create_graph(self, n, h, o, nff, count):
 				possible_p = itertools.product(*[self.design_space['operation_parameters'][o[layer]] \
 					for layer in range(layers)])
+				if not create_graphs:
+					if not heterogeneous_feed_forward:
+						count += len(list(possible_p)) * len(list(possible_f))
+					else:
+						count += len(list(possible_p)) * len(list(itertools.product(*[possible_f[nff[layer]-1] \
+							for layer in range(layers)])))
+					return count
 				for p in possible_p:
 					if not heterogeneous_feed_forward:
 						for f in possible_f:
 							model_dict = {'l': layers, 'h': list(h), 'n': list(n), 'o': list(o), \
 								'f': [[f[layer]] *  nff[layer] for layer in range(layers)], 'p': list(p)}
-							if create_graphs: new_graph = Graph(model_dict, self.ops_list, compute_hash=True)
+							new_graph = Graph(model_dict, self.ops_list, compute_hash=True)
 							count += 1
 							if check_isomorphism:
 								assert new_graph.hash not in [graph.hash for graph in self.library], \
@@ -143,12 +150,12 @@ class GraphLib(object):
 									+ f'Check if they are isomorphic:{pu.bcolors.ENDC}\n' \
 									+ f'Graph-1: {new_graph.model_dict}\n' \
 									+ f'Graph-2: {graph.model_dict for graph in self.library if graph.hash == new_graph.hash}'
-							if create_graphs: self.library.append(new_graph)
+							self.library.append(new_graph)
 					else:
 						for f in itertools.product(*[possible_f[nff[layer]-1] for layer in range(layers)]):
 							model_dict = {'l': layers, 'h': list(h), 'n': list(n), 'o': list(o), \
 								'f': f, 'p': list(p)}
-							if create_graphs: new_graph = Graph(model_dict, self.dataset, self.ops_list, compute_hash=True)
+							new_graph = Graph(model_dict, self.dataset, self.ops_list, compute_hash=True)
 							count += 1
 							if check_isomorphism:
 								assert new_graph.hash not in [graph.hash for graph in self.library], \
@@ -156,7 +163,7 @@ class GraphLib(object):
 									+ f'Check if they are isomorphic:{pu.bcolors.ENDC}\n' \
 									+ f'Graph-1: {new_graph.model_dict}\n' \
 									+ f'Graph-2: {graph.model_dict for graph in self.library if graph.hash == new_graph.hash}'
-							if create_graphs: self.library.append(new_graph)
+							self.library.append(new_graph)
 
 				return count
 
