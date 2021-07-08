@@ -232,6 +232,7 @@ class BertSelfAttentionModular(nn.Module):
 
 
         if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
+
             seq_length = hidden_states.size()[1]
             position_ids_l = torch.arange(seq_length, dtype=torch.long, device=hidden_states.device).view(-1, 1)
             position_ids_r = torch.arange(seq_length, dtype=torch.long, device=hidden_states.device).view(1, -1)
@@ -307,7 +308,7 @@ class BertLinearAttentionModular(nn.Module):
 
         self.is_decoder = config.is_decoder
         self.sim = config.similarity_list[layer_id]
-        self.W = torch.nn.Parameter(torch.FloatTensor(self.attention_head_size,self.attention_head_size).uniform_(-0.1, 0.1))
+        #self.W = torch.nn.Parameter(torch.FloatTensor(self.attention_head_size,self.attention_head_size).uniform_(-0.1, 0.1))
 
     def transpose_for_scores(self, x):
         new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
@@ -363,8 +364,7 @@ class BertLinearAttentionModular(nn.Module):
             past_key_value = (key_layer, value_layer)
 
         
-        attention_scores = torch.zeros(hidden_states.shape[0],self.num_attention_heads,hidden_states.shape[1],hidden_states.shape[1])
-
+        attention_scores = torch.zeros(hidden_states.shape[0],self.num_attention_heads,hidden_states.shape[1],hidden_states.shape[1]).to(device=hidden_states.device)
 
         if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
             seq_length = hidden_states.size()[1]
@@ -376,7 +376,9 @@ class BertLinearAttentionModular(nn.Module):
 
             if self.position_embedding_type == "relative_key":
                 relative_position_scores = torch.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
+                #debug --> print(attention_scores.device(),relative_position_scores.device)
                 attention_scores = attention_scores + relative_position_scores
+
             elif self.position_embedding_type == "relative_key_query":
                 relative_position_scores_query = torch.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
                 relative_position_scores_key = torch.einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
@@ -533,7 +535,7 @@ class BertIntermediateModular(nn.Module):
 class BertOutputModular(nn.Module):
     def __init__(self, config, layer_id, last_layer):
         super().__init__()
-        self.dense = nn.Linear(config.ff_dim_list[layer_id], config.hidden_dim_list[layer_id])
+        self.dense = nn.Linear(config.ff_dim_list[layer_id][-1], config.hidden_dim_list[layer_id])
         self.LayerNorm = nn.LayerNorm(config.hidden_dim_list[layer_id], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.last_layer = last_layer

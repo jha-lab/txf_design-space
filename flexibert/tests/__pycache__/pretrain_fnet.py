@@ -21,6 +21,7 @@ def training(dataset_name):
 	--do_eval \
 	--max_seq_length 512 \
 	--line_by_line True \
+	--ngpu 1 \
 	--per_gpu_train_batch_size 32 \
     --overwrite_output_dir \
     ".format(dataset_name)

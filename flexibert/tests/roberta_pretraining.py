@@ -21,6 +21,8 @@ https://huggingface.co/models?filter=masked-lm
 """
 # You can also adapt this script on your own masked language modeling task. Pointers for this are left as comments.
 
+#os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
 import logging
 import math
 import os
@@ -70,12 +72,6 @@ class ModelArguments:
         metadata={
             "help": "The model checkpoint for weights initialization."
             "Don't set if you want to train a model from scratch."
-        },
-    )
-    model_dict: Optional[dict] = field(
-    	default=None,
-        metadata={
-            "help": "Model dictionary for modularization"
         },
     )
     model_type: Optional[str] = field(
@@ -187,18 +183,19 @@ class DataTrainingArguments:
                 assert extension in ["csv", "json", "txt"], "`validation_file` should be a csv, a json or a txt file."
 
 
-def pretrain(args):
+def pretrain(args,model_dict):
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
-
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     if len(args) == 2 and args[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
         # let's parse it to get our arguments.
         model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(args[1]))
     else:
-        model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+        model_args, data_args, training_args = parser.parse_args_into_dataclasses(args)
+
+    print(training_args.output_dir)
 
     # Detecting last checkpoint.
     last_checkpoint = None
@@ -297,7 +294,7 @@ def pretrain(args):
     tokenizer = RobertaTokenizer.from_pretrained(main_dir+'roberta_tokenizer/')
 
     config = BertConfig(vocab_size = tokenizer.vocab_size)
- 	config.from_model_dict(model_args.model_dict)
+    config.from_model_dict(model_dict)
     model = BertForMaskedLMModular(config)
     '''
     tokenizer_kwargs = {
@@ -316,8 +313,8 @@ def pretrain(args):
             "You are instantiating a new tokenizer from scratch. This is not supported by this script."
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
-   '''
-   	'''
+    '''
+    '''
     if model_args.model_name_or_path:
         model = AutoModelForMaskedLM.from_pretrained(
             model_args.model_name_or_path,
