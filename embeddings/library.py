@@ -200,6 +200,24 @@ class GraphLib(object):
 		print(f'{pu.bcolors.OKGREEN}Graphs created{": " + str(count) if not PARALLELIZE else ""}!{pu.bcolors.ENDC} ' \
 			+ f'\n{len(self.library)} graphs within the design space in the library.')
 
+	def interpolate_neighbors(self, graph1: Graph, graph2: Graph, old_layers_per_stack: int, new_layers_per_stack: int):
+		"""Interpolates between two neighbors with finer grained stacks
+		
+		Args:
+		    graph1 (Graph): first graph in the library
+		    graph2 (Graph): second graph in the library
+		    old_layers_per_stack (int): old layers per stack
+		    new_layers_per_stack (int): new layers per stack
+
+		Returns:
+			interpolants (list): list of Graph objects between graph1 and graph2
+		"""
+		assert new_layers_per_stack < old_layers_per_stack and old_layers_per_stack % new_layers_per_stack == 0, \
+			'Old number of layers per stack should be divisible by new number of layers per stack'
+
+		raise NotImplementedError
+
+
 	def build_embeddings(self, embedding_size: int, algo='MDS', kernel='WeisfeilerLehman', neighbors=10, n_jobs=8):
 		"""Build the embeddings of all Graphs in GraphLib using MDS
 		
