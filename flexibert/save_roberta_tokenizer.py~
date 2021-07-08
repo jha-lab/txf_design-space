@@ -1,5 +1,0 @@
-from transformers import RobertaTokenizer
-
-tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
-print(tokenizer.max_model_length)
-tokenizer.save_pretrained('../roberta_tokenizer/')
