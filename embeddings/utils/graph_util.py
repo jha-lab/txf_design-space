@@ -17,11 +17,16 @@ from itertools import combinations, combinations_with_replacement, product
 from joblib import Parallel, delayed, dump, load
 import shutil
 
+import scipy
+import random
+
+
 SUPPORTED_KERNELS = ['WeisfeilerLehman', 'NeighborhoodHash', 'RandomWalkLabeled', 'GraphEditDistance']
 PARALLELIZE = False
 USE_MEMMAP = True # Only used if PARALLELIZE is True
 CHUNK_COMPUTE = False
 CHUNK_SIZE = 10 # Only used if CHUNK_COMPUTE is True
+RANDOM_FRAC = 0.0001 # Only used is CHUNK_COMPUTE is False
 
 
 def model_dict_to_graph(model_dict, ops_list):
@@ -334,7 +339,10 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 
 		if not PARALLELIZE:
 			if not CHUNK_COMPUTE:
-				for i, j in tqdm(list(combinations(range(len(graph_list)), 2)), desc='Generating dissimilarity matrix'):
+				idx_set = list(combinations(range(len(graph_list)), 2))
+				if RANDOM_FRAC:
+					idx_set = random.sample(idx_set, int(len(idx_set)*RANDOM_FRAC))
+				for i, j in tqdm(idx_set, desc='Generating dissimilarity matrix'):
 					get_ged(i, j, dissimilarity_matrix)
 			else:
 				for i, j in tqdm(list(combinations(range(0, len(graph_list), CHUNK_SIZE), 2)), \
@@ -353,10 +361,13 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 				dissimilarity_matrix = np.memmap(memmap_file, shape=(len(graph_list), len(graph_list)), mode='w+')
 
 			if not CHUNK_COMPUTE:
+				idx_set = list(combinations(range(len(graph_list)), 2))
+				if RANDOM_FRAC:
+					idx_set = random.sample(idx_set, int(len(idx_set)*RANDOM_FRAC))
 				if not USE_MEMMAP:
 					with Parallel(n_jobs=n_jobs, prefer='threads', require='sharedmem') as parallel:
 						parallel(delayed(get_ged)(i, j, dissimilarity_matrix) \
-							for i, j in tqdm(list(combinations(range(len(graph_list)), 2)), \
+							for i, j in tqdm(idx_set, \
 								desc='Generating dissimilarity matrix'))
 				else:
 					with Parallel(n_jobs=n_jobs, prefer='threads') as parallel:
@@ -380,6 +391,17 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 					shutil.rmtree(folder)
 				except:  # noqa
 					print('Could not clean-up automatically.')
+
+		if RANDOM_FRAC:
+			assert CHUNK_COMPUTE is False
+			grid_x, grid_y = np.mgrid[0:len(graph_list), 0:len(graph_list)]
+			points = idx_set
+			values = [dissimilarity_matrix[idx[0], idx[1]] for idx in idx_set]
+			points.extend((i, i) for i in range(len(graph_list)))
+			values.extend(0 for i in range(len(graph_list)))
+
+			dissimilarity_matrix = scipy.interpolate.griddata(points, values, (grid_x, grid_y), 
+				fill_value=max(values), method='nearest')
 
 		dissimilarity_matrix = np.triu(dissimilarity_matrix, k=1)
 		dissimilarity_matrix = dissimilarity_matrix + np.transpose(dissimilarity_matrix)
