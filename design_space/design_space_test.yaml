@@ -20,10 +20,10 @@ architecture:
     - 4
   encoder_layers:
     - 2
+    - 4
   operation_types:
     - sa
     - l
-    - c
   number_of_feed-forward_stacks:
     - 1
     - 2
