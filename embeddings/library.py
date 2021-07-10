@@ -404,7 +404,7 @@ class GraphLib(object):
 
 		return interpolants
 
-	def build_embeddings(self, embedding_size: int, algo='MDS', kernel='WeisfeilerLehman', neighbors=10, n_jobs=8):
+	def build_embeddings(self, embedding_size: int, algo='MDS', kernel='WeisfeilerLehman', neighbors=100, n_jobs=8):
 		"""Build the embeddings of all Graphs in GraphLib using MDS
 		
 		Args:

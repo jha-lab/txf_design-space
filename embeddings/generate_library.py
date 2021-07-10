@@ -30,6 +30,11 @@ def main():
         type=str,
         help='kernel for graph similarity computation',
         default='GraphEditDistance')
+    parser.add_argument('--layers_per_stack',
+        metavar='',
+        type=int,
+        help='number of layers per stack',
+        default=2)
     parser.add_argument('--algo',
         metavar='',
         type=str,
@@ -64,7 +69,7 @@ def main():
         print()
 
         # Generating graph library
-        graphLib.build_library()
+        graphLib.build_library(layers_per_stack=args.layers_per_stack)
         print()
 
         # Simple test to check isomorphisms, rather than comparing hash for every new graph
