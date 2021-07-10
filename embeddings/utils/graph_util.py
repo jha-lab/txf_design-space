@@ -26,7 +26,7 @@ PARALLELIZE = False
 USE_MEMMAP = True # Only used if PARALLELIZE is True
 CHUNK_COMPUTE = False
 CHUNK_SIZE = 10 # Only used if CHUNK_COMPUTE is True
-RANDOM_FRAC = 0.0001 # Only used is CHUNK_COMPUTE is False
+RANDOM_FRAC = 0.01 # Only used is CHUNK_COMPUTE is False
 
 
 def model_dict_to_graph(model_dict, ops_list):
@@ -342,6 +342,9 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 				idx_set = list(combinations(range(len(graph_list)), 2))
 				if RANDOM_FRAC:
 					idx_set = random.sample(idx_set, int(len(idx_set)*RANDOM_FRAC))
+					# Adding top-right point to aid interpolation
+					idx_set.append((0, len(graph_list) - 1))
+					idx_set = list(set(idx_set))
 				for i, j in tqdm(idx_set, desc='Generating dissimilarity matrix'):
 					get_ged(i, j, dissimilarity_matrix)
 			else:
@@ -364,6 +367,9 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 				idx_set = list(combinations(range(len(graph_list)), 2))
 				if RANDOM_FRAC:
 					idx_set = random.sample(idx_set, int(len(idx_set)*RANDOM_FRAC))
+					# Adding top-right point to aid interpolation
+					idx_set.append((0, len(graph_list) - 1))
+					idx_set = list(set(idx_set))
 				if not USE_MEMMAP:
 					with Parallel(n_jobs=n_jobs, prefer='threads', require='sharedmem') as parallel:
 						parallel(delayed(get_ged)(i, j, dissimilarity_matrix) \
@@ -401,9 +407,11 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 			values.extend(0 for i in range(len(graph_list)))
 
 			dissimilarity_matrix = scipy.interpolate.griddata(points, values, (grid_x, grid_y), 
-				fill_value=max(values), method='nearest')
+				method='linear')
 
 		dissimilarity_matrix = np.triu(dissimilarity_matrix, k=1)
 		dissimilarity_matrix = dissimilarity_matrix + np.transpose(dissimilarity_matrix)
+
+		assert np.isnan(dissimilarity_matrix).sum() == 0, 'Dissimilarity matrix generated has NaN values'
 
 	return dissimilarity_matrix
