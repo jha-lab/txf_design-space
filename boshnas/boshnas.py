@@ -13,7 +13,7 @@ from .utils import *
 NUM_CORES = multiprocessing.cpu_count()
 DEBUG = False
 
-class GOSH():
+class BOSHNAS():
 	def __init__(self, input_dim, bounds, trust_region, second_order, parallel, model_aleatoric, pretrained):
 		assert bounds[0].shape[0] == input_dim and bounds[1].shape[0] == input_dim
 		self.input_dim = input_dim
