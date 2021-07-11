@@ -24,12 +24,13 @@ architecture:
   operation_types:
     - sa
     - l
+    - c
   number_of_feed-forward_stacks:
     - 1
-    - 2
+    - 3
   feed-forward_hidden:
-    - 2048
-    - 4096
+    - 512
+    - 1024
   operation_parameters:
     sa:
       - sdp
@@ -40,4 +41,3 @@ architecture:
     c:
       - 5
       - 9
-      - 13
