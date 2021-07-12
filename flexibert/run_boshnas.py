@@ -40,15 +40,15 @@ OVERLAP_THRESHOLD = 0.9 # Corresponds to the minimum overlap for model to be con
 DEBUG = False
 
 
-def worker(model_idx: int, 
-    model_dict: dict,
+def worker(model_dict: dict,
     model_hash: str,
     task: str, 
+    epochs: int, 
     models_dir: str,
     chosen_neighbor_hash: str = None,
     cluster: str,
     id: str):
-    """Worker to fine-tune the given model
+    """Worker to fine-tune or pre-train the given model
     
     Args:
         model_idx (int): index for the model in shared_accuracies
@@ -56,20 +56,50 @@ def worker(model_idx: int,
         model_hash (str): hash of the given model
         task (str): name of the GLUE task for fine-tuning the model on; should
             be in GLUE_TASKS
+		epochs (int): number of epochs for fine-tuning
         models_dir (str): path to "models" directory containing "pretrained" sub-directory
         chosen_neighbor_hash (str, optional): hash of the chosen neighbor
         cluster (str): name of the cluster - "adroit" or "tiger"
         id (str): PU-NetID that is used to run slurm commands
     
     Returns:
-        job_id (int): Job ID for the slurm scheduler
+        job_id (str): Job ID for the slurm scheduler
     """
+    pretrain = False
 
-    # 1. Create job_model_script that pre-trains or fine-tunes based on neighbor
-    # 2. Call script and get job number to return to main, using 
-    #   subprocess.check_output('sbatch ...', shell=True, text=True)
+    if chosen_neighbor_hash is not None:
+        # Load weights of current model using the fine-tuned neighbor that was chosen
+        model_config = BertConfig()
+        model_config.from_model_dict(model_dict)
+        chosen_neighbor_model = BertModelModular.from_pretrained(
+            f'{models_dir}{task}/{chosen_neighbor_hash}/')
+        current_model = BertModelModular(model_config)
+        current_model.load_model_from_source(chosen_neighbor_model)
+        current_model.save_pretrained(
+            f'{models_dir}{task}/{model_hash}/')
 
-    raise NotImplementedError('Slurm scheduling is not implemented yet')
+        model_name_or_path = f'{models_dir}{task}/{model_hash}/' 
+        print(f'Model (with hash: {model_hash}) copied from neighbor. Fine-tuning model.')
+    else:
+        if model_hash not in os.listdir(f'{models_dir}pretrained/'):
+        	print(f'Model (with hash: {model_hash}) is not pre-trained. Pre-training first.')
+        	pretrain = True
+        else:
+        	print(f'Model (with hash: {model_hash}) is pre-trained. Directly fine-tuning.')
+        model_name_or_path = f'{models_dir}pretrained/{model_hash}/'
+
+    args = ['--task', task]
+    args.extend(['--cluster', cluster])
+    args.extend(['--id', id])
+    args.extend(['--pretrain', '1' if pretrain else '0'])
+    args.extend(['--model_hash', model_hash])
+    args.extend(['--model_name_or_path', model_name_or_path])
+    args.extend(['--epochs', str(epochs)])
+    args.extend(['--output_dir', f'{models_dir}{task}/{model_hash}/'])
+
+    slurm_stdout = subprocess.check_output(f'source job_train_script.sh {' '.join(args)}')
+
+    return slurm_stdout.split()[-1]
         
 
 def main():
