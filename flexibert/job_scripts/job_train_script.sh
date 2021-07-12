@@ -106,14 +106,15 @@ else
 	return 1
 fi
 
-job_file="./${task}/job_${model_hash}_.slurm"
+job_file="./job_${model_hash}_.slurm"
+mkdir -p "./${task}/"
 
 cd ..
 
 # Load GLUE dataset using the internet
 python load_glue_dataset.py --task $task
 
-cd job_scripts/
+cd "./job_scripts/${task}/"
 
 # Create SLURM job script to train surrogate model
 echo "#!/bin/bash" >> $job_file
@@ -131,7 +132,7 @@ echo "module purge" >> $job_file
 echo "module load anaconda3/2020.7" >> $job_file
 echo "conda activate txf_design-space" >> $job_file
 echo "" >> $job_file
-echo "cd .." >> $job_file
+echo "cd ../../" >> $job_file
 echo "" >> $job_file
 if [[ $pretrain == "1" ]]
 then
