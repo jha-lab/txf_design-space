@@ -511,4 +511,5 @@ def finetune(args):
     return metrics
 
 
-
+if __name__ == "__main__":
+    finetune(sys.argv[1:])
