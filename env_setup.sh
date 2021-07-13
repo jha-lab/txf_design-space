@@ -81,6 +81,7 @@ conda install -c plotly plotly
 pip install grakel
 pip install datasets
 pip install networkx
+pip install tabulate
 
 ## TODO: create environment.yaml file or requirements.txt
 
