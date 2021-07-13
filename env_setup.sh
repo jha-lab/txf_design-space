@@ -70,7 +70,7 @@ pip install -e .
 pip install torch-dct
 
 # Add other packages and enabling extentions
-conda install -c conda-forge tqdm ipywidgets matplotlib
+conda install -c conda-forge tqdm ipywidgets matplotlib scikit-optimize
 jupyter nbextension enable --py widgetsnbextension
 conda install -c anaconda scipy cython
 conda install pyyaml
