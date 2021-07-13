@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Sript to train (either fine-tune or pre-train and then fine-tune)
+# Script to train (either fine-tune or pre-train and then fine-tune)
 # a given model.
 
 # Author : Shikhar Tuli
@@ -22,9 +22,9 @@ ENDC='\033[0m'
 Help()
 {
    # Display Help
-   echo -e "${CYAN}Sript to train (either fine-tune or pre-train and then fine-tune) a given model${ENDC}"
+   echo -e "${CYAN}Script to train (either fine-tune or pre-train and then fine-tune) a given model${ENDC}"
    echo
-   echo -e "Syntax: source ${CYAN}job_train_script.sh${ENDC} [${YELLOW}flags${ENDC}]"
+   echo -e "Syntax: source ${CYAN}./job_scripts/job_train_script.sh${ENDC} [${YELLOW}flags${ENDC}]"
    echo "Flags:"
    echo -e "${YELLOW}-t${ENDC} | ${YELLOW}--task${ENDC} [default = ${GREEN}\"sst2\"${ENDC}] \t\t\t Name of GLUE task"
    echo -e "${YELLOW}-c${ENDC} | ${YELLOW}--cluster${ENDC} [default = ${GREEN}\"tiger\"${ENDC}] \t\t Selected cluster - adroit, tiger or della"
@@ -107,9 +107,7 @@ else
 fi
 
 job_file="./job_${model_hash}_.slurm"
-mkdir -p "./${task}/"
-
-cd ..
+mkdir -p "./job_scripts/${task}/"
 
 # Load GLUE dataset using the internet
 python load_glue_dataset.py --task $task
@@ -125,8 +123,6 @@ echo "#SBATCH --cpus-per-task=16                          # cpu-cores per task (
 echo "#SBATCH --mem-per-cpu=8G                            # memory per cpu-core (4G is default)" >> $job_file
 echo "#SBATCH --gres=${cluster_gpu}                       # number of gpus per node" >> $job_file
 echo "#SBATCH --time=144:00:00                            # total run time limit (HH:MM:SS)" >> $job_file
-echo "#SBATCH --mail-type=all                             # send email" >> $job_file
-echo "#SBATCH --mail-user=${id}@princeton.edu" >> $job_file
 echo "" >> $job_file
 echo "module purge" >> $job_file
 echo "module load anaconda3/2020.7" >> $job_file
@@ -149,5 +145,6 @@ echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
   --num_train_epochs ${epochs} \
   --overwrite_output_dir \
   --output_dir ${output_dir}" >> $job_file
+# echo "python -c 'import time; import random; time.sleep(random.randint(50, 100))'" >> $job_file
 
 sbatch $job_file
