@@ -6,16 +6,16 @@ import random
 from constants import *
 import matplotlib.pyplot as plt
 
-def save_model(model, optimizer, epoch, loss_list):
-	file_path = MODEL_SAVE_PATH + "/" + model.name + ".ckpt"
+def save_model(model, optimizer, epoch, loss_list, path):
+	file_path = path + "/" + model.name + ".ckpt"
 	torch.save({
         'epoch': epoch,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'loss_list': loss_list}, file_path)
 
-def load_model(model, optimizer):
-	file_path = MODEL_SAVE_PATH + "/" + model.name + ".ckpt"
+def load_model(model, optimizer, path):
+	file_path = path + "/" + model.name + ".ckpt"
 	assert os.path.exists(file_path)
 	checkpoint = torch.load(file_path)
 	model.load_state_dict(checkpoint['model_state_dict'])

@@ -14,7 +14,7 @@ NUM_CORES = multiprocessing.cpu_count()
 DEBUG = False
 
 class BOSHNAS():
-	def __init__(self, input_dim, bounds, trust_region, second_order, parallel, model_aleatoric, pretrained):
+	def __init__(self, input_dim, bounds, trust_region, second_order, parallel, model_aleatoric, save_path, pretrained):
 		assert bounds[0].shape[0] == input_dim and bounds[1].shape[0] == input_dim
 		self.input_dim = input_dim
 		self.bounds = (torch.tensor(bounds[0], dtype=torch.float), torch.tensor(bounds[1], dtype=torch.float))
@@ -22,6 +22,7 @@ class BOSHNAS():
 		self.trust_region = trust_region
 		self.second_order = second_order
 		self.run_aleatoric = model_aleatoric
+		self.path = save_path
 		self.init_models(pretrained)
 
 	def init_models(self, pretrained):
@@ -152,7 +153,7 @@ class BOSHNAS():
 			self.teacher_l.append(self.train_teacher_helper(tset))
 			vloss.append(self.train_teacher_helper(vset, False))
 			if early_stop(self.teacher_l, vloss): break
-		save_model(self.teacher, self.teacher_opt, self.epoch, self.teacher_l)
+		save_model(self.teacher, self.teacher_opt, self.epoch, self.teacher_l, self.path)
 		return self.teacher_l[-1]
 
 	## Student training
@@ -179,7 +180,7 @@ class BOSHNAS():
 			self.student_l.append(self.train_student_helper(tset))
 			vloss.append(self.train_student_helper(vset, False))
 			if early_stop(self.student_l, vloss): break
-		save_model(self.student, self.student_opt, self.epoch, self.student_l)
+		save_model(self.student, self.student_opt, self.epoch, self.student_l, self.path)
 		return self.student_l[-1]
 
 	## NPN training
@@ -204,5 +205,5 @@ class BOSHNAS():
 			self.npn_l.append(self.train_npn_helper(tset))
 			vloss.append(self.train_npn_helper(vset, False))
 			if early_stop(self.npn_l, vloss): break
-		save_model(self.npn, self.npn_opt, self.epoch, self.npn_l)
+		save_model(self.npn, self.npn_opt, self.epoch, self.npn_l, self.path)
 		return self.npn_l[-1]
