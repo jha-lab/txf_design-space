@@ -544,7 +544,7 @@ class GraphLib(object):
 		with open(file_path, 'r', encoding ='utf8') as json_file:
 			dataset_dict = json.load(json_file)
 
-			graphLib.dataset = dataset_dict['dataset']
+			graphLib.dataset = dataset_dict.get('dataset', '')
 			graphLib.ops_list = dataset_dict['ops_list']
 			graphLib.design_space = dataset_dict['design_space']
 			graphLib.num_neighbors = dataset_dict['num_neighbors']
