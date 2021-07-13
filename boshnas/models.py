@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from .constants import *
-from .npn import *
+from constants import *
+from npn import *
 
 class student(nn.Module):
     def __init__(self, feats):

@@ -4,11 +4,11 @@ from joblib import Parallel, delayed
 from copy import deepcopy
 import random
 
-from .models import *
-from .constants import *
-from .acq import *
-from .adahessian import Adahessian
-from .utils import *
+from models import *
+from constants import *
+from acq import *
+from adahessian import Adahessian
+from boshnas_utils import *
 
 NUM_CORES = multiprocessing.cpu_count()
 DEBUG = False

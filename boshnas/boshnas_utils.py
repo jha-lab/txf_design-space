@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import torch
 import random
-from .constants import *
+from constants import *
 import matplotlib.pyplot as plt
 
 def save_model(model, optimizer, epoch, loss_list):
