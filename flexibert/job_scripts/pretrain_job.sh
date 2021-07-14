@@ -65,7 +65,7 @@ then
   cluster_gpu="gpu:4"
 elif [[ $cluster == "della" ]]
 then
-  cluster_gpu="gpu:4"
+  cluster_gpu="gpu:2"
 else
 	echo "Unrecognized cluster"
 	return 1

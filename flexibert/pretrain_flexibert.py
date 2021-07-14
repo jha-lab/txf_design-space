@@ -31,26 +31,26 @@ def training(dataset_name, seed, output_dir):
 	--learning_rate 1e-4\
 	--warmup_steps 10000\
 	--lr_scheduler_type linear\
-    --overwrite_output_dir \
-    --output_dir {} \
-    ".format(dataset_name, seed, output_dir)
+	--overwrite_output_dir \
+	--output_dir {} \
+	".format(dataset_name, seed, output_dir)
 
 	return shlex.split(a)
 
 
 def main():
-    """Run pretraining
-    """
-    parser = argparse.ArgumentParser(
-        description='Input parameters for pretraining',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--model',
-        metavar='',
-        type=str,
-        help='Model to pretrain',
-        default='fnet_mini')
+	"""Run pretraining
+	"""
+	parser = argparse.ArgumentParser(
+		description='Input parameters for pretraining',
+		formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	parser.add_argument('--model',
+		metavar='',
+		type=str,
+		help='Model to pretrain',
+		default='fnet_mini')
 
-    args = parser.parse_args()
+	args = parser.parse_args()
 
 
 	graphLib = GraphLib.load_from_dataset('../dataset/dataset_test.json')
