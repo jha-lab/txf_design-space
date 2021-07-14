@@ -1,12 +1,12 @@
 
 from roberta_pretraining import pretrain
 import sys
-sys.path.append('../../transformers/src/')
-sys.path.append('../../embeddings/')
-sys.path.append('../../flexibert/')
+sys.path.append('../transformers/src/')
+sys.path.append('../embeddings/')
+
 import os
 import torch
-from utils import print_util as pu
+
 import shlex
 from library import Graph, GraphLib
 import argparse
@@ -88,3 +88,7 @@ def main():
 	metrics = pretrain(args_train, model_dict)
 
 	print(f"MLM Accuracy on cc_news is {metrics['eval_accuracy']:0.2f}")
+
+if __name__ == '__main__':
+	
+    main()
