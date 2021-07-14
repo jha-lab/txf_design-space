@@ -14,7 +14,7 @@ from utils import print_util as pu
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
-graphLib = GraphLib.load_from_dataset('../dataset/dataset_small.json')
+graphLib = GraphLib.load_from_dataset('../dataset/dataset_test.json')
 
 #BertBase 
 '''
@@ -123,7 +123,8 @@ print("Bert Medium Modularized")
 
 bert_mini = BertModel.from_pretrained('google/bert_uncased_L-4_H-256_A-4')
 
-model_dict_bert_mini= {'l':4,'a':[4]*4,'f':[4*256]*4,'h':[256]*4,'s':['sdp']*4}
+
+model_dict_bert_mini = {'l': 4, 'o': ['sa']*4, 'h': [256]*4, 'n': [4]*4, 'f': [[1024]]*4, 'p': ['sdp']*4}
 
 config = BertConfig()
 
@@ -156,7 +157,7 @@ print("Bert Mini Modularized")
 
 bert_tiny = BertModel.from_pretrained('google/bert_uncased_L-2_H-128_A-2')
 
-model_dict_bert_tiny= {'l':2,'a':[2]*2,'f':[4*128]*2,'h':[128]*2,'s':['sdp']*2}
+model_dict_bert_tiny= { 'l': 2, 'o': ['sa']*2, 'h': [128]*2, 'n': [2]*2, 'f': [[4*128]]*2, 'p': ['sdp']*2}
 
 config = BertConfig()
 
@@ -189,7 +190,7 @@ print("Bert Tiny Modularized")
 
 bert_2_256 = BertModel.from_pretrained('google/bert_uncased_L-2_H-256_A-4')
 
-model_dict_bert_2_256= {'l':2,'a':[4]*2,'f':[4*256]*2,'h':[256]*2,'s':['sdp']*2}
+model_dict_bert_2_256= { 'l': 2, 'o': ['sa']*2, 'h': [256]*2, 'n': [4]*2, 'f': [[4*256]]*2, 'p': ['sdp']*2}
 
 config = BertConfig()
 
@@ -223,7 +224,7 @@ print("Bert L-2/H-256/A-4 Modularized")
 
 bert_4_128 = BertModel.from_pretrained('google/bert_uncased_L-4_H-128_A-2')
 
-model_dict_bert_4_128= {'l':4,'a':[2]*4,'f':[4*128]*4,'h':[128]*4,'s':['sdp']*4}
+model_dict_bert_4_128= { 'l': 4, 'o': ['sa']*4, 'h': [128]*4, 'n': [2]*4, 'f': [[4*128]]*4, 'p': ['sdp']*4}
 
 config = BertConfig()
 
@@ -250,5 +251,4 @@ model_modular.save_pretrained("../models/pretrained/"+str(bert_4_128_graph.hash)
 tokenizer.save_pretrained("../models/pretrained/"+str(bert_4_128_graph.hash)+'/')
 
 print("Bert L-4/H-128/A-2 Modularized")
-
 
