@@ -14,7 +14,6 @@ from transformers.models.bert.modeling_modular_bert import BertModelModular
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
-conv_bert_base = ConvBertModel.from_pretrained('YituTech/conv-bert-base')
 
 model_dict_convbert_base = {'l':12, 't': ['c']*12, 'a':[12]*12,'f':[3072]*12,'h':[768]*12, 'nff':[1]*12,'s':['c']*12}
 

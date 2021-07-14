@@ -140,7 +140,7 @@ modular_state_dict.update(model_state_dict)
 
 model_modular.load_state_dict(modular_state_dict)
 
-bert_mini_graph = graphLib.get_graph(model_dict=model_dict_bert_mini)
+bert_mini_graph = graphLib.get_graph(model_dict=model_dict_bert_mini)[0]
 
 if bert_mini_graph is not None:
 	print(f'{pu.bcolors.OKGREEN}BERT-medium found in dataset!{pu.bcolors.ENDC}')
@@ -173,7 +173,7 @@ modular_state_dict.update(model_state_dict)
 
 model_modular.load_state_dict(modular_state_dict)
 
-bert_tiny_graph = graphLib.get_graph(model_dict=model_dict_bert_tiny)
+bert_tiny_graph = graphLib.get_graph(model_dict=model_dict_bert_tiny)[0]
 
 if bert_tiny_graph is not None:
 	print(f'{pu.bcolors.OKGREEN}BERT-tiny found in dataset!{pu.bcolors.ENDC}')
@@ -206,7 +206,7 @@ modular_state_dict.update(model_state_dict)
 
 model_modular.load_state_dict(modular_state_dict)
 
-bert_2_256_graph = graphLib.get_graph(model_dict=model_dict_bert_2_256)
+bert_2_256_graph = graphLib.get_graph(model_dict=model_dict_bert_2_256)[0]
 
 if bert_2_256_graph is not None:
 	print(f'{pu.bcolors.OKGREEN}BERT-2-256 found in dataset!{pu.bcolors.ENDC}')
@@ -240,7 +240,7 @@ modular_state_dict.update(model_state_dict)
 
 model_modular.load_state_dict(modular_state_dict)
 
-bert_4_128_graph = graphLib.get_graph(model_dict=model_dict_bert_4_128)
+bert_4_128_graph = graphLib.get_graph(model_dict=model_dict_bert_4_128)[0]
 
 if bert_4_128_graph is not None:
 	print(f'{pu.bcolors.OKGREEN}BERT-4-128 found in dataset!{pu.bcolors.ENDC}')
