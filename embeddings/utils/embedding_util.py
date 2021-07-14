@@ -184,25 +184,55 @@ def generate_naive_embeddings(model_dict_list: list, design_space: dict, compute
     else:
         return embeddings
 
-def get_neighbors(embeddings, n: int):
+def get_neighbors(embeddings, method: str, graph_list: list, neighbors: int):
     """Get neighbor indices for all graphs from embeddings
     
     Args:
         embeddings (np.ndarray): embeddings array from generate_embeddings() or
             generate_naive_embeddings()
-        n (int): number of nearest neighbors to return
+        method (str): one in 'distance' or 'biased'
+        graph_list (list): list of graphs in the library. Required if
+            method = 'biased'
+        neighbors (int): number of neighbors
     
     Returns:
         neighbor_idx (np.ndarray): neighbor indices according to the order in the
             embeddings array
     """
-    # Generate distance matrix in the embeddings space
-    distance_matrix = pairwise_distances(embeddings, embeddings, metric='euclidean')
+    if method == 'distance':
+        # Generate distance matrix in the embeddings space
+        distance_matrix = pairwise_distances(embeddings, embeddings, metric='euclidean')
 
-    # Argmin should not return the same graph index
-    np.fill_diagonal(distance_matrix, np.inf)
+        # Argmin should not return the same graph index
+        np.fill_diagonal(distance_matrix, np.inf)
 
-    # Find neighbors greedily
-    neighbor_idx = np.argsort(distance_matrix, axis=1)[:, :n]
+        # Find neighbors greedily
+        neighbor_idx = np.argsort(distance_matrix, axis=1)[:, :neighbors]
+    elif method == 'biased':
+        # graph_list is required
+        assert graph_list is not None, 'graph_list is required with method = "biased"'
+
+        # Get biased overlap between graphs
+        def _get_overlap(curr_graph, query_graph):
+            overlap = 0
+            for i in range(len(curr_graph[1])):
+                # Basic test
+                if i >= len(query_graph[1]): break
+
+                # Check if ops are the same
+                if curr_graph[1][i] == query_graph[1][i]:
+                    overlap += 1
+                else:
+                    break
+
+            return overlap
+
+        neighbor_idx = np.zeros((embeddings.shape[0], neighbors))
+        ids = list(range(len(graph_list)))
+
+        for i in tqdm(range(len(graph_list)), desc='Generating biased neighbors'):
+            # Sort indices based on overlap. Break ties with embedding distance
+            neighbor_idx[i, :] = sorted(ids, key=lambda idx: (-1*_get_overlap(graph_list[i], graph_list[idx]), \
+                float(pairwise_distances(embeddings[i, :].reshape(1, -1), embeddings[idx, :].reshape(1, -1)))))[1:neighbors+1]
 
     return neighbor_idx
