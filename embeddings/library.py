@@ -439,6 +439,7 @@ class GraphLib(object):
 				embedding_size=embedding_size, n_jobs=n_jobs, silent=True)
 
 		# Get neighboring graph in the embedding space, for all Graphs
+		# TODO: Add biased neighbor determination for better overlaps
 		neighbor_idx = embedding_util.get_neighbors(embeddings, neighbors)
 
 		# Update embeddings and neighbors of all Graphs in GraphLib
