@@ -26,7 +26,8 @@ def training(dataset_name, seed, output_dir):
 	--do_eval \
 	--max_seq_length 512 \
 	--line_by_line True \
-	--per_gpu_train_batch_size 64 \
+	--per_gpu_train_batch_size 256\
+	--num_train_epochs 6.0\
 	--adam_epsilon 1e-6\
 	--learning_rate 1e-4\
 	--warmup_steps 10000\

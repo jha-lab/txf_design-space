@@ -32,7 +32,7 @@ from typing import Optional
 
 main_dir = os.path.abspath(os.path.dirname(__file__)).split('flexibert')[0]
 
-from datasets import load_dataset
+from datasets import load_dataset, interleave_datasets
 from transformers.models.bert.modeling_modular_bert import BertModelModular, BertForMaskedLMModular
 from transformers import RobertaTokenizer, BertConfig
 
@@ -244,6 +244,7 @@ def pretrain(args,model_dict):
     #
     # In distributed training, the load_dataset function guarantee that only one local process can concurrently
     # download the dataset.
+    '''
     if data_args.dataset_name is not None:
         # Downloading and loading a dataset from the hub.
         datasets = load_dataset(data_args.dataset_name, data_args.dataset_config_name)
@@ -257,7 +258,8 @@ def pretrain(args,model_dict):
                 data_args.dataset_name,
                 data_args.dataset_config_name,
                 split=f"train[{data_args.validation_split_percentage}%:]",
-            )
+    
+           )
     else:
         data_files = {}
         if data_args.train_file is not None:
@@ -268,6 +270,26 @@ def pretrain(args,model_dict):
         if extension == "txt":
             extension = "text"
         datasets = load_dataset(extension, data_files=data_files)
+    '''
+        cc_news = load_dataset('cc_news','plain_text',cache_dir='/scratch/gpfs/bdedhia')
+        bookcorpus = load_dataset('bookcorpus','plain_text',cache_dir='/scratch/gpfs/bdedhia')
+        openwebtext = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia')
+        wikipedia = load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/bdedhia')
+        wikipedia = wikipedia.remove_columns('title')
+        datasets = interleave_datasets(cc_news,bookcorpus,openwebtext,wikipedia)
+
+        if "validation" not in datasets.keys():
+            datasets["validation"] = load_dataset(
+                data_args.dataset_name,
+                data_args.dataset_config_name,
+                split=f"train[:{data_args.validation_split_percentage}%]",
+            )
+            datasets["train"] = load_dataset(
+                data_args.dataset_name,
+                data_args.dataset_config_name,
+                split=f"train[{data_args.validation_split_percentage}%:]",
+    
+           )
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
 
