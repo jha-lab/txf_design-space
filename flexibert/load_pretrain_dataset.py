@@ -26,10 +26,10 @@ def main():
     for task in GLUE_TASKS:
 
         if task != 'wikipedia':
-            load_dataset(task,'plaintext',cache_dir='/scratch/gpfs/'+args.id+'/'+task)
+            load_dataset(task,'plaintext',cache_dir='/scratch/gpfs/'+args.id)
             #load_metric(task)
         else:
-            load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/'+args.id+'/'+task)
+            load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/'+args.id)
             #load_metric('wikipedia')
 
 if __name__ == '__main__':
