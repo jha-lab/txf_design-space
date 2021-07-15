@@ -4,7 +4,6 @@ import argparse
 
 
 
-
 GLUE_TASKS = ['cc_news','bookcorpus','wikipedia','openwebtext']
 
 
@@ -26,7 +25,7 @@ def main():
     for task in GLUE_TASKS:
 
         if task != 'wikipedia':
-            load_dataset(task,'plain_text',cache_dir='/scratch/gpfs/'+args.id)
+            load_dataset(task,cache_dir='/scratch/gpfs/'+args.id)
             #load_metric(task)
         else:
             load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/'+args.id)
