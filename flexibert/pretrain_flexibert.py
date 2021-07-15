@@ -87,7 +87,7 @@ def main():
 
 	metrics = pretrain(args_train, model_dict)
 
-	print(f"MLM Accuracy on cc_news is {metrics['eval_accuracy']:0.2f}")
+	print(f"MLM Loss on cc_news is {metrics['eval_loss']:0.2f}")
 
 if __name__ == '__main__':
 	
