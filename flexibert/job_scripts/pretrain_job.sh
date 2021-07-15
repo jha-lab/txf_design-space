@@ -96,6 +96,8 @@ conda activate txf_design-space
 
 cd ..
 
+python load_pretrain_dataset.py --id ${id}
+
 python pretrain_flexibert.py --model ${model} " > $job_file
 
 sbatch $job_file
