@@ -1,7 +1,7 @@
 
 from datasets import load_dataset, load_metric
 import argparse
-from datasets data_lo
+
 
 
 
@@ -26,7 +26,7 @@ def main():
     for task in GLUE_TASKS:
 
         if task != 'wikipedia':
-            load_dataset(task,'plaintext',cache_dir='/scratch/gpfs/'+args.id)
+            load_dataset(task,'plain_text',cache_dir='/scratch/gpfs/'+args.id)
             #load_metric(task)
         else:
             load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/'+args.id)
