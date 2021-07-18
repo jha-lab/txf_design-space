@@ -18,14 +18,12 @@ logging.disable(logging.WARNING)
 
 
 
-def training(dataset_name, seed, output_dir):
+def training(seed, output_dir):
 
-	a = "--dataset_name {} \
-	--seed {} \
+	a = "--seed {} \
 	--do_train \
 	--do_eval \
 	--max_seq_length 512 \
-	--line_by_line True \
 	--per_gpu_train_batch_size 256\
 	--num_train_epochs 6.0\
 	--adam_epsilon 1e-6\
@@ -34,7 +32,7 @@ def training(dataset_name, seed, output_dir):
 	--lr_scheduler_type linear\
 	--overwrite_output_dir \
 	--output_dir {} \
-	".format(dataset_name, seed, output_dir)
+	".format( seed, output_dir)
 
 	return shlex.split(a)
 
@@ -75,13 +73,14 @@ def main():
 		model_dict= { 'l': 2, 'o': ['c']*2, 'h': [128]*2, 'n': [2]*2, 'f': [[4*128]]*2, 'p': [9]*2}
 
 
+
+
 	model_graph = graphLib.get_graph(model_dict=model_dict)[0]
 
-	dataset = "cc_news"
 
 	output_dir = "../../models/pretrained/"+str(model_graph.hash)+'/'
 
-	args_train = training(dataset, seed, output_dir)
+	args_train = training(seed, output_dir)
 
 	# Forcing to train on single GPU
 	#os.environ["CUDA_VISIBLE_DEVICES"]="0"

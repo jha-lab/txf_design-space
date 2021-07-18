@@ -271,25 +271,31 @@ def pretrain(args,model_dict):
             extension = "text"
         datasets = load_dataset(extension, data_files=data_files)
     '''
-        cc_news = load_dataset('cc_news','plain_text',cache_dir='/scratch/gpfs/bdedhia')
-        bookcorpus = load_dataset('bookcorpus','plain_text',cache_dir='/scratch/gpfs/bdedhia')
-        openwebtext = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia')
-        wikipedia = load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/bdedhia')
-        wikipedia = wikipedia.remove_columns('title')
-        datasets = interleave_datasets(cc_news,bookcorpus,openwebtext,wikipedia)
-
-        if "validation" not in datasets.keys():
-            datasets["validation"] = load_dataset(
-                data_args.dataset_name,
-                data_args.dataset_config_name,
-                split=f"train[:{data_args.validation_split_percentage}%]",
-            )
-            datasets["train"] = load_dataset(
-                data_args.dataset_name,
-                data_args.dataset_config_name,
-                split=f"train[{data_args.validation_split_percentage}%:]",
     
-           )
+    datasets = load_dataset('bookcorpus','plain_text',cache_dir='/scratch/gpfs/bdedhia')
+
+    cc_news_valid = load_dataset('cc_news','plain_text',split=f"train[:{data_args.validation_split_percentage}%]")
+    non_text_column_names = [name for name in cc_news_valid.column_names if name != 'text']
+    cc_news_valid = cc_news_valid.remove_columns(non_text_column_names)
+
+    bookcorpus_valid = load_dataset('bookcorpus','plain_text',cache_dir='/scratch/gpfs/bdedhia',split=f"train[:{data_args.validation_split_percentage}%]")
+    #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia')
+    wikipedia_valid = load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/bdedhia',split=f"train[:{data_args.validation_split_percentage}%]")
+    wikipedia_valid = wikipedia_valid.remove_columns('title')
+    combined_valid = interleave_datasets([cc_news_valid,bookcorpus_valid,wikipedia_valid])
+
+    datasets['validation'] = combined_valid
+
+    cc_news_train = load_dataset('cc_news','plain_text',split=f"train[{data_args.validation_split_percentage}%:]")
+    cc_news_train =  cc_news_train.remove_columns(non_text_column_names)
+    bookcorpus_train = load_dataset('bookcorpus','plain_text',cache_dir='/scratch/gpfs/bdedhia',split=f"train[{data_args.validation_split_percentage}%:]")
+    #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia')
+    wikipedia_train = load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/bdedhia',split=f"train[{data_args.validation_split_percentage}%:]")
+    wikipedia_train = wikipedia_train.remove_columns('title')
+    combined_train = interleave_datasets([cc_news_train,bookcorpus_train,wikipedia_train])
+
+    datasets['train'] = combined_train
+
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
 
