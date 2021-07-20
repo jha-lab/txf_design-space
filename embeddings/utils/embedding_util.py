@@ -96,7 +96,7 @@ def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs: 
     train_loader = DataLoader(DistanceDataset(dissimilarity_matrix), 
         batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=n_jobs)
 
-    device = torch.device("cuda")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Instantiate the model
     model = GraphEmbeddingModel(len(dissimilarity_matrix), embedding_size)
