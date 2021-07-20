@@ -24,7 +24,7 @@ def training(seed, output_dir):
 	--do_train \
 	--do_eval \
 	--max_seq_length 512 \
-	--per_gpu_train_batch_size 128\
+	--per_gpu_train_batch_size 64\
 	--num_train_epochs 6.0\
 	--adam_epsilon 1e-6\
 	--learning_rate 1e-4\
