@@ -935,10 +935,10 @@ class ConvBertOutputModular(nn.Module):
     def __init__(self, config, layer_id, last_layer):
         super().__init__()
         if config.num_groups == 1:
-            self.dense = nn.Linear(config.ff_dim_list[layer_id], config.hidden_dim_list[layer_id])
+            self.dense = nn.Linear(config.ff_dim_list[layer_id][-1], config.hidden_dim_list[layer_id])
         else:
             self.dense = GroupedLinearLayer(
-                input_size=config.ff_dim_list[layer_id], output_size=config.hidden_dim_list[layer_id], num_groups=config.num_groups
+                input_size=config.ff_dim_list[layer_id][-1], output_size=config.hidden_dim_list[layer_id], num_groups=config.num_groups
             )
         self.LayerNorm = nn.LayerNorm(config.hidden_dim_list[layer_id], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
