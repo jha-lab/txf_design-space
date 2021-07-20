@@ -12,8 +12,8 @@ from library import Graph, GraphLib
 import argparse
 
 import logging
-logging.disable(logging.INFO)
-logging.disable(logging.WARNING)
+#logging.disable(logging.INFO)
+#logging.disable(logging.WARNING)
 
 
 
@@ -24,13 +24,12 @@ def training(seed, output_dir):
 	--do_train \
 	--do_eval \
 	--max_seq_length 512 \
-	--per_gpu_train_batch_size 256\
+	--per_gpu_train_batch_size 128\
 	--num_train_epochs 6.0\
 	--adam_epsilon 1e-6\
 	--learning_rate 1e-4\
 	--warmup_steps 10000\
 	--lr_scheduler_type linear\
-	--overwrite_output_dir \
 	--output_dir {} \
 	".format( seed, output_dir)
 
@@ -72,7 +71,22 @@ def main():
 
 		model_dict= { 'l': 2, 'o': ['c']*2, 'h': [128]*2, 'n': [2]*2, 'f': [[4*128]]*2, 'p': [9]*2}
 
+	elif args.model == 'fnet_2_256':
 
+		model_dict = { 'l': 2, 'o': ['l']*2, 'h': [256]*2, 'n': [4]*2, 'f': [[4*256]]*2, 'p': ['dft']*2}
+
+	elif args.model == 'fnet_4_128':
+
+		model_dict = { 'l': 4, 'o': ['l']*4, 'h': [128]*4, 'n': [2]*4, 'f': [[4*128]]*4, 'p': ['dft']*4}
+
+
+	elif args.model == 'convbert_2_256':
+
+		model_dict = { 'l': 2, 'o': ['c']*2, 'h': [256]*2, 'n': [4]*2, 'f': [[4*256]]*2, 'p': [9]*2}
+
+	elif args.model == 'convbert_4_128':
+
+		model_dict = { 'l': 4, 'o': ['c']*4, 'h': [128]*4, 'n': [2]*4, 'f': [[4*128]]*4, 'p': [9]*4}
 
 
 	model_graph = graphLib.get_graph(model_dict=model_dict)[0]
