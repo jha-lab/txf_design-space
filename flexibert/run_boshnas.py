@@ -180,12 +180,13 @@ def wait_for_jobs(model_jobs: list, running_limit: int = 4, patience: int = 1):
 		time.sleep(1)
 
 
-def update_dataset(graphLib: 'GraphLib', finetune_dir: str):
+def update_dataset(graphLib: 'GraphLib', finetune_dir: str, dataset_file: str):
 	"""Update the dataset with all finetuned models
 	
 	Args:
 	    graphLib (GraphLib): GraphLib opject to update
 	    finetune_dir (str): directory with all finetuned models
+	    dataset_file (str): path the the dataset file where updated graphLib is stored
 	"""
 	count = 0
 	best_accuracy = 0
@@ -199,6 +200,8 @@ def update_dataset(graphLib: 'GraphLib', finetune_dir: str):
 				if results['eval_accuracy'] > best_accuracy:
 					best_accuracy = results['eval_accuracy']
 				count += 1
+
+	graphLib.save_dataset(dataset_file)
 
 	print(f'{pu.bcolors.OKGREEN}Trained points in dataset:{pu.bcolors.ENDC} {count}' \
 		+ f'{pu.bcolors.OKGREEN}Best accuracy:{pu.bcolors.ENDC} {best_accuracy}')
@@ -391,7 +394,7 @@ def main():
 	wait_for_jobs(model_jobs)
 
 	# Update dataset with newly trained models
-	old_best_accuracy = update_dataset(graphLib)
+	old_best_accuracy = update_dataset(graphLib, finetune_dir, new_dataset_file)
 
 	# Get entire dataset in embedding space
 	X_ds = []
@@ -557,7 +560,7 @@ def main():
 		wait_for_jobs(model_jobs)
 
 		# Update dataset with newly trained models
-		best_accuracy = update_dataset(graphLib)
+		best_accuracy = update_dataset(graphLib, finetune_dir, new_dataset_file)
 
 		# Update same_accuracy to check convergence
 		if best_accuracy == old_best_accuracy and method == 'optimization':
@@ -569,7 +572,7 @@ def main():
 	wait_for_jobs(model_jobs, running_limit=0, patience=0)
 
 	# Update dataset with newly trained models
-	best_accuracy = update_dataset(graphLib)
+	best_accuracy = update_dataset(graphLib, finetune_dir, new_dataset_file)
 
 	print(f'{pu.bcolors.OKGREEN}Convergence criterion reached!{pu.bcolors.ENDC}')
 
