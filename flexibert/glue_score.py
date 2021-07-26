@@ -95,7 +95,7 @@ def main():
 
 	elif args.model_name == 'bert_2_256':
 
-		models_dict = { 'l': 2, 'o': ['sa']*2, 'h': [256]*2, 'n': [4]*2, 'f': [[4*256]]*2, 'p': ['sdp']*2}
+		model_dict = { 'l': 2, 'o': ['sa']*2, 'h': [256]*2, 'n': [4]*2, 'f': [[4*256]]*2, 'p': ['sdp']*2}
 
 	elif args.model_name == 'bert_4_128':
 
