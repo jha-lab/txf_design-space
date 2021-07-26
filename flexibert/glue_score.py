@@ -61,13 +61,23 @@ def main():
 		default='../models/')
 	parser.add_argument('--model_name',
 		metavar='',
-		type=json.loads,
+		type=str,
 		help='model name'
 		)
 
 	args = parser.parse_args()
 
-	if args.model_name == 'fnet_mini':
+	if args.model_name == 'bert_mini':
+
+		model_dict = {'l': 4, 'o': ['sa']*4, 'h': [256]*4, 'n': [4]*4, 'f': [[1024]]*4, 'p': ['sdp']*4}
+
+
+	elif args.model_name == 'bert_tiny':
+
+		model_dict = { 'l': 2, 'o': ['sa']*2, 'h': [128]*2, 'n': [2]*2, 'f': [[4*128]]*2, 'p': ['sdp']*2}
+
+
+	elif args.model_name == 'fnet_mini':
 		
 		model_dict = {'l':4,'o':['l','l','l','l'],'h':[256,256,256,256],'n':[4,4,4,4],'f':[[1024],[1024],[1024],[1024]],'p':['dft','dft','dft','dft']}
 
@@ -82,6 +92,15 @@ def main():
 	elif args.model_name == 'convbert_tiny':
 
 		model_dict= { 'l': 2, 'o': ['c']*2, 'h': [128]*2, 'n': [2]*2, 'f': [[4*128]]*2, 'p': [9]*2}
+
+	elif args.model_name == 'bert_2_256':
+
+		models_dict = { 'l': 2, 'o': ['sa']*2, 'h': [256]*2, 'n': [4]*2, 'f': [[4*256]]*2, 'p': ['sdp']*2}
+
+	elif args.model_name == 'bert_4_128':
+
+		model_dict = { 'l': 4, 'o': ['sa']*4, 'h': [128]*4, 'n': [2]*4, 'f': [[4*128]]*4, 'p': ['sdp']*4}
+
 
 	elif args.model_name == 'fnet_2_256':
 
@@ -103,6 +122,7 @@ def main():
 
 	graphLib = GraphLib.load_from_dataset(args.dataset_file)
 	graph = graphLib.get_graph(model_dict=model_dict)[0]
+	
 	
 	glue_scores = {}
 
