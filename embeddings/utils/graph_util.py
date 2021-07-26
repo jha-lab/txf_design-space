@@ -26,7 +26,7 @@ PARALLELIZE = False
 USE_MEMMAP = True # Only used if PARALLELIZE is True
 CHUNK_COMPUTE = False
 CHUNK_SIZE = 10 # Only used if CHUNK_COMPUTE is True
-RANDOM_FRAC = 0.0001 # Only used is CHUNK_COMPUTE is False
+RANDOM_FRAC = 0.01 # Only used is CHUNK_COMPUTE is False
 
 
 def model_dict_to_graph(model_dict, ops_list):
