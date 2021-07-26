@@ -8,6 +8,8 @@ from sklearn.metrics import pairwise_distances
 from scipy.stats import zscore
 from tqdm import tqdm
 
+from itertools import combinations
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -79,8 +81,7 @@ def generate_grad_embeddings(dissimilarity_matrix, embedding_size: int, epochs: 
             self.labels = torch.zeros(self.num_pairs)
 
             count = 0
-            for i in range(len(distance_matrix)):
-                for j in range(i+1, len(distance_matrix)):
+            for i, j in tqdm(list(combinations(range(len(distance_matrix)), 2)), desc='Generating dataset'):
                     self.graph_pairs[count, :] = torch.Tensor([i, j])
                     self.labels[count] = distance_matrix[i, j]
                     count += 1 
