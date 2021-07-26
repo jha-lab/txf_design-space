@@ -50,6 +50,11 @@ def main():
         type=int,
         help='number of neighbors to save for each graph',
         default=100)
+    parser.add_argument('--diss_mat_file',
+        metavar='',
+        type=str,
+        help='path to the dissimilarity matrix file',
+        default=None)
     parser.add_argument('--n_jobs',
         metavar='',
         type=int,
@@ -93,7 +98,7 @@ def main():
 
     # Build embeddings
     graphLib.build_embeddings(embedding_size=args.embedding_size, algo=args.algo,
-        kernel=args.kernel, neighbors=args.num_neighbors, n_jobs=args.n_jobs)
+        kernel=args.kernel, diss_mat_file=args.diss_mat_file, neighbors=args.num_neighbors, n_jobs=args.n_jobs)
     print()
 
     # Save dataset

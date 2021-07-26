@@ -7,6 +7,7 @@ import numpy as np
 
 import itertools
 from tqdm.contrib.itertools import product
+from tqdm import tqdm
 
 from joblib import Parallel, delayed
 from copy import deepcopy
@@ -404,7 +405,8 @@ class GraphLib(object):
 
 		return interpolants
 
-	def build_embeddings(self, embedding_size: int, algo='MDS', kernel='WeisfeilerLehman', neighbors=100, n_jobs=8):
+	def build_embeddings(self, embedding_size: int, algo='MDS', kernel='WeisfeilerLehman', diss_mat_file: str = None, 
+		neighbors=100, n_jobs=8):
 		"""Build the embeddings of all Graphs in GraphLib using MDS
 		
 		Args:
@@ -420,6 +422,8 @@ class GraphLib(object):
 					- 'RandomWalkLabeled'
 					- 'GraphEditDistance'
 				The default value is 'WeisfeilerLehman'
+			diss_mat_file (str, optional): path to the dissimilarity matrix file. If given, 
+				dissimilarity matrix is not computed
 			neighbors (int, optional): number of nearest neighbors to save for every graph
 			n_jobs (int, optional): number of parrallel jobs for joblib
 		"""
@@ -428,8 +432,11 @@ class GraphLib(object):
 		# Create list of graphs (tuples of adjacency matrices and ops)
 		graph_list = [self.library[i].graph for i in range(len(self))]
 
-		# Generate dissimilarity_matrix using the specified kernel
-		diss_mat = graph_util.generate_dissimilarity_matrix(graph_list, kernel=kernel, ops_list=self.ops_list, n_jobs=n_jobs)
+		if diss_mat_file is None:
+			# Generate dissimilarity_matrix using the specified kernel
+			diss_mat = graph_util.generate_dissimilarity_matrix(graph_list, kernel=kernel, ops_list=self.ops_list, n_jobs=n_jobs)
+		else:
+			diss_mat = np.load(open(diss_mat_file, 'rb'))
 
 		# Generate embeddings using MDS or GD
 		if algo == 'MDS':

@@ -26,7 +26,7 @@ PARALLELIZE = False
 USE_MEMMAP = True # Only used if PARALLELIZE is True
 CHUNK_COMPUTE = False
 CHUNK_SIZE = 10 # Only used if CHUNK_COMPUTE is True
-RANDOM_FRAC = 0.01 # Only used is CHUNK_COMPUTE is False
+RANDOM_FRAC = 0.0001 # Only used is CHUNK_COMPUTE is False
 
 
 def model_dict_to_graph(model_dict, ops_list):
@@ -413,5 +413,8 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 		dissimilarity_matrix = dissimilarity_matrix + np.transpose(dissimilarity_matrix)
 
 		assert np.isnan(dissimilarity_matrix).sum() == 0, 'Dissimilarity matrix generated has NaN values'
+
+	with open('diss_mat_temp.npy', 'wb+') as temp_file:
+		np.save(temp_file, dissimilarity_matrix)
 
 	return dissimilarity_matrix
