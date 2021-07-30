@@ -1348,13 +1348,16 @@ class BertModelModular(BertPreTrainedModel):
             #Loading self attention 
 
             
-            if self.config.attention_type[i] == source_config.attention_type[i]:
+            if self.config.attention_type[i] == source_config.attention_type[i] :
                 
-                if self.config.hidden_dim_list[i] ==  source_config.hidden_dim_list[i] and self.config.attention_heads_list[i] ==  source_config.attention_heads_list[i]:
+                if self.config.hidden_dim_list[i] ==  source_config.hidden_dim_list[i] and \
+                self.config.attention_heads_list[i] ==  source_config.attention_heads_list[i] and \
+                self.config.similarity_list[i] == source_config.similarity_list[i]:
+                    
                     self.encoder.layer[i].attention.load_state_dict(source_model.encoder.layer[i].attention.state_dict())
                     count+=len(source_model.encoder.layer[i].attention.state_dict())
 
-                    if self.config.ff_dim_list[i] == source_config.ff_dim_list[i] and self.config.nff_list[i] == source_config.nff_list[i] :
+                    if self.config.ff_dim_list[i] == source_config.ff_dim_list[i] :
                         self.encoder.layer[i].intermediate.load_state_dict(source_model.encoder.layer[i].intermediate.state_dict())
                         count+=len(source_model.encoder.layer[i].intermediate.state_dict())
                         #print("Intermediate loaded")
@@ -1985,7 +1988,6 @@ class BertForSequenceClassificationModular(BertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
-
         self.bert = BertModelModular(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.classifier = nn.Linear(config.hidden_dim_list[-1], config.num_labels)
@@ -2043,10 +2045,12 @@ class BertForSequenceClassificationModular(BertPreTrainedModel):
                 #  We are doing regression
                 loss_fct = MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
+                
             else:
                 loss_fct = CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
+        
         if not return_dict:
             output = (logits,) + outputs[2:]
             return ((loss,) + output) if loss is not None else output
