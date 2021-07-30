@@ -23,6 +23,10 @@ import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
+import logging
+
+logging.disable(logging.INFO)
+logging.disable(logging.WARNING)
 main_dir = os.path.abspath(os.path.dirname(__file__)).split('flexibert')[0]
 
 import numpy as np
@@ -287,6 +291,7 @@ def finetune(args):
             label_list.sort()  # Let's sort it for determinism
             num_labels = len(label_list)
 
+    print("is regression:", is_regression)
     # Load pretrained model and tokenizer
     #
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
@@ -304,7 +309,6 @@ def finetune(args):
     #bertmodel.config.num_labels = num_labels 
 
     classifier_config = BertConfig.from_pretrained(model_args.model_name_or_path,num_labels=num_labels)
-
     model = BertForSequenceClassificationModular(classifier_config)
     model.bert.load_state_dict(bertmodel.state_dict())
 
