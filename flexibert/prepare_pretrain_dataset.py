@@ -42,7 +42,6 @@ from transformers import (
     CONFIG_MAPPING,
     MODEL_FOR_MASKED_LM_MAPPING,
     HfArgumentParser,
-    set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
@@ -341,13 +340,9 @@ def save_dataset(args,id):
     tokenized_datasets.save_to_disk(f'/scratch/gpfs/{id}/tokenized_pretraining_dataset')
 
 
-def get_args(seed):
+def get_args():
 
-    a = "--seed {} \
-    --do_train \
-    --do_eval \
-    --max_seq_length 512 \
-    ".format(seed)
+    a = "--max_seq_length 512"
 
     return shlex.split(a)
 
@@ -365,9 +360,7 @@ def main():
 
     args = parser.parse_args()
 
-    seed = 1
-
-    args_data = get_args(seed)
+    args_data = get_args()
 
     save_dataset(args_data,args.id)
 
