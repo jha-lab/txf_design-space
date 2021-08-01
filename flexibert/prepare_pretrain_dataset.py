@@ -37,16 +37,11 @@ from transformers.models.bert.modeling_modular_bert import BertModelModular, Ber
 from transformers import RobertaTokenizer, BertConfig
 
 import transformers
+import shlex
 from transformers import (
     CONFIG_MAPPING,
     MODEL_FOR_MASKED_LM_MAPPING,
-    AutoConfig,
-    AutoModelForMaskedLM,
-    AutoTokenizer,
-    DataCollatorForLanguageModeling,
     HfArgumentParser,
-    Trainer,
-    TrainingArguments,
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
@@ -186,15 +181,13 @@ class DataTrainingArguments:
 
 def save_dataset(args,id):
 
-    parser = HfArgumentParser(( DataTrainingArguments, TrainingArguments))
+    parser = HfArgumentParser(( DataTrainingArguments))
     if len(args) == 2 and args[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
         # let's parse it to get our arguments.
-        data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(args[1]))
+        data_args= parser.parse_json_file(json_file=os.path.abspath(args[1]))
     else:
-        data_args, training_args = parser.parse_args_into_dataclasses(args)
-
-    print(training_args.output_dir)
+        data_args= parser.parse_args_into_dataclasses(args)
 
 
     
