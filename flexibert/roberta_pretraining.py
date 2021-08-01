@@ -283,7 +283,8 @@ def pretrain(args,model_dict):
     #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia')
     wikipedia_valid = load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/bdedhia',split=f"train[:{data_args.validation_split_percentage}%]")
     wikipedia_valid = wikipedia_valid.remove_columns('title')
-    combined_valid = interleave_datasets([cc_news_valid,bookcorpus_valid,wikipedia_valid])
+    openwebtext_valid = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia/openwebtextfull',split=f"train[:{data_args.validation_split_percentage}%]")
+    combined_valid = interleave_datasets([cc_news_valid,bookcorpus_valid,wikipedia_valid,openwebtext_valid])
 
     datasets['validation'] = combined_valid
 
@@ -291,9 +292,10 @@ def pretrain(args,model_dict):
     cc_news_train =  cc_news_train.remove_columns(non_text_column_names)
     bookcorpus_train = load_dataset('bookcorpus','plain_text',cache_dir='/scratch/gpfs/bdedhia',split=f"train[{data_args.validation_split_percentage}%:]")
     #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia')
+    openwebtext_train = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia/openwebtextfull',split=f"train[{data_args.validation_split_percentage}%:]")
     wikipedia_train = load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/bdedhia',split=f"train[{data_args.validation_split_percentage}%:]")
     wikipedia_train = wikipedia_train.remove_columns('title')
-    combined_train = interleave_datasets([cc_news_train,bookcorpus_train,wikipedia_train])
+    combined_train = interleave_datasets([cc_news_train,bookcorpus_train,wikipedia_train,openwebtext_train])
 
     datasets['train'] = combined_train
 

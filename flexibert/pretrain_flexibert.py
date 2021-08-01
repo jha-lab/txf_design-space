@@ -24,8 +24,8 @@ def training(seed, output_dir):
 	--do_train \
 	--do_eval \
 	--max_seq_length 512 \
-	--per_gpu_train_batch_size 64\
-	--num_train_epochs 6.0\
+	--per_gpu_train_batch_size 32\
+	--num_train_epochs 12.0\
 	--adam_epsilon 1e-6\
 	--learning_rate 1e-4\
 	--warmup_steps 10000\
@@ -92,7 +92,7 @@ def main():
 	model_graph = graphLib.get_graph(model_dict=model_dict)[0]
 
 
-	output_dir = "../../models/pretrained/"+str(model_graph.hash)+'/'
+	output_dir = "../models/pretrained/"+str(model_graph.hash)+'/'
 
 	args_train = training(seed, output_dir)
 
