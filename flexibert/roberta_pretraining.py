@@ -32,7 +32,7 @@ from typing import Optional
 
 main_dir = os.path.abspath(os.path.dirname(__file__)).split('flexibert')[0]
 
-from datasets import load_dataset, interleave_datasets
+from datasets import load_dataset, interleave_datasets, load_from_disk
 from transformers.models.bert.modeling_modular_bert import BertModelModular, BertForMaskedLMModular
 from transformers import RobertaTokenizer, BertConfig
 
@@ -196,8 +196,6 @@ def pretrain(args,model_dict):
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses(args)
 
-    print(training_args.output_dir)
-
     # Detecting last checkpoint.
     last_checkpoint = None
     if os.path.isdir(training_args.output_dir) and training_args.do_train and not training_args.overwrite_output_dir:
@@ -273,33 +271,7 @@ def pretrain(args,model_dict):
         datasets = load_dataset(extension, data_files=data_files)
     '''
     
-    datasets = load_dataset('bookcorpus','plain_text',cache_dir='/scratch/gpfs/bdedhia')
 
-    cc_news_valid = load_dataset('cc_news','plain_text',split=f"train[:{data_args.validation_split_percentage}%]")
-    non_text_column_names = [name for name in cc_news_valid.column_names if name != 'text']
-    cc_news_valid = cc_news_valid.remove_columns(non_text_column_names)
-
-    bookcorpus_valid = load_dataset('bookcorpus','plain_text',cache_dir='/scratch/gpfs/bdedhia',split=f"train[:{data_args.validation_split_percentage}%]")
-    #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia')
-    wikipedia_valid = load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/bdedhia',split=f"train[:{data_args.validation_split_percentage}%]")
-    wikipedia_valid = wikipedia_valid.remove_columns('title')
-    openwebtext_valid = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia/openwebtextfull',split=f"train[:{data_args.validation_split_percentage}%]")
-    combined_valid = interleave_datasets([cc_news_valid,bookcorpus_valid,wikipedia_valid,openwebtext_valid])
-
-    datasets['validation'] = combined_valid
-
-    cc_news_train = load_dataset('cc_news','plain_text',split=f"train[{data_args.validation_split_percentage}%:]")
-    cc_news_train =  cc_news_train.remove_columns(non_text_column_names)
-    bookcorpus_train = load_dataset('bookcorpus','plain_text',cache_dir='/scratch/gpfs/bdedhia',split=f"train[{data_args.validation_split_percentage}%:]")
-    #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia')
-    openwebtext_train = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia/openwebtextfull',split=f"train[{data_args.validation_split_percentage}%:]")
-    wikipedia_train = load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/bdedhia',split=f"train[{data_args.validation_split_percentage}%:]")
-    wikipedia_train = wikipedia_train.remove_columns('title')
-    combined_train = interleave_datasets([cc_news_train,bookcorpus_train,wikipedia_train,openwebtext_train])
-
-    datasets['train'] = combined_train
-
-    print("Dataset loaded")
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
 
@@ -387,6 +359,7 @@ def pretrain(args,model_dict):
             )
         max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
 
+    '''
     if data_args.line_by_line:
         # When using line_by_line, we just tokenize each nonempty line.
         padding = "max_length" if data_args.pad_to_max_length else False
@@ -455,7 +428,9 @@ def pretrain(args,model_dict):
             num_proc=data_args.preprocessing_num_workers,
             load_from_cache_file=not data_args.overwrite_cache,
         )
+    '''
 
+    tokenized_datasets = load_from_disk(f'/scratch/gpfs/bdedhia/tokenized_pretraining_dataset')
     if training_args.do_train:
         if "train" not in tokenized_datasets:
             raise ValueError("--do_train requires a train dataset")
