@@ -334,9 +334,10 @@ def pretrain(args,model_dict):
     '''
 
     model.resize_token_embeddings(len(tokenizer))
-
+    
     # Preprocessing the datasets.
     # First we tokenize all the texts.
+    '''
     if training_args.do_train:
         column_names = datasets["train"].column_names
     else:
@@ -358,7 +359,8 @@ def pretrain(args,model_dict):
                 f"model ({tokenizer.model_max_length}). Using max_seq_length={tokenizer.model_max_length}."
             )
         max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
-
+    '''
+    
     '''
     if data_args.line_by_line:
         # When using line_by_line, we just tokenize each nonempty line.
