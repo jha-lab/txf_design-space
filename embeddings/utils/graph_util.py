@@ -406,6 +406,7 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 			points.extend((i, i) for i in range(len(graph_list)))
 			values.extend(0 for i in range(len(graph_list)))
 
+			print('Interpolating matrix')
 			dissimilarity_matrix = scipy.interpolate.griddata(points, values, (grid_x, grid_y), 
 				method='linear')
 
@@ -415,6 +416,7 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 		assert np.isnan(dissimilarity_matrix).sum() == 0, 'Dissimilarity matrix generated has NaN values'
 
 	with open('diss_mat_temp.npy', 'wb+') as temp_file:
+		print('Saving matrix to "./diss_mat_temp.npy"')
 		np.save(temp_file, dissimilarity_matrix)
 
 	return dissimilarity_matrix
