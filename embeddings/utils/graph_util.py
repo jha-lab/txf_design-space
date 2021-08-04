@@ -28,6 +28,9 @@ CHUNK_COMPUTE = False
 CHUNK_SIZE = 10 # Only used if CHUNK_COMPUTE is True
 RANDOM_FRAC = 0.01 # Only used is CHUNK_COMPUTE is False
 
+DISS_MAT_TEMP = '/scratch/gpfs/stuli/diss_mat_temp.npy'
+IDX_SET_TEMP = '/scratch/gpfs/stuli/idx_set_temp.npy'
+
 
 def model_dict_to_graph(model_dict, ops_list):
 	"""Converts model_dict to model_graph which is a tuple of
@@ -273,8 +276,8 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 
 		dissimilarity_matrix = np.empty((len(graph_list), len(graph_list)))
 
-		if os.path.exists('./diss_mat_temp.npy'):
-			dissimilarity_matrix = np.load(open('./diss_mat_temp.npy', 'rb'))
+		if os.path.exists(DISS_MAT_TEMP):
+			dissimilarity_matrix = np.load(open(DISS_MAT_TEMP, 'rb'))
 
 		def node_subst_cost(node1, node2):
 			if node1['label'] == node2['label']:
@@ -349,15 +352,15 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 					idx_set.append((0, len(graph_list) - 1))
 					idx_set = list(set(idx_set))
 
-					if not os.path.exists('./idx_set_temp.npy'):
-						np.save(open('./idx_set_temp.npy', 'wb+'), idx_set)
+					if not os.path.exists(IDX_SET_TEMP):
+						np.save(open(IDX_SET_TEMP, 'wb+'), idx_set)
 					else:
-						idx_set = np.load(open('./idx_set_temp.npy', 'rb'))
-						print('Loaded idx_set from "./idx_set_temp.npy"')
+						idx_set = np.load(open(IDX_SET_TEMP, 'rb'))
+						print(f'Loaded idx_set from "{IDX_SET_TEMP}"')
 
 				for i, j in tqdm(idx_set, desc='Generating dissimilarity matrix'):
 					get_ged(i, j, dissimilarity_matrix)
-					np.save(open('./diss_mat_temp.npy', 'wb+'), dissimilarity_matrix)
+					np.save(open(DISS_MAT_TEMP, 'wb+'), dissimilarity_matrix)
 			else:
 				for i, j in tqdm(list(combinations(range(0, len(graph_list), CHUNK_SIZE), 2)), \
 					desc='Generating dissimilarity matrix'):
@@ -426,8 +429,8 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 
 		assert np.isnan(dissimilarity_matrix).sum() == 0, 'Dissimilarity matrix generated has NaN values'
 
-	with open('diss_mat_temp.npy', 'wb+') as temp_file:
-		print('Saving matrix to "./diss_mat_temp.npy"')
+	with open(DISS_MAT_TEMP, 'wb+') as temp_file:
+		print(f'Saving matrix to "{DISS_MAT_TEMP}"')
 		np.save(temp_file, dissimilarity_matrix)
 
 	return dissimilarity_matrix
