@@ -25,13 +25,14 @@ def training(seed, output_dir):
 	--do_eval \
 	--max_seq_length 512 \
 	--per_gpu_train_batch_size 32\
-	--num_train_epochs 12.0\
+	--num_train_epochs 6.0\
 	--adam_epsilon 1e-6\
 	--learning_rate 1e-4\
 	--warmup_steps 10000\
 	--lr_scheduler_type linear\
 	--output_dir {} \
-	".format( seed, output_dir)
+        --overwrite_output_dir \
+        ".format( seed, output_dir)
 
 	return shlex.split(a)
 

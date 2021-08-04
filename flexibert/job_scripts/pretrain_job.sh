@@ -9,6 +9,7 @@
 cluster="della"
 id="bdedhia"
 model="fnet_mini"
+partition='gpu'
 
 YELLOW='\033[0;33m'
 GREEN='\033[0;32m'
@@ -45,6 +46,11 @@ case "$1" in
         shift
         id=$1
         shift
+	;;
+    -p | --partition)
+        shift
+        partition=$1
+        shift
         ;;
     -h | --help)
        Help
@@ -80,14 +86,14 @@ job_file="pretrain_${model}.slurm"
 
 # Create SLURM job script to train surrogate model
 echo "#!/bin/bash
-#SBATCH --job-name=flexibert_${task}        # create a short name for your job
-#SBATCH --partition gpu-100
+#SBATCH --job-name=pretrain_${model}        # create a short name for your job
+#SBATCH --partition ${partition}
 #SBATCH --nodes=1                           # node count
 #SBATCH --ntasks=1                          # total number of tasks across all nodes
 #SBATCH --cpus-per-task=16                  # cpu-cores per task (>1 if multi-threaded tasks)
 #SBATCH --mem-per-cpu=8G                    # memory per cpu-core (4G is default)
 #SBATCH --gres=${cluster_gpu}               # number of gpus per node
-#SBATCH --time=10:00:00                     # total run time limit (HH:MM:SS)
+#SBATCH --time=72:00:00                     # total run time limit (HH:MM:SS)
 #SBATCH --mail-type=all                     # send email
 #SBATCH --mail-user=${id}@princeton.edu
 
