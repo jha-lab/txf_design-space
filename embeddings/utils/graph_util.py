@@ -273,6 +273,9 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 
 		dissimilarity_matrix = np.empty((len(graph_list), len(graph_list)))
 
+		if os.path.exists('./diss_mat_temp.npy'):
+			dissimilarity_matrix = np.load(open('./diss_mat_temp.npy', 'rb'))
+
 		def node_subst_cost(node1, node2):
 			if node1['label'] == node2['label']:
 				return 0
@@ -345,8 +348,16 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 					# Adding top-right point to aid interpolation
 					idx_set.append((0, len(graph_list) - 1))
 					idx_set = list(set(idx_set))
+
+					if not os.path.exists('./idx_set_temp.npy'):
+						np.save(open('./idx_set_temp.npy', 'wb+'), idx_set)
+					else:
+						idx_set = np.load(open('./idx_set_temp.npy', 'rb'))
+						print('Loaded idx_set from "./idx_set_temp.npy"')
+
 				for i, j in tqdm(idx_set, desc='Generating dissimilarity matrix'):
 					get_ged(i, j, dissimilarity_matrix)
+					np.save(open('./diss_mat_temp.npy', 'wb+'), dissimilarity_matrix)
 			else:
 				for i, j in tqdm(list(combinations(range(0, len(graph_list), CHUNK_SIZE), 2)), \
 					desc='Generating dissimilarity matrix'):
