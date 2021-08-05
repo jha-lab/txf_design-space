@@ -459,6 +459,7 @@ def finetune(args):
                 checkpoint = model_args.model_name_or_path
 
         train_result = trainer.hyperparameter_search(
+        model_init = model,
         hp_space=my_hp_space,
         direction="maximize", 
         backend="ray", 
