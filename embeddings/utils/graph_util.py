@@ -275,6 +275,7 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 			nx_graph_list.append(nx_graph)
 
 		dissimilarity_matrix = np.empty((len(graph_list), len(graph_list)))
+		dissimilarity_matrix[:] = np.NaN
 
 		if os.path.exists(DISS_MAT_TEMP):
 			dissimilarity_matrix = np.load(open(DISS_MAT_TEMP, 'rb'))
@@ -359,8 +360,9 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 						print(f'Loaded idx_set from "{IDX_SET_TEMP}"')
 
 				for i, j in tqdm(idx_set, desc='Generating dissimilarity matrix'):
-					get_ged(i, j, dissimilarity_matrix)
-					np.save(open(DISS_MAT_TEMP, 'wb+'), dissimilarity_matrix)
+					if np.isnan(dissimilarity_matrix[i, j]):
+						get_ged(i, j, dissimilarity_matrix)
+						np.save(open(DISS_MAT_TEMP, 'wb+'), dissimilarity_matrix)
 			else:
 				for i, j in tqdm(list(combinations(range(0, len(graph_list), CHUNK_SIZE), 2)), \
 					desc='Generating dissimilarity matrix'):
