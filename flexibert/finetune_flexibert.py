@@ -439,6 +439,20 @@ def finetune(args):
         data_collator=data_collator,
     )
 
+    def my_hp_space(trial):
+    return {
+        "learning_rate": trial.suggest_categorical("learning_rate", 3e-4, 1e-4, 5e-5, 3e-5 log=True),
+        "per_device_train_batch_size": trial.suggest_categorical("per_device_train_batch_size", [8, 16, 32, 64]),
+    }
+
+    trainer.hyperparameter_search(
+    hp_space=my_hp_space,
+    direction="maximize", 
+    backend="ray", 
+    n_samples=10, # number of trials
+    n_jobs=2  # number of parallel jobs, if multiple GPUs
+    )
+
     # Training
     if training_args.do_train:
         checkpoint = None
