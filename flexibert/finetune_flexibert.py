@@ -434,7 +434,7 @@ def finetune(args):
 
     # Initialize our Trainer
     trainer = Trainer(
-        model=model,
+        model_init = model_return,
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
@@ -463,7 +463,6 @@ def finetune(args):
                 checkpoint = model_args.model_name_or_path
 
         train_result = trainer.hyperparameter_search(
-        model_init = model_return,
         hp_space=my_hp_space,
         direction="maximize", 
         backend="ray", 
