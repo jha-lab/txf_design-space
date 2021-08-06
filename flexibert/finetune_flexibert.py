@@ -312,6 +312,10 @@ def finetune(args):
     model = BertForSequenceClassificationModular(classifier_config)
     model.bert.load_state_dict(bertmodel.state_dict())
 
+    def model_return():
+
+        return model
+
     # Preprocessing the datasets
     if data_args.task_name is not None:
         sentence1_key, sentence2_key = task_to_keys[data_args.task_name]
@@ -459,7 +463,7 @@ def finetune(args):
                 checkpoint = model_args.model_name_or_path
 
         train_result = trainer.hyperparameter_search(
-        model_init = model,
+        model_init = model_return,
         hp_space=my_hp_space,
         direction="maximize", 
         backend="ray", 
