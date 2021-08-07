@@ -531,7 +531,7 @@ class GraphLib(object):
 						'hashes': [graph.hash for graph in self.library],
 						'embeddings': embeddings_list,
 						'neighbors': [graph.neighbors for graph in self.library],
-						'accuracies': [graph.accuracy for graph in self.library]}, 
+						'performances': [graph.performance for graph in self.library]}, 
 						json_file, ensure_ascii = True)
 
 		print(f'{pu.bcolors.OKGREEN}Dataset saved to:{pu.bcolors.ENDC} {file_path}')
@@ -566,7 +566,7 @@ class GraphLib(object):
 				graph.hash = dataset_dict['hashes'][i]
 				graph.embedding = embeddings_list[i]
 				graph.neighbors = dataset_dict['neighbors'][i]
-				graph.accuracy = dataset_dict['accuracies'][i]
+				graph.performance = dataset_dict['performances'][i]
 
 				graphLib.library.append(graph)
 
@@ -577,7 +577,7 @@ class Graph(object):
 	"""Graph class to represent a computational graph in the design space
 	
 	Attributes:
-		accuracy (float): accuracy of the model for the given dataset
+		performance (float): performance of the model for the given dataset
 		embedding (np.ndarray): embedding for every graph in the design space
 		graph (tuple(np.ndarray, list[str])): model graph as a tuple of adjacency matrix and 
 			a list of operations
@@ -618,12 +618,12 @@ class Graph(object):
 		# Initialize the nearest neighboring graph
 		self.neighbors = None
 
-		# Initialize accuracy
-		self.accuracy = None
+		# Initialize performance metric
+		self.performance = None
 
 	def __repr__(self):
 		"""Representation of the Graph"""
 		return f'{pu.bcolors.HEADER}Graph model_dict:{pu.bcolors.ENDC} {self.model_dict}\n' \
-			+ f'{pu.bcolors.HEADER}Accuracy:{pu.bcolors.ENDC} {self.accuracy}\n' \
+			+ f'{pu.bcolors.HEADER}Accuracy:{pu.bcolors.ENDC} {self.performance}\n' \
 			+ f'{pu.bcolors.HEADER}Embedding:{pu.bcolors.ENDC} {self.embedding}\n' \
 			+ f'{pu.bcolors.HEADER}Hash:{pu.bcolors.ENDC} {self.hash}'
