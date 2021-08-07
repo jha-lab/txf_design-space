@@ -91,6 +91,9 @@ class DataTrainingArguments:
     overwrite_cache: bool = field(
         default=False, metadata={"help": "Overwrite the cached preprocessed datasets or not."}
     )
+    autotune: bool = field(
+        default=False, metadata={"help": "Tune learning rate or not.q"}
+    )
     pad_to_max_length: bool = field(
         default=True,
         metadata={
@@ -463,17 +466,19 @@ def finetune(args):
             if AutoConfig.from_pretrained(model_args.model_name_or_path).num_labels == num_labels:
                 checkpoint = model_args.model_name_or_path
 
-        best_result = trainer.hyperparameter_search(
-        hp_space=my_hp_space,
-        direction="maximize", 
-        backend="optuna", 
-        n_trials = 5, # number of trials
-        # n_jobs=2  # number of parallel jobs, if multiple GPUs
-        )
+        if training_args.autotune:
+            
+            best_result = trainer.hyperparameter_search(
+            hp_space=my_hp_space,
+            direction="maximize", 
+            backend="optuna", 
+            n_trials = 5, # number of trials
+            # n_jobs=2  # number of parallel jobs, if multiple GPUs
+            )
 
 
-        trainer.args.learning_rate = best_result.hyperparameters['learning_rate']
-        #trainer.args.per_device_train_batch_size = best_result.hyperparameters['per_device_train_batch_size']
+            trainer.args.learning_rate = best_result.hyperparameters['learning_rate']
+            #trainer.args.per_device_train_batch_size = best_result.hyperparameters['per_device_train_batch_size']
 
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
 
