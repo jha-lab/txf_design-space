@@ -24,20 +24,20 @@ def training(seed, output_dir):
 	--do_train \
 	--do_eval \
 	--max_seq_length 512 \
-	--per_gpu_train_batch_size 32\
-	--num_train_epochs 6.0\
-	--adam_epsilon 1e-6\
-	--learning_rate 1e-4\
-	--warmup_steps 10000\
-	--lr_scheduler_type linear\
+	--per_gpu_train_batch_size 32 \
+	--num_train_epochs 6.0 \
+	--adam_epsilon 1e-6 \
+	--learning_rate 1e-4 \
+	--warmup_steps 10000 \
+	--lr_scheduler_type linear \
 	--output_dir {} \
-        --overwrite_output_dir \
+    --overwrite_output_dir \
         ".format( seed, output_dir)
 
 	return shlex.split(a)
 
 
-def main():
+def test():
 	"""Run pretraining
 	"""
 	parser = argparse.ArgumentParser(
@@ -50,7 +50,6 @@ def main():
 		default='fnet_mini')
 
 	args = parser.parse_args()
-
 
 	graphLib = GraphLib.load_from_dataset('../dataset/dataset_test.json')
 
@@ -104,6 +103,37 @@ def main():
 
 	print(f"MLM Loss on cc_news is {metrics['eval_loss']:0.2f}")
 
+
+def main():
+	"""Pretraining front-end function"""
+	parser = argparse.ArgumentParser(
+		description='Input parameters for pretraining',
+		formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	parser.add_argument('--model_hash',
+		metavar='',
+		type=str,
+		help='Hash of the model to pretrain')
+	parser.add_argument('--output_dir',
+		metavar='',
+		type=str,
+		help='Path to save the pretrained model')
+	parser.add_argument('--dataset_file',
+		metavar='',
+		type=str,
+		help='path to load the dataset',
+		default='../dataset/dataset_small.json')
+
+	args = parser.parse_args()
+
+	graphLib = GraphLib.load_from_dataset(args.dataset_file)
+
+	model_graph, _ = graphLib.get_graph(model_hash=args.model_hash)
+
+	seed = 1
+	args_train = training(seed, args, output_dir)
+
+	metrics = pretrain(args_train, model_graph.model_dict)
+
+
 if __name__ == '__main__':
-	
     main()

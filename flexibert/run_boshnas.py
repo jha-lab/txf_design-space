@@ -28,7 +28,7 @@ from transformers import BertConfig
 from transformers.models.bert.modeling_modular_bert import BertModelModular
 
 from boshnas import BOSHNAS
-from aqn import gosh_aqn as aqn
+from acq import gosh_aqn as acq
 
 from library import GraphLib, Graph
 from utils import print_util as pu
@@ -58,11 +58,10 @@ def worker(model_dict: dict,
 	"""Worker to finetune or pretrain the given model
 	
 	Args:
-		model_idx (int): index for the model in shared_accuracies
 		model_dict (dict): model dictionary
 		model_hash (str): hash of the given model
 		task (str): name of the GLUE task for fine-tuning the model on; should
-			be in GLUE_TASKS
+			be in GLUE_TASKS, or "glue"
 		epochs (int): number of epochs for fine-tuning
 		models_dir (str): path to "models" directory containing "pretrained" sub-directory
 		chosen_neighbor_hash (str, optional): hash of the chosen neighbor
@@ -174,6 +173,9 @@ def wait_for_jobs(model_jobs: list, running_limit: int = 4, patience: int = 1):
 				pending_jobs += 1
 			elif status == 'RUNNING':
 				running_jobs += 1
+			elif status == 'FAILED':
+				print_jobs(model_jobs)
+				raise RuntimeError('Some jobs failed.')
 		if last_completed_jobs != completed_jobs:
 			print_jobs(model_jobs)
 		last_completed_jobs = completed_jobs 
@@ -203,8 +205,8 @@ def update_dataset(graphLib: 'GraphLib', finetune_dir: str, dataset_file: str):
 
 	graphLib.save_dataset(dataset_file)
 
-	print(f'{pu.bcolors.OKGREEN}Trained points in dataset:{pu.bcolors.ENDC} {count}' \
-		+ f'{pu.bcolors.OKGREEN}Best accuracy:{pu.bcolors.ENDC} {best_accuracy}')
+	print(f'\n{pu.bcolors.OKGREEN}Trained points in dataset:{pu.bcolors.ENDC} {count}\n' \
+		+ f'{pu.bcolors.OKGREEN}Best accuracy:{pu.bcolors.ENDC} {best_accuracy}\n')
 
 	return best_accuracy
 
@@ -221,9 +223,9 @@ def convert_to_tabular(graphLib: 'GraphLib'):
 	"""
 	X, y = [], []
 	for graph in graphLib.library:
-		if graph.accuracy:
+		if graph.performance:
 			X.append(graph.embedding)
-			y.append(1 - graph.accuracy)
+			y.append(1 - graph.performance)
 
 	X, y = np.array(X), np.array(y)
 
@@ -279,8 +281,8 @@ def main():
 	parser.add_argument('--task',
 		metavar='',
 		type=str,
-		help=f'name of GLUE tasks to train surrogate model for',
-		default='sst2')
+		help=f'name of GLUE task (or "glue") to train surrogate model for',
+		default='glue')
 	parser.add_argument('--epochs',
 		metavar='',
 		type=int,
@@ -290,7 +292,7 @@ def main():
 		metavar='',
 		type=str,
 		help='path to save the surrogate model parameters',
-		default='../dataset/surrogate_models/sst2/')
+		default='../dataset/surrogate_models/glue/')
 	parser.add_argument('--models_dir',
 		metavar='',
 		type=str,
@@ -301,6 +303,11 @@ def main():
 		type=int,
 		help='number of initial models to initialize the BOSHNAS model',
 		default=10)
+	parser.add_argument('--autotune_trials',
+		metavar='',
+		type=int,
+		help='number of trials for optuna',
+		default=5)
 	parser.add_argument('--n_jobs',
 		metavar='',
 		type=int,
@@ -441,7 +448,7 @@ def main():
 
 		new_queries = 0
 
-		if method == 'optimization'
+		if method == 'optimization':
 			print(f'{pu.bcolors.OKBLUE}Running optimization step{pu.bcolors.ENDC}')
 			# Get current tabular dataset
 			X, y = convert_to_tabular(graphLib)

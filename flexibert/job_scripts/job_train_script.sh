@@ -11,6 +11,7 @@ id="stuli"
 pretrain="0"
 model_hash=""
 model_name_or_path=""
+dataset_file=""
 epochs=""
 output_dir=""
 
@@ -32,6 +33,7 @@ Help()
    echo -e "${YELLOW}-p${ENDC} | ${YELLOW}--pretrain${ENDC} [default = ${GREEN}\"0\"${ENDC}] \t\t To pre-train the given model"
    echo -e "${YELLOW}-m${ENDC} | ${YELLOW}--model_hash${ENDC} [default = ${GREEN}\"\"${ENDC}] \t\t Model hash"
    echo -e "${YELLOW}-n${ENDC} | ${YELLOW}--model_name_or_path${ENDC} [default = ${GREEN}\"\"${ENDC}] \t Model path for fine-tuning"
+   echo -e "${YELLOW}-d${ENDC} | ${YELLOW}--dataset_file${ENDC} [default = ${GREEN}\"\"${ENDC}] \t Path to the dataset file"
    echo -e "${YELLOW}-e${ENDC} | ${YELLOW}--epochs${ENDC} [default = ${GREEN}\"\"${ENDC}] \t\t\t Number of epochs for fine-tuning"
    echo -e "${YELLOW}-o${ENDC} | ${YELLOW}--output_dir${ENDC} [default = ${GREEN}\"\"${ENDC}] \t\t Output directory to save fine-tuned result"
    echo -e "${YELLOW}-h${ENDC} | ${YELLOW}--help${ENDC} \t\t\t\t\t Call this help message"
@@ -69,6 +71,11 @@ case "$1" in
     -n | --model_name_or_path)
         shift
         model_name_or_path=$1
+        shift
+        ;;
+    -d | --dataset_file)
+        shift
+        dataset_file=$1
         shift
         ;;
     -e | --epochs)
@@ -132,7 +139,9 @@ echo "cd ../../" >> $job_file
 echo "" >> $job_file
 if [[ $pretrain == "1" ]]
 then
-  echo "python roberta_pretrain.py --model_name_or_path ${model_name_or_path}" >> $job_file
+  echo "python pretrain_flexibert.py --model_hash ${model_name_or_path} \
+    --output_dir ${output_dir} \
+    --dataset_file ${dataset_file}" >> $job_file
 fi
 echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
   --task_name ${task} \
