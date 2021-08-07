@@ -26,7 +26,7 @@ from typing import Optional
 import logging
 
 logging.disable(logging.INFO)
-logging.disable(logging.WARNING)
+#logging.disable(logging.WARNING)
 main_dir = os.path.abspath(os.path.dirname(__file__)).split('flexibert')[0]
 
 import numpy as np
@@ -306,15 +306,17 @@ def finetune(args):
     )
     tokenizer = BertTokenizer.from_pretrained(main_dir+'tokenizer/')
     bertmodel = BertModelModular.from_pretrained(model_args.model_name_or_path)
-    #bertmodel.config.num_labels = num_labels 
-
     classifier_config = BertConfig.from_pretrained(model_args.model_name_or_path,num_labels=num_labels)
-    model = BertForSequenceClassificationModular(classifier_config)
-    model.bert.load_state_dict(bertmodel.state_dict())
+    #bertmodel.config.num_labels = num_labels 
 
     def model_return():
 
+        model = BertForSequenceClassificationModular(classifier_config)
+        model.bert.load_state_dict(bertmodel.state_dict())
+
         return model
+
+    model = model_return()
 
     # Preprocessing the datasets
     if data_args.task_name is not None:
@@ -434,7 +436,7 @@ def finetune(args):
 
     # Initialize our Trainer
     trainer = Trainer(
-        model=model,
+        model_init = model_return,
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
@@ -446,7 +448,6 @@ def finetune(args):
     def my_hp_space(trial):
         return {
             "learning_rate": trial.suggest_float("learning_rate", 1e-4, 1e-2, log=True),
-            "per_device_train_batch_size": trial.suggest_categorical("per_device_train_batch_size", [16, 32, 64]),
         }
 
     
@@ -462,14 +463,20 @@ def finetune(args):
             if AutoConfig.from_pretrained(model_args.model_name_or_path).num_labels == num_labels:
                 checkpoint = model_args.model_name_or_path
 
-        train_result = trainer.hyperparameter_search(
-        model_init = model_return,
+        best_result = trainer.hyperparameter_search(
         hp_space=my_hp_space,
         direction="maximize", 
-        backend="ray", 
-        n_samples=10, # number of trials
+        backend="optuna", 
+        n_trials = 5, # number of trials
         # n_jobs=2  # number of parallel jobs, if multiple GPUs
         )
+
+
+        trainer.args.learning_rate = best_result.hyperparameters['learning_rate']
+        #trainer.args.per_device_train_batch_size = best_result.hyperparameters['per_device_train_batch_size']
+
+        train_result = trainer.train(resume_from_checkpoint=checkpoint)
+
         metrics = train_result.metrics
         max_train_samples = (
             data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
