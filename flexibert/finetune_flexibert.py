@@ -453,10 +453,8 @@ def finetune(args):
 
     def my_hp_space(trial):
         return {
-            "learning_rate": trial.suggest_float("learning_rate", 1e-4, 1e-2, log=True),
+            "learning_rate": trial.suggest_float("learning_rate", 1e-6, 1e-3, log=True),
         }
-
-    
 
     # Training
     if training_args.do_train:
