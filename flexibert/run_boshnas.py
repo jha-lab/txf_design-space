@@ -105,8 +105,9 @@ def worker(model_dict: dict,
 	args.extend(['--epochs', str(epochs)])
 	args.extend(['--output_dir', f'{models_dir}{task}/{model_hash}/'])
 
-	slurm_stdout = subprocess.check_output(f'source ./job_scripts/job_train_script.sh {" ".join(args)}',
-		shell=True, text=True)
+	command = f'source ./job_scripts/job_train_script.sh {" ".join(args)}'
+
+	slurm_stdout = subprocess.check_output(command, shell=True, text=True)
 
 	return slurm_stdout.split()[-1], pretrain
 		

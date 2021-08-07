@@ -18,7 +18,7 @@ import logging
 
 
 
-def training(seed, output_dir):
+def get_training_args(seed, output_dir):
 
 	a = "--seed {} \
 	--do_train \
@@ -94,7 +94,7 @@ def test():
 
 	output_dir = "../models/pretrained/"+str(model_graph.hash)+'/'
 
-	args_train = training(seed, output_dir)
+	args_train = get_training_args(seed, output_dir)
 
 	# Forcing to train on single GPU
 	#os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -112,11 +112,11 @@ def main():
 	parser.add_argument('--model_hash',
 		metavar='',
 		type=str,
-		help='Hash of the model to pretrain')
+		help='hash of the model to pretrain')
 	parser.add_argument('--output_dir',
 		metavar='',
 		type=str,
-		help='Path to save the pretrained model')
+		help='path to save the pretrained model')
 	parser.add_argument('--dataset_file',
 		metavar='',
 		type=str,
@@ -130,7 +130,7 @@ def main():
 	model_graph, _ = graphLib.get_graph(model_hash=args.model_hash)
 
 	seed = 1
-	args_train = training(seed, args, output_dir)
+	args_train = get_training_args(seed, args, output_dir)
 
 	metrics = pretrain(args_train, model_graph.model_dict)
 

@@ -25,7 +25,7 @@ GLUE_TASKS = ['cola', 'mnli', 'mrpc', 'qnli', 'qqp', 'rte', 'sst2', 'stsb', 'wnl
 GLUE_TASKS_DATASET = ['CoLA', 'MNLI-mm', 'MRPC', 'QNLI', 'QQP', 'RTE', 'SST-2', 'STS-B', 'WNLI']
 
 
-def returntrainingargs(models_dir,task,model_hash):
+def get_training_args(models_dir, task, model_hash, autotune):
 
 	model_name_or_path = f'{models_dir}pretrained/{model_hash}'
 
@@ -33,6 +33,7 @@ def returntrainingargs(models_dir,task,model_hash):
 		--task_name {task} \
 		--do_train \
 		--do_eval \
+		{"--autotune" if autotune else ""} \
 		--save_total_limit 2 \
 		--max_seq_length 128 \
 		--per_device_train_batch_size 64 \
@@ -126,10 +127,11 @@ def test():
 	
 	
 	glue_scores = {}
+	score = 0
 
 	for task in GLUE_TASKS:
 
-		training_args = returntrainingargs(args.models_dir, task, graph.hash)
+		training_args = get_training_args(args.models_dir, task, graph.hash)
 		metrics = finetune(training_args)
 
 		if task == 'cola':
@@ -184,10 +186,8 @@ def test():
 
 
 def main():
-
-
 	parser = argparse.ArgumentParser(
-		description='Input parameters for generation of dataset library',
+		description='Input parameters for glue score computation',
 		formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument('--models_dir',
 		metavar='',
@@ -197,15 +197,22 @@ def main():
 	parser.add_argument('--model_hash',
 		metavar='',
 		type=str,
-		help='model hash'
-		)
+		help='hash of the given model')
+	parser.add_argument('--autotune',
+		metavar='',
+		type=bool,
+		help='to autotune training recipe',
+		default=False,
+		action='store_true')
 
+	args = parser.parse_args()
 	
 	glue_scores = {}
+	score = 0
 
 	for task in GLUE_TASKS:
 
-		training_args = returntrainingargs(args.models_dir, task, args.model_hash)
+		training_args = get_training_args(args.models_dir, task, args.model_hash, args.autotune)
 		metrics = finetune(training_args)
 
 		if task == 'cola':
@@ -219,7 +226,7 @@ def main():
             glue_scores[task+'_pearson'] = metrics['eval_pearson']
             task_score = (metrics['eval_spearmanr']+metrics['eval_pearson'])/2
 
-        elif task == 'mrpc' or task=='qqp':
+        elif task == 'mrpc' or task == 'qqp':
 
             glue_scores[task+'_accuracy'] = metrics['eval_accuracy']
             glue_scores[task+'_f1'] = metrics['eval_f1']
@@ -234,10 +241,9 @@ def main():
                 
         score+=task_score
                         
-    
-    print(f"{args.model_hash}:", score*1.0/9)
+    # print(f"{args.model_hash}:", score*1.0/9)
 
-    output_dir = f"../models/glue_score/{model_hash}/"
+    output_dir = f"{args.models_dir}glue_score/{model_hash}/"
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
