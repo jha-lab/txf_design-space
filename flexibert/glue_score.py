@@ -240,15 +240,17 @@ def main():
         #print(task,':',task_score)
                 
         score+=task_score
+
+    glue_scores['glue_score'] = score*1.0/9
                         
     # print(f"{args.model_hash}:", score*1.0/9)
 
-    output_dir = f"{args.models_dir}glue_score/{model_hash}/"
+    output_dir = f"{args.models_dir}glue/{model_hash}/"
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    with open(output_dir+'glue_score.json', 'w') as fp:
+    with open(output_dir+'all_results.json', 'w') as fp:
         json.dump(glue_scores, fp)
 
 if __name__ == '__main__':
