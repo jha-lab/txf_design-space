@@ -26,6 +26,7 @@ GLUE_TASKS_DATASET = ['CoLA', 'MNLI-mm', 'MRPC', 'QNLI', 'QQP', 'RTE', 'SST-2', 
 
 
 def returntrainingargs(models_dir,task,model_hash):
+
 	model_name_or_path = f'{models_dir}pretrained/{model_hash}'
 
 	training_args = f'--model_name_or_path {model_name_or_path} \
@@ -44,7 +45,7 @@ def returntrainingargs(models_dir,task,model_hash):
 
 	return training_args
 
-def main():
+def test():
 
 	parser = argparse.ArgumentParser(
 		description='Input parameters for generation of dataset library',
@@ -133,25 +134,41 @@ def main():
 
 		if task == 'cola':
 
-			glue_scores[task] = metrics['eval_matthews_correlation']
+            glue_scores[task] = metrics['eval_matthews_correlation']
+            task_score = glue_scores[task]
 
-		elif task == 'stsb':
+        elif task == 'stsb':
 
-			glue_scores[task+'_spearman'] = metrics['eval_spearmanr']
-			glue_scores[task+'_pearson'] = metrics['eval_pearson']
+            glue_scores[task+'_spearman'] = metrics['eval_spearmanr']
+            glue_scores[task+'_pearson'] = metrics['eval_pearson']
+            task_score = (metrics['eval_spearmanr']+metrics['eval_pearson'])/2
 
-		elif task == 'mrpc' or task=='qqp':
+        elif task == 'mrpc' or task=='qqp':
 
-			glue_scores[task+'_accuracy'] = metrics['eval_accuracy']
-			glue_scores[task+'_f1'] = metrics['eval_f1']
+            glue_scores[task+'_accuracy'] = metrics['eval_accuracy']
+            glue_scores[task+'_f1'] = metrics['eval_f1']
+            task_score = (metrics['eval_accuracy']+metrics['eval_f1'])/2
 
-		elif task in ["sst2", "mnli",  "qnli", "rte", "wnli"]:
+        elif task in ["sst2", "mnli",  "qnli", "rte", "wnli"]:
 
-			glue_scores[task] = metrics['eval_accuracy']
+            glue_scores[task] = metrics['eval_accuracy']
+            task_score = metrics['eval_accuracy']
+            
+        print(task,':',task_score)
+                
+        score+=task_score
+                        
+    
+    print(f"{model_name}:", score*1.0/9)
 
-	score = 0
-	total = 0
-	
+    output_dir = f"../models/glue_score/{model_hash}/"
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    with open(output_dir+'glue_score.json', 'w') as fp:
+        json.dump(glue_scores, fp)
+
 	for key, value in glue_scores:
 
 		score+=value
@@ -165,6 +182,68 @@ def main():
 	with open(output_dir, 'w') as fp:
 		json.dump(glue_scores, fp)
 
+
+def main():
+
+
+	parser = argparse.ArgumentParser(
+		description='Input parameters for generation of dataset library',
+		formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	parser.add_argument('--models_dir',
+		metavar='',
+		type=str,
+		help='path to "models" directory containing "pretrained" sub-directory',
+		default='../models/')
+	parser.add_argument('--model_hash',
+		metavar='',
+		type=str,
+		help='model hash'
+		)
+
+	
+	glue_scores = {}
+
+	for task in GLUE_TASKS:
+
+		training_args = returntrainingargs(args.models_dir, task, args.model_hash)
+		metrics = finetune(training_args)
+
+		if task == 'cola':
+
+            glue_scores[task] = metrics['eval_matthews_correlation']
+            task_score = glue_scores[task]
+
+        elif task == 'stsb':
+
+            glue_scores[task+'_spearman'] = metrics['eval_spearmanr']
+            glue_scores[task+'_pearson'] = metrics['eval_pearson']
+            task_score = (metrics['eval_spearmanr']+metrics['eval_pearson'])/2
+
+        elif task == 'mrpc' or task=='qqp':
+
+            glue_scores[task+'_accuracy'] = metrics['eval_accuracy']
+            glue_scores[task+'_f1'] = metrics['eval_f1']
+            task_score = (metrics['eval_accuracy']+metrics['eval_f1'])/2
+
+        elif task in ["sst2", "mnli",  "qnli", "rte", "wnli"]:
+
+            glue_scores[task] = metrics['eval_accuracy']
+            task_score = metrics['eval_accuracy']
+            
+        #print(task,':',task_score)
+                
+        score+=task_score
+                        
+    
+    print(f"{args.model_hash}:", score*1.0/9)
+
+    output_dir = f"../models/glue_score/{model_hash}/"
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    with open(output_dir+'glue_score.json', 'w') as fp:
+        json.dump(glue_scores, fp)
 
 if __name__ == '__main__':
  
