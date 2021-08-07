@@ -94,6 +94,9 @@ class DataTrainingArguments:
     autotune: bool = field(
         default=False, metadata={"help": "Tune learning rate or not.q"}
     )
+    autotune_trials: int = field(
+        default=5,
+        metadata={"help": "The number of trials to autotune the training recipe (namely the learning rate)."})
     pad_to_max_length: bool = field(
         default=True,
         metadata={
@@ -472,7 +475,7 @@ def finetune(args):
             hp_space=my_hp_space,
             direction="maximize", 
             backend="optuna", 
-            n_trials = 5, # number of trials
+            n_trials = training_args.autotune_trials, # number of trials
             # n_jobs=2  # number of parallel jobs, if multiple GPUs
             )
 
