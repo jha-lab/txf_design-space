@@ -53,6 +53,9 @@ def worker(model_dict: dict,
 	epochs: int, 
 	models_dir: str,
 	chosen_neighbor_hash: str,
+	dataset_file: str,
+	autotune: bool,
+	autotune_trials: int,
 	cluster: str,
 	id: str):
 	"""Worker to finetune or pretrain the given model
@@ -64,7 +67,10 @@ def worker(model_dict: dict,
 			be in GLUE_TASKS, or "glue"
 		epochs (int): number of epochs for fine-tuning
 		models_dir (str): path to "models" directory containing "pretrained" sub-directory
-		chosen_neighbor_hash (str, optional): hash of the chosen neighbor
+		chosen_neighbor_hash (str): hash of the chosen neighbor
+		dataset_file (str): path to the dataset file
+		autotune (bool): whether to automatically tune the training recipe
+		autotune_trials (int): number of trials for autotuning. Only used if autotune is True
 		cluster (str): name of the cluster - "adroit" or "tiger"
 		id (str): PU-NetID that is used to run slurm commands
 	
@@ -78,14 +84,25 @@ def worker(model_dict: dict,
 		# Load weights of current model using the finetuned neighbor that was chosen
 		model_config = BertConfig()
 		model_config.from_model_dict(model_dict)
-		chosen_neighbor_model = BertModelModular.from_pretrained(
-			f'{models_dir}{task}/{chosen_neighbor_hash}/')
-		current_model = BertModelModular(model_config)
-		current_model.load_model_from_source(chosen_neighbor_model)
-		current_model.save_pretrained(
-			f'{models_dir}{task}/{model_hash}/')
 
-		model_name_or_path = f'{models_dir}{task}/{model_hash}/' 
+		if task != "glue":
+			chosen_neighbor_model = BertModelModular.from_pretrained(
+				f'{models_dir}{task}/{chosen_neighbor_hash}/')
+			current_model = BertModelModular(model_config)
+			current_model.load_model_from_source(chosen_neighbor_model)
+			current_model.save_pretrained(
+				f'{models_dir}{task}/{model_hash}/')
+			model_name_or_path = f'{models_dir}{task}/{model_hash}/' 
+		else:
+			for task in GLUE_TASKS:
+				chosen_neighbor_model = BertModelModular.from_pretrained(
+					f'{models_dir}{task}/{chosen_neighbor_hash}/')
+				current_model = BertModelModular(model_config)
+				current_model.load_model_from_source(chosen_neighbor_model)
+				current_model.save_pretrained(
+					f'{models_dir}{task}/{model_hash}/')
+				model_name_or_path = f'{models_dir}{task}/{model_hash}/' 
+
 		print(f'Model (with hash: {model_hash}) copied from neighbor. Finetuning model.')
 	else:
 		if model_hash not in os.listdir(f'{models_dir}pretrained/'):
@@ -99,9 +116,13 @@ def worker(model_dict: dict,
 	args = ['--task', task]
 	args.extend(['--cluster', cluster])
 	args.extend(['--id', id])
+	args.extend(['--dataset_file', dataset_file])
 	args.extend(['--pretrain', '1' if pretrain else '0'])
+	args.extend(['--autotune', '1' if autotune else '0'])
+	args.extend(['--autotune_trials', autotune_trials])
 	args.extend(['--model_hash', model_hash])
 	args.extend(['--model_name_or_path', model_name_or_path])
+	args.extend(['--models_dir', models_dir])
 	args.extend(['--epochs', str(epochs)])
 	args.extend(['--output_dir', f'{models_dir}{task}/{model_hash}/'])
 
@@ -199,7 +220,7 @@ def update_dataset(graphLib: 'GraphLib', finetune_dir: str, dataset_file: str):
 			with open(results_json) as json_file:
 				results = json.load(json_file)
 				_, model_idx = graphLib.get_graph(model_hash=model_hash)
-				graphLib.library[model_idx].accuracy = results['eval_accuracy']
+				graphLib.library[model_idx].performance = results['eval_accuracy']
 				if results['eval_accuracy'] > best_accuracy:
 					best_accuracy = results['eval_accuracy']
 				count += 1
@@ -241,7 +262,7 @@ def get_neighbor_hash(model: 'Graph', trained_hashes: list):
     chosen_neighbor_hash = None
     max_overlap = 0
 
-    # Choose neighbor with max overlap given that it adhere to the overlap constraint
+    # Choose neighbor with max overlap given where it follows the overlap constraint
 	for neighbor_hash in model.neighbors:
 		if neighbor_hash not in trained_hashes: 
 			# Neighbor should be trained for weight transfer
@@ -260,7 +281,6 @@ def get_neighbor_hash(model: 'Graph', trained_hashes: list):
         overlap = current_model.load_model_from_source(neighbor_model)
 
         if overlap >= OVERLAP_THRESHOLD:
-            train_model = True
             if overlap >= max_overlap:
                 max_overlap = overlap
                 chosen_neighbor_hash = neighbor_hash
@@ -272,7 +292,7 @@ def main():
 	"""Run BOSHNAS to get the best architecture in the design space
 	"""
 	parser = argparse.ArgumentParser(
-		description='Input parameters for generation of dataset library',
+		description='Input parameters for running BOSHNAS over the FlexiBERT space',
 		formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument('--dataset_file',
 		metavar='',
@@ -304,6 +324,12 @@ def main():
 		type=int,
 		help='number of initial models to initialize the BOSHNAS model',
 		default=10)
+	parser.add_argument('--autotune',
+		metavar='',
+		type=bool,
+		help='to autotune the training recipe',
+		default=False,
+		action='store_true')
 	parser.add_argument('--autotune_trials',
 		metavar='',
 		type=int,
@@ -329,7 +355,7 @@ def main():
 
 	random_seed = 1
 
-	assert args.task in GLUE_TASKS, f'GLUE task should be in: {GLUE_TASKS}'
+	assert args.task in GLUE_TASKS + ['glue'], f'given task should be in: {GLUE_TASKS} or "glue"'
 
 	# Take global dataset and assign task
 	graphLib = GraphLib.load_from_dataset(args.dataset_file)
@@ -338,6 +364,7 @@ def main():
 	# New dataset file
     new_dataset_file = args.dataset_file.split('.json')[0] + f'_{args.task}.json'
 
+    # Pseudo-code for the BOSHNAS pipeline:
 	# 1. Pre-train randomly sampled models if number of pretrained models available 
 	#   is less than num_init
 	# 2. Fine-tune pretrained models for the given task
@@ -367,8 +394,8 @@ def main():
 		model, model_idx = graphLib.get_graph(model_hash=model_hash)
 		
 		job_id, pretrain = worker(model_dict=model.model_dict, model_hash=model.hash, task=args.task, 
-			epochs=args.epochs, models_dir=args.models_dir, chosen_neighbor_hash=None, 
-			cluster=args.cluster, id=args.id)
+			epochs=args.epochs, models_dir=args.models_dir, chosen_neighbor_hash=None, dataset_file=args.dataset_file,
+			autotune=args.autotune, autotune_trials=args.autotune_trials, cluster=args.cluster, id=args.id)
 		assert pretrain is False
 		
 		model_jobs.append({'model_hash': model_hash, 
@@ -390,8 +417,8 @@ def main():
 			model, model_idx = graphLib.get_graph(model_hash=model_hash)
 
 			job_id, pretrain = worker(model_dict=model.model_dict, model_hash=model.hash, task=args.task, 
-				epochs=args.epochs, models_dir=args.models_dir, chosen_neighbor_hash=None, 
-				cluster=args.cluster, id=args.id)
+				epochs=args.epochs, models_dir=args.models_dir, chosen_neighbor_hash=None, dataset_file=args.dataset_file,
+				autotune=args.autotune, autotune_trials=args.autotune_trials, cluster=args.cluster, id=args.id)
 			assert pretrain is True
 			
 			model_jobs.append({'model_hash': model_hash, 

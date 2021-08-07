@@ -9,9 +9,12 @@ task="sst2"
 cluster="tiger"
 id="stuli"
 pretrain="0"
+autotune="0"
+autotune_trials=""
 model_hash=""
 model_name_or_path=""
 dataset_file=""
+models_dir=""
 epochs=""
 output_dir=""
 
@@ -31,9 +34,12 @@ Help()
    echo -e "${YELLOW}-c${ENDC} | ${YELLOW}--cluster${ENDC} [default = ${GREEN}\"tiger\"${ENDC}] \t\t Selected cluster - adroit, tiger or della"
    echo -e "${YELLOW}-i${ENDC} | ${YELLOW}--id${ENDC} [default = ${GREEN}\"stuli\"${ENDC}] \t\t\t Selected PU-NetID to email slurm updates"
    echo -e "${YELLOW}-p${ENDC} | ${YELLOW}--pretrain${ENDC} [default = ${GREEN}\"0\"${ENDC}] \t\t To pre-train the given model"
+   echo -e "${YELLOW}-a${ENDC} | ${YELLOW}--autotune${ENDC} [default = ${GREEN}\"0\"${ENDC}] \t\t To autotune the training recipe"
+   echo -e "${YELLOW}-l${ENDC} | ${YELLOW}--autotune_trials${ENDC} [default = ${GREEN}\"\"${ENDC}] \t\t Number of trials for autotuning"
    echo -e "${YELLOW}-m${ENDC} | ${YELLOW}--model_hash${ENDC} [default = ${GREEN}\"\"${ENDC}] \t\t Model hash"
    echo -e "${YELLOW}-n${ENDC} | ${YELLOW}--model_name_or_path${ENDC} [default = ${GREEN}\"\"${ENDC}] \t Model path for fine-tuning"
    echo -e "${YELLOW}-d${ENDC} | ${YELLOW}--dataset_file${ENDC} [default = ${GREEN}\"\"${ENDC}] \t Path to the dataset file"
+   echo -e "${YELLOW}-r${ENDC} | ${YELLOW}--models_dir${ENDC} [default = ${GREEN}\"\"${ENDC}] \t Path to the models directory"
    echo -e "${YELLOW}-e${ENDC} | ${YELLOW}--epochs${ENDC} [default = ${GREEN}\"\"${ENDC}] \t\t\t Number of epochs for fine-tuning"
    echo -e "${YELLOW}-o${ENDC} | ${YELLOW}--output_dir${ENDC} [default = ${GREEN}\"\"${ENDC}] \t\t Output directory to save fine-tuned result"
    echo -e "${YELLOW}-h${ENDC} | ${YELLOW}--help${ENDC} \t\t\t\t\t Call this help message"
@@ -63,6 +69,16 @@ case "$1" in
         pretrain=$1
         shift
         ;;
+    -a | --autotune)
+        shift
+        autotune=$1
+        shift
+        ;;
+    -l | --autotune_trials)
+        shift
+        autotune_trials=$1
+        shift
+        ;;
     -m | --model_hash)
         shift
         model_hash=$1
@@ -76,6 +92,11 @@ case "$1" in
     -d | --dataset_file)
         shift
         dataset_file=$1
+        shift
+        ;;
+    -r | --models_dir)
+        shift
+        models_dir=$1
         shift
         ;;
     -e | --epochs)
@@ -139,21 +160,52 @@ echo "cd ../../" >> $job_file
 echo "" >> $job_file
 if [[ $pretrain == "1" ]]
 then
-  echo "python pretrain_flexibert.py --model_hash ${model_name_or_path} \
-    --output_dir ${output_dir} \
-    --dataset_file ${dataset_file}" >> $job_file
+    echo "python pretrain_flexibert.py --model_hash ${model_name_or_path} 
+        --output_dir ${output_dir} \
+        --dataset_file ${dataset_file}" >> $job_file
 fi
-echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
-  --task_name ${task} \
-  --do_train \
-  --do_eval \
-  --save_total_limit 2 \
-  --max_sequence_length 128 \
-  --per_device_train_batch_size 64 \
-  --learning_rate 2e-5 \
-  --num_train_epochs ${epochs} \
-  --overwrite_output_dir \
-  --output_dir ${output_dir}" >> $job_file
+if [[ $autotune == "0" ]]
+then
+    if [[ $task == "glue" ]]
+    then
+        echo "python glue_score.py -- model_hash ${model_hash} \
+            --models_dir ${models_dir} " >> $job_file
+    else
+        echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
+            --task_name ${task} \
+            --do_train \
+            --do_eval \
+            --save_total_limit 2 \
+            --max_sequence_length 128 \
+            --per_device_train_batch_size 64 \
+            --learning_rate 2e-5 \
+            --num_train_epochs ${epochs} \
+            --overwrite_output_dir \
+            --output_dir ${output_dir}" >> $job_file
+    fi
+else
+    if [[ $task == "glue" ]]
+    then
+        echo "python glue_score.py -- model_hash ${model_hash} \
+            --models_dir ${models_dir} \
+            --autotune \
+            --autotune_trials ${autotune_trials}" >> $job_file
+    else
+        echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
+            --task_name ${task} \
+            --do_train \
+            --do_eval \
+            --autotune \
+            --autotune_trials ${autotune_trials} \
+            --save_total_limit 2 \
+            --max_sequence_length 128 \
+            --per_device_train_batch_size 64 \
+            --learning_rate 2e-5 \
+            --num_train_epochs ${epochs} \
+            --overwrite_output_dir \
+            --output_dir ${output_dir}" >> $job_file
+    fi
+fi
 # echo "python -c 'import time; import random; time.sleep(random.randint(50, 100))'" >> $job_file
 
 sbatch $job_file
