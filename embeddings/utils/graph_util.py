@@ -360,9 +360,13 @@ def generate_dissimilarity_matrix(graph_list: list, kernel='WeisfeilerLehman', o
 						print(f'Loaded idx_set from "{IDX_SET_TEMP}"')
 
 				for i, j in tqdm(idx_set, desc='Generating dissimilarity matrix'):
+					count = 0
 					if np.isnan(dissimilarity_matrix[i, j]):
 						get_ged(i, j, dissimilarity_matrix)
-						np.save(open(DISS_MAT_TEMP, 'wb+'), dissimilarity_matrix)
+						count += 1
+						if count % 100 == 0:
+							np.save(open(DISS_MAT_TEMP, 'wb+'), dissimilarity_matrix)
+							count = 0
 			else:
 				for i, j in tqdm(list(combinations(range(0, len(graph_list), CHUNK_SIZE), 2)), \
 					desc='Generating dissimilarity matrix'):
