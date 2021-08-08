@@ -35,6 +35,7 @@ def get_training_args(models_dir, task, model_hash, autotune, autotune_trials):
 		--do_eval \
 		{"--autotune" if autotune else ""} \
 		--autotune_trials {autotune_trials} \
+		--logging_steps 50 \
 		--dataloader_num_workers 16 \
 		--save_total_limit 2 \
 		--max_seq_length 128 \
