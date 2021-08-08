@@ -138,7 +138,12 @@ job_file="./job_${model_hash}_.slurm"
 mkdir -p "./job_scripts/${task}/"
 
 # Load GLUE dataset using the internet
-python load_glue_dataset.py --task $task
+if [[ $task == "glue" ]]
+then
+    python load_all_glue_datasets.py
+else
+    python load_glue_dataset.py --task $task
+fi
 
 cd "./job_scripts/${task}/"
 
@@ -149,8 +154,8 @@ echo "#SBATCH --nodes=1                                   # node count" >> $job_
 echo "#SBATCH --ntasks=1                                  # total number of tasks across all nodes" >> $job_file
 echo "#SBATCH --cpus-per-task=20                          # cpu-cores per task (>1 if multi-threaded tasks)" >> $job_file
 echo "#SBATCH --mem-per-cpu=8G                            # memory per cpu-core (4G is default)" >> $job_file
-echo "#SBATCH --gres=${cluster_gpu}                       # number of gpus per node" >> $job_file
-echo "#SBATCH --time=144:00:00                            # total run time limit (HH:MM:SS)" >> $job_file
+# echo "#SBATCH --gres=${cluster_gpu}                       # number of gpus per node" >> $job_file
+echo "#SBATCH --time=2:00:00                            # total run time limit (HH:MM:SS)" >> $job_file
 echo "" >> $job_file
 echo "module purge" >> $job_file
 echo "module load anaconda3/2020.7" >> $job_file
@@ -160,8 +165,8 @@ echo "cd ../../" >> $job_file
 echo "" >> $job_file
 if [[ $pretrain == "1" ]]
 then
-    echo "python pretrain_flexibert.py --model_hash ${model_name_or_path} 
-        --output_dir ${output_dir} \
+    echo "python pretrain_flexibert.py --model_hash ${model_hash} 
+        --output_dir ${model_name_or_path} \
         --dataset_file ${dataset_file} \
         --id ${id}" >> $job_file
 fi
@@ -209,6 +214,18 @@ else
             --output_dir ${output_dir}" >> $job_file
     fi
 fi
-# echo "python -c 'import time; import random; time.sleep(random.randint(50, 100))'" >> $job_file
+# if [[ $pretrain == "1" ]]
+# then
+#     echo "python -c 'import os, time, random, json; \
+#         os.makedirs(\"${models_dir}${task}/${model_hash}\", exist_ok=True); \
+#         os.makedirs(\"${models_dir}pretrained/${model_hash}\", exist_ok=True); \
+#         json.dump({\"glue_score\": random.random()}, \
+#         open(\"${models_dir}${task}/${model_hash}/all_results.json\", \"w+\"))'" >> $job_file
+# else
+#     echo "python -c 'import os, time, random, json; \
+#         os.makedirs(\"${models_dir}${task}/${model_hash}\", exist_ok=True); \
+#         json.dump({\"glue_score\": random.random()}, \
+#         open(\"${models_dir}${task}/${model_hash}/all_results.json\", \"w+\"))'" >> $job_file
+# fi
 
 sbatch $job_file

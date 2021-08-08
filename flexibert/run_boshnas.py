@@ -22,6 +22,8 @@ import tabulate
 import subprocess
 import time
 import json
+import copy
+import shutil
 
 import torch
 from transformers import BertConfig
@@ -37,7 +39,7 @@ from utils import print_util as pu
 GLUE_TASKS = ['cola', 'mnli', 'mrpc', 'qnli', 'qqp', 'rte', 'sst2', 'stsb', 'wnli']
 
 CONF_INTERVAL = 0.005 # Corresponds to 0.5% accuracy for 95% confidence interval
-OVERLAP_THRESHOLD = 0.9 # Corresponds to the minimum overlap for model to be considered
+OVERLAP_THRESHOLD = 0.8 # Corresponds to the minimum overlap for model to be considered
 
 DEBUG = False
 ACCURACY_PATIENCE = 10 # Convergence criterion for accuracy
@@ -119,7 +121,7 @@ def worker(model_dict: dict,
 	args.extend(['--dataset_file', dataset_file])
 	args.extend(['--pretrain', '1' if pretrain else '0'])
 	args.extend(['--autotune', '1' if autotune else '0'])
-	args.extend(['--autotune_trials', autotune_trials])
+	args.extend(['--autotune_trials', str(autotune_trials)])
 	args.extend(['--model_hash', model_hash])
 	args.extend(['--model_name_or_path', model_name_or_path])
 	args.extend(['--models_dir', models_dir])
@@ -171,7 +173,7 @@ def print_jobs(model_jobs: list):
 	print(tabulate.tabulate(rows, header))
 
 
-def wait_for_jobs(model_jobs: list, running_limit: int = 4, patience: int = 1):
+def wait_for_jobs(model_jobs: list, running_limit: int = 8, patience: int = 1):
 	"""Wait for current jobs in queue to complete
 	
 	Args:
@@ -181,8 +183,8 @@ def wait_for_jobs(model_jobs: list, running_limit: int = 4, patience: int = 1):
 	"""
 	print_jobs(model_jobs)
 
-	completed_jobs = 0
 	last_completed_jobs = 0
+	last_running_jobs = 0
 	running_jobs = np.inf
 	pending_jobs = np.inf
 
@@ -201,11 +203,10 @@ def wait_for_jobs(model_jobs: list, running_limit: int = 4, patience: int = 1):
 				print_jobs(model_jobs)
 				raise RuntimeError('Some jobs failed.')
 
-		if last_completed_jobs != completed_jobs:
+		if last_completed_jobs != completed_jobs or last_running_jobs != running_jobs:
 			print_jobs(model_jobs)
 
-		last_completed_jobs = completed_jobs 
-		time.sleep(1)
+		last_completed_jobs, last_running_jobs = completed_jobs, running_jobs 
 
 
 def update_dataset(graphLib: 'GraphLib', task: str, finetune_dir: str, dataset_file: str):
@@ -219,10 +220,11 @@ def update_dataset(graphLib: 'GraphLib', task: str, finetune_dir: str, dataset_f
 	"""
 	count = 0
 	best_performance = 0
+	best_hash = ''
 	
 	for model_hash in os.listdir(finetune_dir):
 		metrics_json = os.path.join(finetune_dir, model_hash, 'all_results.json')
-		if os.path.exists(mertics_json):
+		if os.path.exists(metrics_json):
 			with open(metrics_json) as json_file:
 				metrics = json.load(json_file)
 				_, model_idx = graphLib.get_graph(model_hash=model_hash)
@@ -244,12 +246,15 @@ def update_dataset(graphLib: 'GraphLib', task: str, finetune_dir: str, dataset_f
 
 				if performance > best_performance:
 					best_performance = performance
+					best_hash = model_hash
 				count += 1
 
+	print()
 	graphLib.save_dataset(dataset_file)
 
 	print(f'\n{pu.bcolors.OKGREEN}Trained points in dataset:{pu.bcolors.ENDC} {count}\n' \
-		+ f'{pu.bcolors.OKGREEN}Best accuracy:{pu.bcolors.ENDC} {best_performance}\n')
+		+ f'{pu.bcolors.OKGREEN}Best performance:{pu.bcolors.ENDC} {best_performance}\n' 
+		+ f'{pu.bcolors.OKGREEN}Best model hash:{pu.bcolors.ENDC} {best_hash}\n')
 
 	return best_performance
 
@@ -275,7 +280,7 @@ def convert_to_tabular(graphLib: 'GraphLib'):
 	return X, y
 
 
-def get_neighbor_hash(model: 'Graph', trained_hashes: list):
+def get_neighbor_hash(model: 'Graph', graphLib: 'GraphLib', trained_hashes: list):
 	# Create BertConfig for the current model
 	model_config = BertConfig()
 	model_config.from_model_dict(model.model_dict)
@@ -293,13 +298,14 @@ def get_neighbor_hash(model: 'Graph', trained_hashes: list):
 		current_model = BertModelModular(model_config)
 
 		# Initialize neighbor model
-		neighbor_graph, _ = graphLib.get_graph(model_hash=neighor_hash)
-		neighbor_config = BertConfig(neighbor_graph.model_dict)
+		neighbor_graph, _ = graphLib.get_graph(model_hash=neighbor_hash)
+		neighbor_config = BertConfig()
 		neighbor_config.from_model_dict(neighbor_graph.model_dict)
 		neighbor_model = BertModelModular(neighbor_config)
 
 		# Get overlap from neighboring model
 		overlap = current_model.load_model_from_source(neighbor_model)
+		print(f'Overlap of query ({model.hash}) with neighbor ({neighbor_hash}) is: {overlap}')
 
 		if overlap >= OVERLAP_THRESHOLD:
 			if overlap >= max_overlap:
@@ -339,7 +345,7 @@ def main():
 		metavar='',
 		type=str,
 		help='path to "models" directory containing "pretrained" sub-directory',
-		default='../models/')
+		default='/scratch/gpfs/stuli/txf_design-space/models/')
 	parser.add_argument('--num_init',
 		metavar='',
 		type=int,
@@ -371,7 +377,8 @@ def main():
 	parser.set_defaults(autotune=False)
 
 	args = parser.parse_args()
-
+	autotune_trials = args.autotune_trials
+	
 	random_seed = 1
 
 	assert args.task in GLUE_TASKS + ['glue'], f'given task should be in: {GLUE_TASKS} or "glue"'
@@ -408,24 +415,50 @@ def main():
 	pretrained_hashes = os.listdir(pretrain_dir)
 	# pretrained_hashes = random.sample([graph.hash for graph in graphLib.library], 4)
 
+	# Load model jobs if previous instance of BOSHNAS ended unexpectedly
+	model_jobs_file = f'./job_scripts/{args.task}/model_jobs.json'
+	if os.path.exists(model_jobs_file):
+		model_jobs = json.load(open(model_jobs_file))
+
+		try:
+			wait_for_jobs(model_jobs)
+		except:
+			# Is there are failed jobs, remove them
+			model_jobs_copy = copy.deepcopy(model_jobs)
+			for job in model_jobs_copy:
+				_, _, status = get_job_info(job['job_id'])
+				if status == 'FAILED':
+					# Assume job was unsuccessful
+					model_jobs.pop(job)
+					shutil.rmtree(os.path.join(pretrain_dir, job['model_hash']), ignore_errors=True)
+					shutil.rmtree(os.path.join(finetune_dir, job['model_hash']), ignore_errors=True)
+
+			print(f'{pu.bcolors.WARNING}Removed failed jobs{pu.bcolors.ENDC}')
+			wait_for_jobs(model_jobs)
+	else:
+		os.makedirs(f'./job_scripts/{args.task}', exist_ok=True)
+
 	# Finetune pretrained models
 	for model_hash in pretrained_hashes:
-		if model_hash in finetune_dir:
+		if os.path.exists(finetune_dir) and model_hash in os.listdir(finetune_dir):
 			continue
 
 		model, model_idx = graphLib.get_graph(model_hash=model_hash)
 		
 		job_id, pretrain = worker(model_dict=model.model_dict, model_hash=model.hash, task=args.task, 
 			epochs=args.epochs, models_dir=args.models_dir, chosen_neighbor_hash=None, dataset_file=args.dataset_file,
-			autotune=args.autotune, autotune_trials=args.autotune_trials, cluster=args.cluster, id=args.id)
+			autotune=args.autotune, autotune_trials=autotune_trials, cluster=args.cluster, id=args.id)
 		assert pretrain is False
 		
-		model_jobs.append({'model_hash': model_hash, 
+		model_jobs.append({'model_hash': model.hash, 
 			'job_id': job_id, 
 			'train_type': 'P+F' if pretrain else 'F'})
 
 	# Wait for jobs to complete
 	wait_for_jobs(model_jobs)
+
+	# Save model jobs
+	json.dump(model_jobs, open(model_jobs_file, 'w+'))
 
 	# Pretrain and then finetune randomly sampled models if total finetuned models are less than num_init
 	# TODO: Add skopt.sampler.Sobol points instead
@@ -440,15 +473,18 @@ def main():
 
 			job_id, pretrain = worker(model_dict=model.model_dict, model_hash=model.hash, task=args.task, 
 				epochs=args.epochs, models_dir=args.models_dir, chosen_neighbor_hash=None, dataset_file=args.dataset_file,
-				autotune=args.autotune, autotune_trials=args.autotune_trials, cluster=args.cluster, id=args.id)
+				autotune=args.autotune, autotune_trials=autotune_trials, cluster=args.cluster, id=args.id)
 			assert pretrain is True
 			
-			model_jobs.append({'model_hash': model_hash, 
+			model_jobs.append({'model_hash': model.hash, 
 				'job_id': job_id, 
 				'train_type': 'P+F' if pretrain else 'F'})
 
 	# Wait for jobs to complete
 	wait_for_jobs(model_jobs)
+
+	# Save model jobs
+	json.dump(model_jobs, open(model_jobs_file, 'w+'))
 
 	# Update dataset with newly trained models
 	old_best_performance = update_dataset(graphLib, args.task, finetune_dir, new_dataset_file)
@@ -475,10 +511,14 @@ def main():
 	X, y = convert_to_tabular(graphLib)
 	max_loss = np.amax(y)
 
-	same_accuracy = 0
+	# Train BOSHNAS model based on trained models
+	y = y/max_loss
+	train_error = surrogate_model.train(X, y)
+
+	same_performance = 0
 	method = 'optimization'
 
-	while same_accuracy < ACCURACY_PATIENCE + ALEATORIC_QUERIES:
+	while same_performance < ACCURACY_PATIENCE + ALEATORIC_QUERIES:
 		prob = random.uniform(0, 1)
 		if 0 <= prob <= (1 - UNC_PROB - DIV_PROB):
 			method = 'optimization'
@@ -500,20 +540,16 @@ def main():
 
 		if method == 'optimization':
 			print(f'{pu.bcolors.OKBLUE}Running optimization step{pu.bcolors.ENDC}')
-			# Get current tabular dataset
-			X, y = convert_to_tabular(graphLib)
-			y = y/max_loss
-
-			# Train BOSHNAS model
-			train_error = surrogate_model.train(X, y)
-
+			
 			# Use aleatoric loss close to convergence to optimize training recipe
-			if same_accuracy < ACCURACY_PATIENCE:
+			if same_performance < ACCURACY_PATIENCE:
 				# Architecture not converged yet. Use only epistemic uncertainty
 				use_al = False
 			else:
 				# Use aleatoric uncertainty to optimize training recipe
 				use_al = True
+				autotune_trials = 2 * args.autotune_trials
+				print(f'{pu.bcolors.OKBLUE}Aleatoric uncertainty being used{pu.bcolors.ENDC}')
 
 			# Get next queries
 			query_indices = surrogate_model.get_queries(x=X_ds, k=K, explore_type='ucb', use_al=use_al)
@@ -527,13 +563,13 @@ def main():
 					# already trained or in the pipeline
 					continue
 
-				chosen_neighbor_hash = get_neighbor_hash(model, trained_hashes)
+				chosen_neighbor_hash = get_neighbor_hash(model, graphLib, trained_hashes)
 
 				if chosen_neighbor_hash:
 					# Finetune model with the chosen neighbor
 					job_id, pretrain = worker(model_dict=model.model_dict, model_hash=model.hash, task=args.task, 
 						epochs=args.epochs, models_dir=args.models_dir, chosen_neighbor_hash=chosen_neighbor_hash, 
-						dataset_file=args.dataset_file, autotune=args.autotune, autotune_trials=args.autotune_trials,
+						dataset_file=args.dataset_file, autotune=args.autotune, autotune_trials=autotune_trials,
 						cluster=args.cluster, id=args.id)
 					assert pretrain is False
 				else:
@@ -542,7 +578,7 @@ def main():
 
 				new_queries += 1
 				
-				model_jobs.append({'model_hash': model_hash, 
+				model_jobs.append({'model_hash': model.hash, 
 					'job_id': job_id, 
 					'train_type': 'P+F' if pretrain else 'F'})
 			
@@ -552,15 +588,34 @@ def main():
 				query_embeddings = [X_ds[idx, :] for idx in query_indices]
 				candidate_predictions = surrogate_model.predict(query_embeddings)
 
-				best_prediction_index = query_indices[np.argmax(acq([pred[0] for pred in candidate_predictions],
-																[pred[1][0] + pred[1][1] for pred in candidate_predictions],
-																explore_type='ucb'))]
+				best_prediction_indices = [query_indices[idx] for idx in np.argsort(acq([pred[0] for pred in candidate_predictions],
+											[pred[1][0] + pred[1][1] for pred in candidate_predictions],
+											explore_type='ucb'))]
+				
+				if len(best_prediction_indices) > 1:
+					for best_prediction_index in best_prediction_indices:
+						model = graphLib.library[best_prediction_index]
+						if use_al or model.hash not in trained_hashes + pipeline_hashes:
+							# If model already trained, take the next best model
+							break
+				else:
+					model = graphLib.library[best_prediction_indices[0]]
+					for neighbor_hash in model.neighbors:
+						neighbor_model, _ = graphLib.get_graph(model_hash=neighbor_hash)
+						if use_al or neighbor_model.hash not in trained_hashes + pipeline_hashes:
+							# If model already trained, take the nearest untrained neighbor
+							break
 
 				# Pretrain model
 				job_id, pretrain = worker(model_dict=model.model_dict, model_hash=model.hash, task=args.task, 
 					epochs=args.epochs, models_dir=args.models_dir, chosen_neighbor_hash=None, dataset_file=args.dataset_file,
-					autotune=args.autotune, autotune_trials=args.autotune_trials, cluster=args.cluster, id=args.id)
-				assert pretrain is True
+					autotune=args.autotune, autotune_trials=autotune_trials, cluster=args.cluster, id=args.id)
+
+				new_queries += 1
+				
+				model_jobs.append({'model_hash': model.hash, 
+					'job_id': job_id, 
+					'train_type': 'P+F' if pretrain else 'F'})
 
 		elif method == 'unc_sampling':
 			print(f'{pu.bcolors.OKBLUE}Running uncertainty sampling{pu.bcolors.ENDC}')
@@ -571,7 +626,8 @@ def main():
 			unc_prediction_idx = np.argmax([pred[1][0] for pred in candidate_predictions])
 
 			# Sanity check: model with highest epistemic uncertainty should not be trained
-			assert graphLib.library[unc_prediction_idx].hash not in trained_hashes, 'model with highes uncertainty was found trained'
+			assert graphLib.library[unc_prediction_idx].hash not in trained_hashes, \
+				'model with highest uncertainty was found trained'
 
 			if graphLib.library[unc_prediction_idx].hash in pipeline_hashes:
 				print(f'{pu.bcolors.OKBLUE}Highest uncertainty model already in pipeline{pu.bcolors.ENDC}')
@@ -581,12 +637,12 @@ def main():
 				# Pretrain sampled architecture
 				job_id, pretrain = worker(model_dict=model.model_dict, model_hash=model.hash, task=args.task, 
 						epochs=args.epochs, models_dir=args.models_dir, chosen_neighbor_hash=None, dataset_file=args.dataset_file,
-						autotune=args.autotune, autotune_trials=args.autotune_trials, cluster=args.cluster, id=args.id)
+						autotune=args.autotune, autotune_trials=autotune_trials, cluster=args.cluster, id=args.id)
 				assert pretrain is True
 
 				new_queries += 1
 				
-				model_jobs.append({'model_hash': model_hash, 
+				model_jobs.append({'model_hash': model.hash, 
 					'job_id': job_id, 
 					'train_type': 'P+F' if pretrain else 'F'})
 
@@ -605,7 +661,7 @@ def main():
 			# Pretrain sampled architecture
 			job_id, pretrain = worker(model_dict=model.model_dict, model_hash=model.hash, task=args.task, 
 					epochs=args.epochs, models_dir=args.models_dir, chosen_neighbor_hash=None, dataset_file=args.dataset_file,
-					autotune=args.autotune, autotune_trials=args.autotune_trials, cluster=args.cluster, id=args.id)
+					autotune=args.autotune, autotune_trials=autotune_trials, cluster=args.cluster, id=args.id)
 			assert pretrain is True
 
 			new_queries += 1
@@ -617,17 +673,32 @@ def main():
 		# Wait for jobs to complete
 		wait_for_jobs(model_jobs)
 
+		# Save model jobs
+		json.dump(model_jobs, open(model_jobs_file, 'w+'))
+
+		# Get current tabular dataset
+		X, y = convert_to_tabular(graphLib)
+		y = y/max_loss
+
+		# Train BOSHNAS model based on new trained queries
+		train_error = surrogate_model.train(X, y)
+
 		# Update dataset with newly trained models
 		best_performance = update_dataset(graphLib, args.task, finetune_dir, new_dataset_file)
 
-		# Update same_accuracy to check convergence
+		# Update same_performance to check convergence
 		if best_performance == old_best_performance and method == 'optimization':
-			same_accuracy += 1
+			same_performance += 1
+		else:
+			same_performance = 0
 
 		old_best_performance = best_performance
 
 	# Wait for jobs to complete
 	wait_for_jobs(model_jobs, running_limit=0, patience=0)
+
+	# Save model jobs
+	json.dump(model_jobs, open(model_jobs_file, 'w+'))
 
 	# Update dataset with newly trained models
 	best_performance = update_dataset(graphLib, args.task, finetune_dir, new_dataset_file)
