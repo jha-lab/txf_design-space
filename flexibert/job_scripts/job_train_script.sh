@@ -158,54 +158,54 @@ echo "conda activate txf_design-space" >> $job_file
 echo "" >> $job_file
 echo "cd ../../" >> $job_file
 echo "" >> $job_file
-if [[ $pretrain == "1" ]]
-then
-    echo "python pretrain_flexibert.py --model_hash ${model_name_or_path} 
-        --output_dir ${output_dir} \
-        --dataset_file ${dataset_file}" >> $job_file
-fi
-if [[ $autotune == "0" ]]
-then
-    if [[ $task == "glue" ]]
-    then
-        echo "python glue_score.py -- model_hash ${model_hash} \
-            --models_dir ${models_dir} " >> $job_file
-    else
-        echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
-            --task_name ${task} \
-            --do_train \
-            --do_eval \
-            --save_total_limit 2 \
-            --max_sequence_length 128 \
-            --per_device_train_batch_size 64 \
-            --learning_rate 2e-5 \
-            --num_train_epochs ${epochs} \
-            --overwrite_output_dir \
-            --output_dir ${output_dir}" >> $job_file
-    fi
-else
-    if [[ $task == "glue" ]]
-    then
-        echo "python glue_score.py -- model_hash ${model_hash} \
-            --models_dir ${models_dir} \
-            --autotune \
-            --autotune_trials ${autotune_trials}" >> $job_file
-    else
-        echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
-            --task_name ${task} \
-            --do_train \
-            --do_eval \
-            --autotune \
-            --autotune_trials ${autotune_trials} \
-            --save_total_limit 2 \
-            --max_sequence_length 128 \
-            --per_device_train_batch_size 64 \
-            --learning_rate 2e-5 \
-            --num_train_epochs ${epochs} \
-            --overwrite_output_dir \
-            --output_dir ${output_dir}" >> $job_file
-    fi
-fi
-# echo "python -c 'import time; import random; time.sleep(random.randint(50, 100))'" >> $job_file
+# if [[ $pretrain == "1" ]]
+# then
+#     echo "python pretrain_flexibert.py --model_hash ${model_name_or_path} 
+#         --output_dir ${output_dir} \
+#         --dataset_file ${dataset_file}" >> $job_file
+# fi
+# if [[ $autotune == "0" ]]
+# then
+#     if [[ $task == "glue" ]]
+#     then
+#         echo "python glue_score.py -- model_hash ${model_hash} \
+#             --models_dir ${models_dir} " >> $job_file
+#     else
+#         echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
+#             --task_name ${task} \
+#             --do_train \
+#             --do_eval \
+#             --save_total_limit 2 \
+#             --max_sequence_length 128 \
+#             --per_device_train_batch_size 64 \
+#             --learning_rate 2e-5 \
+#             --num_train_epochs ${epochs} \
+#             --overwrite_output_dir \
+#             --output_dir ${output_dir}" >> $job_file
+#     fi
+# else
+#     if [[ $task == "glue" ]]
+#     then
+#         echo "python glue_score.py -- model_hash ${model_hash} \
+#             --models_dir ${models_dir} \
+#             --autotune \
+#             --autotune_trials ${autotune_trials}" >> $job_file
+#     else
+#         echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
+#             --task_name ${task} \
+#             --do_train \
+#             --do_eval \
+#             --autotune \
+#             --autotune_trials ${autotune_trials} \
+#             --save_total_limit 2 \
+#             --max_sequence_length 128 \
+#             --per_device_train_batch_size 64 \
+#             --learning_rate 2e-5 \
+#             --num_train_epochs ${epochs} \
+#             --overwrite_output_dir \
+#             --output_dir ${output_dir}" >> $job_file
+#     fi
+# fi
+echo "python -c 'import time; import random; time.sleep(random.randint(50, 100))'" >> $job_file
 
 sbatch $job_file
