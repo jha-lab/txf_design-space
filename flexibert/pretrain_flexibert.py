@@ -16,8 +16,6 @@ import logging
 #logging.disable(logging.WARNING)
 
 
-
-
 def get_training_args(seed, output_dir):
 
 	a = "--seed {} \
@@ -28,6 +26,7 @@ def get_training_args(seed, output_dir):
 	--num_train_epochs 6.0 \
 	--adam_epsilon 1e-6 \
 	--learning_rate 1e-4 \
+	--save_total_limit 2 \
 	--warmup_steps 10000 \
 	--lr_scheduler_type linear \
 	--output_dir {} \
@@ -122,6 +121,11 @@ def main():
 		type=str,
 		help='path to load the dataset',
 		default='../dataset/dataset_small.json')
+	parser.add_argument('--id',
+		metavar='',
+		type=str,
+		help='PU-NetID that is used to run slurm commands',
+		default='stuli')
 
 	args = parser.parse_args()
 
@@ -132,7 +136,7 @@ def main():
 	seed = 1
 	args_train = get_training_args(seed, args, output_dir)
 
-	metrics = pretrain(args_train, model_graph.model_dict)
+	metrics = pretrain(args_train, model_graph.model_dict, id)
 
 
 if __name__ == '__main__':

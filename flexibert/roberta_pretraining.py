@@ -184,7 +184,7 @@ class DataTrainingArguments:
                 assert extension in ["csv", "json", "txt"], "`validation_file` should be a csv, a json or a txt file."
     '''
 
-def pretrain(args,model_dict):
+def pretrain(args, model_dict, id):
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
@@ -432,7 +432,7 @@ def pretrain(args,model_dict):
         )
     '''
 
-    tokenized_datasets = load_from_disk(f'/scratch/gpfs/bdedhia/tokenized_pretraining_dataset')
+    tokenized_datasets = load_from_disk(f'/scratch/gpfs/{id}/tokenized_pretraining_dataset')
     if training_args.do_train:
         if "train" not in tokenized_datasets:
             raise ValueError("--do_train requires a train dataset")
