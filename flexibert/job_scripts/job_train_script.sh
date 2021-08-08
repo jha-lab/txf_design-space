@@ -154,8 +154,8 @@ echo "#SBATCH --nodes=1                                   # node count" >> $job_
 echo "#SBATCH --ntasks=1                                  # total number of tasks across all nodes" >> $job_file
 echo "#SBATCH --cpus-per-task=20                          # cpu-cores per task (>1 if multi-threaded tasks)" >> $job_file
 echo "#SBATCH --mem-per-cpu=8G                            # memory per cpu-core (4G is default)" >> $job_file
-# echo "#SBATCH --gres=${cluster_gpu}                       # number of gpus per node" >> $job_file
-echo "#SBATCH --time=2:00:00                            # total run time limit (HH:MM:SS)" >> $job_file
+echo "#SBATCH --gres=${cluster_gpu}                       # number of gpus per node" >> $job_file
+echo "#SBATCH --time=144:00:00                            # total run time limit (HH:MM:SS)" >> $job_file
 echo "" >> $job_file
 echo "module purge" >> $job_file
 echo "module load anaconda3/2020.7" >> $job_file
