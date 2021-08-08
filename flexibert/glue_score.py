@@ -202,16 +202,14 @@ def main():
 		type=str,
 		help='hash of the given model')
 	parser.add_argument('--autotune',
-		metavar='',
-		type=bool,
-		help='to autotune training recipe',
-		default=False,
+		dest='autotune',
 		action='store_true')
 	parser.add_argument('--autotune_trials',
 		metavar='',
 		type=int,
 		help='number of trials for optuna',
 		default=5)
+	parser.set_defaults(autotune=False)
 
 	args = parser.parse_args()
 	
