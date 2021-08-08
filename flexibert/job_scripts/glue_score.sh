@@ -105,6 +105,6 @@ cd ..
 
 python load_all_glue_datasets.py
 
-python glue_score.py --model_name ${model} " > $job_file
+python glue_score.py --model_hash ${model} " > $job_file
 
 sbatch $job_file

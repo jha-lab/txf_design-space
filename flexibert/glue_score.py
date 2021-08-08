@@ -139,40 +139,40 @@ def test():
 
 		if task == 'cola':
 
-            glue_scores[task] = metrics['eval_matthews_correlation']
-            task_score = glue_scores[task]
+			glue_scores[task] = metrics['eval_matthews_correlation']
+			task_score = glue_scores[task]
 
-        elif task == 'stsb':
+		elif task == 'stsb':
 
-            glue_scores[task+'_spearman'] = metrics['eval_spearmanr']
-            glue_scores[task+'_pearson'] = metrics['eval_pearson']
-            task_score = (metrics['eval_spearmanr']+metrics['eval_pearson'])/2
+			glue_scores[task+'_spearman'] = metrics['eval_spearmanr']
+			glue_scores[task+'_pearson'] = metrics['eval_pearson']
+			task_score = (metrics['eval_spearmanr']+metrics['eval_pearson'])/2
 
-        elif task == 'mrpc' or task=='qqp':
+		elif task == 'mrpc' or task=='qqp':
 
-            glue_scores[task+'_accuracy'] = metrics['eval_accuracy']
-            glue_scores[task+'_f1'] = metrics['eval_f1']
-            task_score = (metrics['eval_accuracy']+metrics['eval_f1'])/2
+			glue_scores[task+'_accuracy'] = metrics['eval_accuracy']
+			glue_scores[task+'_f1'] = metrics['eval_f1']
+			task_score = (metrics['eval_accuracy']+metrics['eval_f1'])/2
 
-        elif task in ["sst2", "mnli",  "qnli", "rte", "wnli"]:
+		elif task in ["sst2", "mnli",  "qnli", "rte", "wnli"]:
 
-            glue_scores[task] = metrics['eval_accuracy']
-            task_score = metrics['eval_accuracy']
-            
-        print(task,':',task_score)
-                
-        score+=task_score
-                        
-    
-    print(f"{model_name}:", score*1.0/9)
+			glue_scores[task] = metrics['eval_accuracy']
+			task_score = metrics['eval_accuracy']
+			
+		print(task,':',task_score)
+				
+		score+=task_score
+						
+	
+	print(f"{model_name}:", score*1.0/9)
 
-    output_dir = f"../models/glue_score/{model_hash}/"
+	output_dir = f"../models/glue_score/{model_hash}/"
 
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+	if not os.path.exists(output_dir):
+		os.makedirs(output_dir)
 
-    with open(output_dir+'glue_score.json', 'w') as fp:
-        json.dump(glue_scores, fp)
+	with open(output_dir+'glue_score.json', 'w') as fp:
+		json.dump(glue_scores, fp)
 
 	for key, value in glue_scores:
 
@@ -223,41 +223,41 @@ def main():
 
 		if task == 'cola':
 
-            glue_scores[task] = metrics['eval_matthews_correlation']
-            task_score = glue_scores[task]
+			glue_scores[task] = metrics['eval_matthews_correlation']
+			task_score = glue_scores[task]
 
-        elif task == 'stsb':
+		elif task == 'stsb':
 
-            glue_scores[task+'_spearman'] = metrics['eval_spearmanr']
-            glue_scores[task+'_pearson'] = metrics['eval_pearson']
-            task_score = (metrics['eval_spearmanr']+metrics['eval_pearson'])/2
+			glue_scores[task+'_spearman'] = metrics['eval_spearmanr']
+			glue_scores[task+'_pearson'] = metrics['eval_pearson']
+			task_score = (metrics['eval_spearmanr']+metrics['eval_pearson'])/2
 
-        elif task == 'mrpc' or task == 'qqp':
+		elif task == 'mrpc' or task == 'qqp':
 
-            glue_scores[task+'_accuracy'] = metrics['eval_accuracy']
-            glue_scores[task+'_f1'] = metrics['eval_f1']
-            task_score = (metrics['eval_accuracy']+metrics['eval_f1'])/2
+			glue_scores[task+'_accuracy'] = metrics['eval_accuracy']
+			glue_scores[task+'_f1'] = metrics['eval_f1']
+			task_score = (metrics['eval_accuracy']+metrics['eval_f1'])/2
 
-        elif task in ["sst2", "mnli",  "qnli", "rte", "wnli"]:
+		elif task in ["sst2", "mnli",  "qnli", "rte", "wnli"]:
 
-            glue_scores[task] = metrics['eval_accuracy']
-            task_score = metrics['eval_accuracy']
-            
-        #print(task,':',task_score)
-                
-        score+=task_score
+			glue_scores[task] = metrics['eval_accuracy']
+			task_score = metrics['eval_accuracy']
+			
+		#print(task,':',task_score)
+				
+		score+=task_score
 
-    glue_scores['glue_score'] = score*1.0/9
-                        
-    # print(f"{args.model_hash}:", score*1.0/9)
+	glue_scores['glue_score'] = score*1.0/9
+						
+	# print(f"{args.model_hash}:", score*1.0/9)
 
-    output_dir = f"{args.models_dir}glue/{model_hash}/"
+	output_dir = f"{args.models_dir}glue/{model_hash}/"
 
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+	if not os.path.exists(output_dir):
+		os.makedirs(output_dir)
 
-    with open(output_dir+'all_results.json', 'w') as fp:
-        json.dump(glue_scores, fp)
+	with open(output_dir+'all_results.json', 'w') as fp:
+		json.dump(glue_scores, fp)
 
 if __name__ == '__main__':
  

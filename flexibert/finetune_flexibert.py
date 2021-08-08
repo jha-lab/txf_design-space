@@ -92,7 +92,7 @@ class DataTrainingArguments:
         default=False, metadata={"help": "Overwrite the cached preprocessed datasets or not."}
     )
     autotune: bool = field(
-        default=False, metadata={"help": "Tune learning rate or not.q"}
+        default=False, metadata={"help": "Tune learning rate or not."}
     )
     autotune_trials: int = field(
         default=5,
@@ -467,13 +467,13 @@ def finetune(args):
             if AutoConfig.from_pretrained(model_args.model_name_or_path).num_labels == num_labels:
                 checkpoint = model_args.model_name_or_path
 
-        if training_args.autotune:
+        if data_args.autotune:
             
             best_result = trainer.hyperparameter_search(
             hp_space=my_hp_space,
             direction="maximize", 
             backend="optuna", 
-            n_trials = training_args.autotune_trials, # number of trials
+            n_trials = data_args.autotune_trials, # number of trials
             # n_jobs=2  # number of parallel jobs, if multiple GPUs
             )
 
