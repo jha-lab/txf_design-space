@@ -147,7 +147,7 @@ echo "#!/bin/bash" >> $job_file
 echo "#SBATCH --job-name=flexibert_${task}_${model_hash}  # create a short name for your job" >> $job_file
 echo "#SBATCH --nodes=1                                   # node count" >> $job_file
 echo "#SBATCH --ntasks=1                                  # total number of tasks across all nodes" >> $job_file
-echo "#SBATCH --cpus-per-task=16                          # cpu-cores per task (>1 if multi-threaded tasks)" >> $job_file
+echo "#SBATCH --cpus-per-task=20                          # cpu-cores per task (>1 if multi-threaded tasks)" >> $job_file
 echo "#SBATCH --mem-per-cpu=8G                            # memory per cpu-core (4G is default)" >> $job_file
 echo "#SBATCH --gres=${cluster_gpu}                       # number of gpus per node" >> $job_file
 echo "#SBATCH --time=144:00:00                            # total run time limit (HH:MM:SS)" >> $job_file
@@ -176,6 +176,7 @@ then
             --task_name ${task} \
             --do_train \
             --do_eval \
+            --dataloader_num_workers 16 \
             --save_total_limit 2 \
             --max_sequence_length 128 \
             --per_device_train_batch_size 64 \
@@ -198,6 +199,7 @@ else
             --do_eval \
             --autotune \
             --autotune_trials ${autotune_trials} \
+            --dataloader_num_workers 16 \
             --save_total_limit 2 \
             --max_sequence_length 128 \
             --per_device_train_batch_size 64 \

@@ -25,7 +25,7 @@ GLUE_TASKS = ['cola', 'mnli', 'mrpc', 'qnli', 'qqp', 'rte', 'sst2', 'stsb', 'wnl
 GLUE_TASKS_DATASET = ['CoLA', 'MNLI-mm', 'MRPC', 'QNLI', 'QQP', 'RTE', 'SST-2', 'STS-B', 'WNLI']
 
 
-def get_training_args(models_dir, task, model_hash, autotune):
+def get_training_args(models_dir, task, model_hash, autotune, autotune_trials):
 
 	model_name_or_path = f'{models_dir}pretrained/{model_hash}'
 
@@ -34,6 +34,8 @@ def get_training_args(models_dir, task, model_hash, autotune):
 		--do_train \
 		--do_eval \
 		{"--autotune" if autotune else ""} \
+		--autotune_trials {autotune_trials} \
+		--dataloader_num_workers 16 \
 		--save_total_limit 2 \
 		--max_seq_length 128 \
 		--per_device_train_batch_size 64 \
@@ -204,6 +206,11 @@ def main():
 		help='to autotune training recipe',
 		default=False,
 		action='store_true')
+	parser.add_argument('--autotune_trials',
+		metavar='',
+		type=int,
+		help='number of trials for optuna',
+		default=5)
 
 	args = parser.parse_args()
 	
@@ -212,7 +219,7 @@ def main():
 
 	for task in GLUE_TASKS:
 
-		training_args = get_training_args(args.models_dir, task, args.model_hash, args.autotune)
+		training_args = get_training_args(args.models_dir, task, args.model_hash, args.autotune, args.autotune_trials)
 		metrics = finetune(training_args)
 
 		if task == 'cola':
