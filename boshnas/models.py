@@ -54,4 +54,4 @@ class npn(nn.Module):
     def forward(self, x):
         x = x.reshape(1, -1)
         x, s = self.run(x)
-        return x, s
+        return x, torch.reshape(s, (1,))
