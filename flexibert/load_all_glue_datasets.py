@@ -11,8 +11,8 @@ def main():
     
     for task in GLUE_TASKS:
 
-        load_dataset("glue", args.task)
-        load_metric("glue", args.task)
+        load_dataset("glue", task)
+        load_metric("glue", task)
 
 
 if __name__ == '__main__':
