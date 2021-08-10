@@ -144,7 +144,7 @@ def get_job_info(job_id: int):
 	Returns:
 		start_time, elapsed_time, status (str, str, str): job details
 	"""
-	slurm_stdout = subprocess.check_output(f'slist {job_id}', shell=True, text=True)
+	slurm_stdout = subprocess.check_output(f'ssh della-gpu "slist {job_id}"', shell=True, text=True)
 	slurm_stdout = slurm_stdout.split('\n')[2].split()
 
 	if len(slurm_stdout) > 7:
