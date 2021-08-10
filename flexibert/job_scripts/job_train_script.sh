@@ -174,17 +174,17 @@ if [[ $autotune == "0" ]]
 then
     if [[ $task == "glue" ]]
     then
-        echo "python glue_score.py -- model_hash ${model_hash} \
+        echo "python glue_score.py --model_hash ${model_hash} \
             --models_dir ${models_dir} " >> $job_file
     else
         echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
             --task_name ${task} \
             --do_train \
             --do_eval \
-            --dataloader_num_workers 16 \
             --save_total_limit 2 \
             --max_sequence_length 128 \
             --per_device_train_batch_size 64 \
+            --load_best_model_at_end \
             --learning_rate 2e-5 \
             --num_train_epochs ${epochs} \
             --overwrite_output_dir \
@@ -193,7 +193,7 @@ then
 else
     if [[ $task == "glue" ]]
     then
-        echo "python glue_score.py -- model_hash ${model_hash} \
+        echo "python glue_score.py --model_hash ${model_hash} \
             --models_dir ${models_dir} \
             --autotune \
             --autotune_trials ${autotune_trials}" >> $job_file
@@ -204,10 +204,10 @@ else
             --do_eval \
             --autotune \
             --autotune_trials ${autotune_trials} \
-            --dataloader_num_workers 16 \
             --save_total_limit 2 \
             --max_sequence_length 128 \
             --per_device_train_batch_size 64 \
+            --load_best_model_at_end \
             --learning_rate 2e-5 \
             --num_train_epochs ${epochs} \
             --overwrite_output_dir \

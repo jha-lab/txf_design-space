@@ -38,7 +38,7 @@ def get_training_args(models_dir, task, model_hash, autotune, autotune_trials):
 		--logging_steps 50 \
 		--max_seq_length 128 \
 		--per_device_train_batch_size 64 \
-		--load_best_model_at_end\
+		--load_best_model_at_end \
 		--learning_rate 2e-5 \
 		--num_train_epochs 4 \
 		--overwrite_output_dir \
