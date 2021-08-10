@@ -36,12 +36,11 @@ def get_training_args(models_dir, task, model_hash, autotune, autotune_trials):
 		{"--autotune" if autotune else ""} \
 		--autotune_trials {autotune_trials} \
 		--logging_steps 50 \
-		--dataloader_num_workers 16 \
-		--save_total_limit 2 \
 		--max_seq_length 128 \
 		--per_device_train_batch_size 64 \
+		--load_best_model_at_end\
 		--learning_rate 2e-5 \
-		--num_train_epochs 5 \
+		--num_train_epochs 4 \
 		--overwrite_output_dir \
 		--output_dir {models_dir}{task}/{model_hash}/'
 
@@ -218,7 +217,8 @@ def main():
 
 	for task in GLUE_TASKS:
 
-		training_args = get_training_args(args.models_dir, task, args.model_hash, args.autotune, args.autotune_trials)
+		autotune = args.autotune and not( task=='qqp' or task == 'qnli')
+		training_args = get_training_args(args.models_dir, task, args.model_hash, autotune, args.autotune_trials)
 		metrics = finetune(training_args)
 
 		if task == 'cola':
@@ -251,7 +251,7 @@ def main():
 						
 	# print(f"{args.model_hash}:", score*1.0/9)
 
-	output_dir = f"{args.models_dir}glue/{model_hash}/"
+	output_dir = f"{args.models_dir}glue/{args.model_hash}/"
 
 	if not os.path.exists(output_dir):
 		os.makedirs(output_dir)

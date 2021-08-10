@@ -22,11 +22,11 @@ import random
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
-
+import json
 import logging
 
 logging.disable(logging.INFO)
-#logging.disable(logging.WARNING)
+logging.disable(logging.WARNING)
 main_dir = os.path.abspath(os.path.dirname(__file__)).split('flexibert')[0]
 
 import numpy as np
@@ -297,7 +297,6 @@ def finetune(args):
             label_list.sort()  # Let's sort it for determinism
             num_labels = len(label_list)
 
-    print("is regression:", is_regression)
     # Load pretrained model and tokenizer
     #
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
@@ -453,7 +452,7 @@ def finetune(args):
 
     def my_hp_space(trial):
         return {
-            "learning_rate": trial.suggest_float("learning_rate", 1e-6, 1e-3, log=True),
+            "learning_rate": trial.suggest_float("learning_rate", 2e-5, 5e-4, log=True),
         }
 
     # Training
@@ -477,8 +476,13 @@ def finetune(args):
             # n_jobs=2  # number of parallel jobs, if multiple GPUs
             )
 
-
+            #print("Done hyperparameter tuning")
             trainer.args.learning_rate = best_result.hyperparameters['learning_rate']
+            output_file = training_args.output_dir + 'best_hp.json'
+            with open(output_file, 'w') as fp:
+                json.dump(best_result.hyperparameters, fp)
+
+            #print(f'Best learning rate for {data_args.task_name} is {trainer.args.learning_rate}')
             #trainer.args.per_device_train_batch_size = best_result.hyperparameters['per_device_train_batch_size']
 
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
@@ -489,8 +493,8 @@ def finetune(args):
         )
         metrics["train_samples"] = min(max_train_samples, len(train_dataset))
 
-        trainer.save_model()  # Saves the tokenizer too for easy upload
-
+        trainer.save_model()  
+        # Saves the tokenizer too for easy upload
         trainer.log_metrics("train", metrics)
         trainer.save_metrics("train", metrics)
         trainer.save_state()
