@@ -33,6 +33,7 @@ import numpy as np
 from datasets import load_dataset, load_metric
 from transformers.models.bert.modeling_modular_bert import BertModelModular, BertForSequenceClassificationModular
 from transformers import BertTokenizer, BertConfig
+from datasets import load_from_disk
 import transformers
 from transformers import (
     AutoConfig,
@@ -244,6 +245,7 @@ def finetune(args):
     #
     # In distributed training, the load_dataset function guarantee that only one local process can concurrently
     # download the dataset.
+    '''
     if data_args.task_name is not None:
         # Downloading and loading a dataset from the hub.
         datasets = load_dataset("glue", data_args.task_name)
@@ -276,7 +278,7 @@ def finetune(args):
             datasets = load_dataset("json", data_files=data_files)
     # See more about loading any type of standard or custom dataset at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
-
+    '''
     # Labels
     if data_args.task_name is not None:
         is_regression = data_args.task_name == "stsb"
@@ -370,7 +372,7 @@ def finetune(args):
             f"model ({tokenizer.model_max_length}). Using max_seq_length={tokenizer.model_max_length}."
         )
     max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
-
+    '''
     def preprocess_function(examples):
         # Tokenize the texts
         args = (
@@ -384,6 +386,8 @@ def finetune(args):
         return result
 
     datasets = datasets.map(preprocess_function, batched=True, load_from_cache_file=not data_args.overwrite_cache)
+    '''
+    datasets = load_from_disk(f'/scratch/gpfs/bdedhia/GLUE_data/{data_args.task_name}') 
     if training_args.do_train:
         if "train" not in datasets:
             raise ValueError("--do_train requires a train dataset")
