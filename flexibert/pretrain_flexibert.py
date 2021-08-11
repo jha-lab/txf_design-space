@@ -120,7 +120,7 @@ def main():
 		metavar='',
 		type=str,
 		help='path to load the dataset',
-		default='../dataset/dataset_small.json')
+		default='../dataset/dataset_test_bn.json')
 	parser.add_argument('--id',
 		metavar='',
 		type=str,
@@ -134,9 +134,9 @@ def main():
 	model_graph, _ = graphLib.get_graph(model_hash=args.model_hash)
 
 	seed = 1
-	args_train = get_training_args(seed, args, output_dir)
+	args_train = get_training_args(seed, args.output_dir)
 
-	metrics = pretrain(args_train, model_graph.model_dict, id)
+	metrics = pretrain(args_train, model_graph.model_dict, args.id)
 
 
 if __name__ == '__main__':

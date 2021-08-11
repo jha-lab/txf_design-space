@@ -165,7 +165,7 @@ echo "cd ../../" >> $job_file
 echo "" >> $job_file
 if [[ $pretrain == "1" ]]
 then
-    echo "python pretrain_flexibert.py --model_hash ${model_hash} 
+    echo "python pretrain_flexibert.py --model_hash ${model_hash} \
         --output_dir ${model_name_or_path} \
         --dataset_file ${dataset_file} \
         --id ${id}" >> $job_file
