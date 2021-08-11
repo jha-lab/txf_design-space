@@ -150,6 +150,7 @@ cd "./job_scripts/${task}/"
 # Create SLURM job script to train surrogate model
 echo "#!/bin/bash" >> $job_file
 echo "#SBATCH --job-name=flexibert_${task}_${model_hash}  # create a short name for your job" >> $job_file
+echo "#SBATCH --partition gpu-ee                          # parition to run job" >> $job_file
 echo "#SBATCH --nodes=1                                   # node count" >> $job_file
 echo "#SBATCH --ntasks=1                                  # total number of tasks across all nodes" >> $job_file
 echo "#SBATCH --cpus-per-task=20                          # cpu-cores per task (>1 if multi-threaded tasks)" >> $job_file
@@ -176,10 +177,12 @@ then
     if [[ $task == "glue" ]]
     then
         echo "python glue_score.py --model_hash ${model_hash} \
+            --id ${id} \
             --models_dir ${models_dir} " >> $job_file
     else
         echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
             --task_name ${task} \
+            --id ${id} \
             --do_train \
             --do_eval \
             --save_total_limit 2 \
@@ -195,12 +198,14 @@ else
     if [[ $task == "glue" ]]
     then
         echo "python glue_score.py --model_hash ${model_hash} \
+            --id ${id} \
             --models_dir ${models_dir} \
             --autotune \
             --autotune_trials ${autotune_trials}" >> $job_file
     else
         echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
             --task_name ${task} \
+            --id ${id} \
             --do_train \
             --do_eval \
             --autotune \

@@ -159,6 +159,9 @@ class ModelArguments:
     model_name_or_path: str = field(
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
+    id: str = field(
+        metadata={"help": "PU-Net ID"}
+    )
     config_name: Optional[str] = field(
         default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
     )
@@ -387,7 +390,7 @@ def finetune(args):
 
     datasets = datasets.map(preprocess_function, batched=True, load_from_cache_file=not data_args.overwrite_cache)
     '''
-    datasets = load_from_disk(f'/scratch/gpfs/bdedhia/GLUE_data/{data_args.task_name}') 
+    datasets = load_from_disk(f'/scratch/gpfs/{model_args.id}/GLUE_data/{data_args.task_name}') 
     if training_args.do_train:
         if "train" not in datasets:
             raise ValueError("--do_train requires a train dataset")
