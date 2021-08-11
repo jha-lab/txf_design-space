@@ -169,6 +169,7 @@ then
         --output_dir ${model_name_or_path} \
         --dataset_file ${dataset_file} \
         --id ${id}" >> $job_file
+    echo "wait" >> $job_file
 fi
 if [[ $autotune == "0" ]]
 then
