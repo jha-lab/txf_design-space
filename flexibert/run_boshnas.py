@@ -115,7 +115,10 @@ def worker(model_dict: dict,
 		
 		model_name_or_path = f'{models_dir}pretrained/{model_hash}/'
 
+	partition = get_della_parition()
+
 	args = ['--task', task]
+	args.extend(['--partition', partition])
 	args.extend(['--cluster', cluster])
 	args.extend(['--id', id])
 	args.extend(['--dataset_file', dataset_file])
@@ -133,7 +136,14 @@ def worker(model_dict: dict,
 	slurm_stdout = subprocess.check_output(command, shell=True, text=True)
 
 	return slurm_stdout.split()[-1], pretrain
-		
+
+
+def get_della_parition():
+	"""Get parition information from GPU usage"""
+	slurm_stdout = subprocess.check_output('squeue', shell=True, text=True)
+
+	return 'gpu' if 'gpu-ee' in slurm_stdout else 'gpu-ee'
+
 
 def get_job_info(job_id: int):
 	"""Obtain job info
@@ -412,9 +422,6 @@ def main():
 	pretrain_dir = os.path.join(args.models_dir, 'pretrained')
 	finetune_dir = os.path.join(args.models_dir, args.task)
 
-	pretrained_hashes = os.listdir(pretrain_dir)
-	# pretrained_hashes = random.sample([graph.hash for graph in graphLib.library], 4)
-
 	# Load model jobs if previous instance of BOSHNAS ended unexpectedly
 	model_jobs_file = f'./job_scripts/{args.task}/model_jobs.json'
 	if os.path.exists(model_jobs_file):
@@ -427,9 +434,9 @@ def main():
 			model_jobs_copy = copy.deepcopy(model_jobs)
 			for job in model_jobs_copy:
 				_, _, status = get_job_info(job['job_id'])
-				if status == 'FAILED':
+				if status == 'FAILED' or status.startswith('CANCELLED'):
 					# Assume job was unsuccessful
-					model_jobs.pop(job)
+					model_jobs.remove(job)
 					shutil.rmtree(os.path.join(pretrain_dir, job['model_hash']), ignore_errors=True)
 					shutil.rmtree(os.path.join(finetune_dir, job['model_hash']), ignore_errors=True)
 
@@ -437,6 +444,19 @@ def main():
 			wait_for_jobs(model_jobs)
 	else:
 		os.makedirs(f'./job_scripts/{args.task}', exist_ok=True)
+
+	trained_hashes, pipeline_hashes = [], []
+	for job in model_jobs:
+		_, _, status = get_job_info(job['job_id'])
+		if status == 'COMPLETED':
+			trained_hashes.append(job['model_hash'])
+		else:
+			pipeline_hashes.append(job['model_hash'])
+
+	pretrained_hashes = []
+	for model_hash in os.listdir(pretrain_dir):
+		if model_hash in trained_hashes:
+			pretrained_hashes.append(model_hash)
 
 	# Finetune pretrained models
 	for model_hash in pretrained_hashes:

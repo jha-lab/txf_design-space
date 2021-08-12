@@ -9,6 +9,7 @@ task="sst2"
 cluster="tiger"
 id="stuli"
 pretrain="0"
+partition="gpu"
 autotune="0"
 autotune_trials=""
 model_hash=""
@@ -34,6 +35,7 @@ Help()
    echo -e "${YELLOW}-c${ENDC} | ${YELLOW}--cluster${ENDC} [default = ${GREEN}\"tiger\"${ENDC}] \t\t Selected cluster - adroit, tiger or della"
    echo -e "${YELLOW}-i${ENDC} | ${YELLOW}--id${ENDC} [default = ${GREEN}\"stuli\"${ENDC}] \t\t\t Selected PU-NetID to email slurm updates"
    echo -e "${YELLOW}-p${ENDC} | ${YELLOW}--pretrain${ENDC} [default = ${GREEN}\"0\"${ENDC}] \t\t To pre-train the given model"
+   echo -e "${YELLOW}-t${ENDC} | ${YELLOW}--partition${ENDC} [default = ${GREEN}\"gpu\"${ENDC}] \t\t Della parition - gpu or gpu-ee"
    echo -e "${YELLOW}-a${ENDC} | ${YELLOW}--autotune${ENDC} [default = ${GREEN}\"0\"${ENDC}] \t\t To autotune the training recipe"
    echo -e "${YELLOW}-l${ENDC} | ${YELLOW}--autotune_trials${ENDC} [default = ${GREEN}\"\"${ENDC}] \t\t Number of trials for autotuning"
    echo -e "${YELLOW}-m${ENDC} | ${YELLOW}--model_hash${ENDC} [default = ${GREEN}\"\"${ENDC}] \t\t Model hash"
@@ -67,6 +69,11 @@ case "$1" in
     -p | --pretrain)
         shift
         pretrain=$1
+        shift
+        ;;
+    -t | --partition)
+        shift
+        partition=$1
         shift
         ;;
     -a | --autotune)
@@ -150,7 +157,7 @@ cd "./job_scripts/${task}/"
 # Create SLURM job script to train surrogate model
 echo "#!/bin/bash" >> $job_file
 echo "#SBATCH --job-name=flexibert_${task}_${model_hash}  # create a short name for your job" >> $job_file
-echo "#SBATCH --partition gpu-ee                          # parition to run job" >> $job_file
+echo "#SBATCH --partition ${parition}                     # parition to run job" >> $job_file
 echo "#SBATCH --nodes=1                                   # node count" >> $job_file
 echo "#SBATCH --ntasks=1                                  # total number of tasks across all nodes" >> $job_file
 echo "#SBATCH --cpus-per-task=20                          # cpu-cores per task (>1 if multi-threaded tasks)" >> $job_file
