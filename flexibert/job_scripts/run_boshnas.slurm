@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH --job-name=boshnas                  # create a short name for your job 
-#SBATCH --partition gpu-ee
 #SBATCH --nodes=1                           # node count
 #SBATCH --ntasks=1                          # total number of tasks across all nodes
 #SBATCH --cpus-per-task=20                  # cpu-cores per task (>1 if multi-threaded tasks)
@@ -15,5 +14,4 @@ conda activate txf_design-space
 
 cd ..
 
-
-python run_boshnas.py --id stuli --models_dir /scratch/gpfs/stuli/txf_design-space/models/ 
+python run_boshnas.py --id stuli --models_dir /scratch/gpfs/stuli/txf_design-space/models/ > boshnas.out
