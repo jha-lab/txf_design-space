@@ -202,7 +202,7 @@ class PretrainedConfig(object):
         self.use_bfloat16 = kwargs.pop("use_bfloat16", False)
         self.pruned_heads = kwargs.pop("pruned_heads", {})
         self.tie_word_embeddings = kwargs.pop(
-            "tie_word_embeddings", True
+            "tie_word_embeddings", False
         )  # Whether input and output word embeddings should be tied for all MLM, LM and Seq2Seq models.
 
         # Is decoder is used in encoder-decoder models to differentiate encoder from decoder
