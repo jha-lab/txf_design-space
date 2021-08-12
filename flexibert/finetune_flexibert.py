@@ -248,7 +248,7 @@ def finetune(args):
     #
     # In distributed training, the load_dataset function guarantee that only one local process can concurrently
     # download the dataset.
-    '''
+    
     if data_args.task_name is not None:
         # Downloading and loading a dataset from the hub.
         datasets = load_dataset("glue", data_args.task_name)
@@ -281,7 +281,7 @@ def finetune(args):
             datasets = load_dataset("json", data_files=data_files)
     # See more about loading any type of standard or custom dataset at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
-    '''
+    
     # Labels
     if data_args.task_name is not None:
         is_regression = data_args.task_name == "stsb"
