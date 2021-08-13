@@ -56,6 +56,7 @@ job_file="run_boshnas.slurm"
 # Create SLURM job script to train surrogate model
 echo "#!/bin/bash
 #SBATCH --job-name=boshnas                  # create a short name for your job 
+#SBATCH --partition gpu
 #SBATCH --nodes=1                           # node count
 #SBATCH --ntasks=1                          # total number of tasks across all nodes
 #SBATCH --cpus-per-task=20                  # cpu-cores per task (>1 if multi-threaded tasks)
@@ -71,6 +72,6 @@ conda activate txf_design-space
 cd ..
 
 
-python run_boshnas.py --id ${id} --models_dir /scratch/gpfs/${id}/txf_design-space/models/ " > $job_file
+python -u  run_boshnas.py --id ${id} --models_dir /scratch/gpfs/${id}/txf_design-space/models/ " > $job_file
 
 sbatch $job_file

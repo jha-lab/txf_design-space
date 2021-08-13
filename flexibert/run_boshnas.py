@@ -453,10 +453,12 @@ def main():
 		else:
 			pipeline_hashes.append(job['model_hash'])
 
-	pretrained_hashes = []
-	for model_hash in os.listdir(pretrain_dir):
-		if model_hash in trained_hashes:
-			pretrained_hashes.append(model_hash)
+	pretrained_hashes = os.listdir(pretrain_dir)
+	if os.path.exists(model_jobs_file):
+		pretrained_hashes = []
+		for model_hash in os.listdir(pretrain_dir):
+			if model_hash in trained_hashes:
+				pretrained_hashes.append(model_hash)
 
 	# Finetune pretrained models
 	for model_hash in pretrained_hashes:

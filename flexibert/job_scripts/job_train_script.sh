@@ -157,7 +157,7 @@ cd "./job_scripts/${task}/"
 # Create SLURM job script to train surrogate model
 echo "#!/bin/bash" >> $job_file
 echo "#SBATCH --job-name=flexibert_${task}_${model_hash}  # create a short name for your job" >> $job_file
-echo "#SBATCH --partition ${parition}                     # parition to run job" >> $job_file
+echo "#SBATCH --partition ${partition}                     # parition to run job" >> $job_file
 echo "#SBATCH --nodes=1                                   # node count" >> $job_file
 echo "#SBATCH --ntasks=1                                  # total number of tasks across all nodes" >> $job_file
 echo "#SBATCH --cpus-per-task=20                          # cpu-cores per task (>1 if multi-threaded tasks)" >> $job_file
