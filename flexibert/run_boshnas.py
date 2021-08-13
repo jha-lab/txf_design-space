@@ -627,6 +627,7 @@ def main():
 						if use_al or neighbor_model.hash not in trained_hashes + pipeline_hashes:
 							# If model already trained, take the nearest untrained neighbor
 							break
+					model = neighbor_model
 
 				# Pretrain model
 				job_id, pretrain = worker(model_dict=model.model_dict, model_hash=model.hash, task=args.task, 
