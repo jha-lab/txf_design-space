@@ -142,7 +142,8 @@ def get_della_parition():
 	"""Get parition information from GPU usage"""
 	slurm_stdout = subprocess.check_output('squeue', shell=True, text=True)
 
-	return 'gpu' if 'gpu-ee' in slurm_stdout else 'gpu-ee'
+	return 'gpu' if sum([1 if slurm_stdout.split()[i] == 'gpu-ee' else 0 \
+		for i in range(len(slurm_stdout.split()))]) >= 2 else 'gpu-ee'
 
 
 def get_job_info(job_id: int):
@@ -434,6 +435,9 @@ def main():
 			model_jobs_copy = copy.deepcopy(model_jobs)
 			for job in model_jobs_copy:
 				_, _, status = get_job_info(job['job_id'])
+
+				
+
 				if status == 'FAILED' or status.startswith('CANCELLED'):
 					# Assume job was unsuccessful
 					model_jobs.remove(job)
@@ -607,7 +611,7 @@ def main():
 			if new_queries == 0:
 				# If no queries were found where direct finetuning could be performed, pretrain model
 				# with best acquisition function value
-				query_embeddings = [X_ds[idx, :] for idx in query_indices]
+				query_embeddings = [X_ds[idx, :] for idx in set(query_indices)]
 				candidate_predictions = surrogate_model.predict(query_embeddings)
 
 				best_prediction_indices = [query_indices[idx] for idx in np.argsort(acq([pred[0] for pred in candidate_predictions],
