@@ -106,10 +106,13 @@ class BOSHNAS():
 				trust_bounds = (old*(1-trust_region), old*(1+trust_region))
 			pred, al = self.npn(init) if self.run_aleatoric else (self.teacher(init), 0)
 			ep = self.student(init)
-			if self.run_aleatoric and use_al: ep += al
+			if self.run_aleatoric and use_al: ep = torch.add(ep, al)
 			z = gosh_acq(pred, ep)
 			zs.append(z.item())
-			optimizer.zero_grad(); z.backward(create_graph=True); optimizer.step(); scheduler.step()
+			optimizer.zero_grad()
+			z.backward(create_graph=True)
+			optimizer.step()
+			scheduler.step()
 			init.data = torch.max(self.bounds[0], torch.min(self.bounds[1], init.data))
 			if self.trust_region:
 				init.data = torch.max(trust_bounds[0], torch.min(trust_bounds[1], init.data))

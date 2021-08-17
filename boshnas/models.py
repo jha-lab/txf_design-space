@@ -52,6 +52,7 @@ class npn(nn.Module):
             NPNSigmoid())
 
     def forward(self, x):
-        x = x.reshape(1, -1)
+        x = x.view(1, -1)
         x, s = self.run(x)
-        return x, torch.reshape(s, (1,))
+        s = s.view(-1)
+        return x, s
