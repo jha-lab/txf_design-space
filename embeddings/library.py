@@ -457,7 +457,7 @@ class GraphLib(object):
 
 		print(f'{pu.bcolors.OKGREEN}Embeddings generated, of size: {embedding_size}{pu.bcolors.ENDC}')
 
-	def build_naive_embeddings(self, neighbors=10, compute_zscore=True):
+	def build_naive_embeddings(self, neighbors=100, compute_zscore=True):
 		"""Build the embeddings of all Graphs in GraphLib naively. Only one neighbor
 		is saved for each graph
 		"""
@@ -470,7 +470,7 @@ class GraphLib(object):
 		embeddings = embedding_util.generate_naive_embeddings(model_dict_list, self.design_space, compute_zscore=compute_zscore)
 
 		# Get neighboring graph in the embedding space, for all Graphs
-		neighbor_idx = embedding_util.get_neighbors(embeddings, neighbors)
+		neighbor_idx = embedding_util.get_neighbors(embeddings, 'distance', [graph.graph for graph in self.library], neighbors)
 
 		# Update embeddings and neighbors of all Graphs in GraphLib
 		for i in range(len(self)):

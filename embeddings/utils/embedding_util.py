@@ -158,27 +158,39 @@ def generate_naive_embeddings(model_dict_list: list, design_space: dict, compute
     # Get maximum hyper-parameters
     max_l = max(design_space['encoder_layers'])
 
-    # Create dictionary of similarity metrics to map to numbers
-    sim_dict = {sim:idx for idx, sim in enumerate(design_space['similarity_metric'])}
+    # Create dictionary of operation types to map to numbers
+    op_dict = {op:idx for idx, op in enumerate(design_space['operation_types'])}
+
+    # Create a dictionary of operation parameters to map to numbers
+    par_dict = {}
+    count = 1
+    for op in design_space['operation_types']:
+        for par in design_space['operation_parameters'][op]:
+            par_dict[par] = count
+            count += 1
 
     # Calculate embedding size
-    embedding_size = 1 + 4 * max_l
+    embedding_size = 1 + 5 * max_l
 
     embeddings = np.zeros((len(model_dict_list), embedding_size))
 
     for i in range(len(model_dict_list)):
         embeddings[i][0] = model_dict_list[i]['l']
         for j in range(model_dict_list[i]['l']):
-            for k in range(4):
+            for k in range(5):
                 if k == 0:
-                    val = model_dict_list[i]['a'][j]
-                elif k == 1:
                     val = model_dict_list[i]['h'][j]
+                elif k == 1:
+                    val = model_dict_list[i]['n'][j]
                 elif k == 2:
-                    val = model_dict_list[i]['f'][j]
+                    val = op_dict[model_dict_list[i]['o'][j]]
+                elif k == 3:
+                    val = par_dict[model_dict_list[i]['p'][j]]
                 else:
-                    val = sim_dict[model_dict_list[i]['s'][j]] 
-                embeddings[i][1 + 4*k + j] = val
+                    val = 1
+                    for f in model_dict_list[i]['f'][j]:
+                        val *= f
+                embeddings[i][1 + k + 5*j] = val
 
     if compute_zscore:
         return zscore(embeddings, axis=1)
