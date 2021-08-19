@@ -68,6 +68,13 @@ git clone https://github.com/huggingface/transformers.git
 cd transformers
 pip install -e .
 pip install torch-dct
+cd ..
+
+# Install datasets
+git clone https://github.com/huggingface/datasets.git
+cd datasets/
+pip install -e .
+cd ..
 
 # Add other packages and enabling extentions
 conda install -c conda-forge tqdm ipywidgets matplotlib scikit-optimize
@@ -86,5 +93,4 @@ pip install tabulate
 ## TODO: create environment.yaml file or requirements.txt
 
 # Check installation
-cd ..
 python check_install.py
