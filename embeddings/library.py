@@ -153,7 +153,8 @@ class GraphLib(object):
 					if not heterogeneous_feed_forward:
 						count += len(list(possible_p)) * len(list(possible_f))
 					else:
-						count += len(list(possible_p)) * len(list(itertools.product(*[possible_f[nff[stack]-1] \
+						count += len(list(possible_p)) * len(list(itertools.product(* \
+							[possible_f[self.design_space['number_of_feed-forward_stacks'].index(nff[stack])] \
 							for stack in range(stacks)])))
 					return count
 				for p in possible_p:
