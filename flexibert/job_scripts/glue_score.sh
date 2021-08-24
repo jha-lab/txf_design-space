@@ -8,7 +8,8 @@
 
 cluster="della"
 id="bdedhia"
-model="fnet_mini"
+model_hash=""
+models_dir=""
 partition="gpu"
 
 YELLOW='\033[0;33m'
@@ -22,9 +23,10 @@ Help()
    echo
    echo -e "Syntax: source ${CYAN}job_creator_script.sh${ENDC} [${YELLOW}flags${ENDC}]"
    echo "Flags:"
-   echo -e "${YELLOW}-m${ENDC} | ${YELLOW}--model${ENDC} [default = ${GREEN}\"fnet_mini\"${ENDC}] \Selected Model - fnet_mini, fnet_tiny, convbert_mini, convbert_tiny"
-   echo -e "${YELLOW}-c${ENDC} | ${YELLOW}--cluster${ENDC} [default = ${GREEN}\"tiger\"${ENDC}] \t Selected cluster - adroit or della or tiger"
-   echo -e "${YELLOW}-i${ENDC} | ${YELLOW}--id${ENDC} [default = ${GREEN}\"stuli\"${ENDC}] \t\t Selected PU-NetID to email slurm updates"
+   echo -e "${YELLOW}-m${ENDC} | ${YELLOW}--model_hash${ENDC} [default = ${GREEN}\"\"${ENDC}] \t Selected model hash"
+   echo -e "${YELLOW}-d${ENDC} | ${YELLOW}--models_dir${ENDC} [default = ${GREEN}\"\"${ENDC}] \t Path to models directory"
+   echo -e "${YELLOW}-c${ENDC} | ${YELLOW}--cluster${ENDC} [default = ${GREEN}\"della\"${ENDC}] \t Selected cluster - adroit or della or tiger"
+   echo -e "${YELLOW}-i${ENDC} | ${YELLOW}--id${ENDC} [default = ${GREEN}\"bdedhia\"${ENDC}] \t\t Selected PU-NetID to email slurm updates"
    echo -e "${YELLOW}-h${ENDC} | ${YELLOW}--help${ENDC} \t\t\t\t Call this help message"
    echo
 }
@@ -32,9 +34,14 @@ Help()
 while [[ $# -gt 0 ]]
 do
 case "$1" in
-    -m | --model)
+    -m | --model_hash)
         shift
-        model=$1
+        model_hash=$1
+        shift
+        ;;
+    -d | --models_dir)
+        shift
+        models_dir=$1
         shift
         ;;
     -c | --cluster)
@@ -45,11 +52,6 @@ case "$1" in
     -i | --id)
         shift
         id=$1
-        shift
-        ;;
-    -p | --partition)
-        shift
-        partition=$1
         shift
         ;;
     -h | --help)
@@ -77,16 +79,21 @@ else
 	return 1
 fi
 
-
 cd ..
+
+module purge
+module load anaconda3/2020.7
+conda activate txf_design-space
+
+python load_all_glue_datasets.py
 
 cd job_scripts/
 
-job_file="run_glue_${model}.slurm"
+job_file="run_glue_${model_hash}.slurm"
 
 # Create SLURM job script to train surrogate model
 echo "#!/bin/bash
-#SBATCH --job-name=glue_${model}        # create a short name for your job 
+#SBATCH --job-name=glue_${model_hash}        # create a short name for your job 
 #SBATCH --partition ${partition}
 #SBATCH --nodes=1                           # node count
 #SBATCH --ntasks=1                          # total number of tasks across all nodes
@@ -105,6 +112,6 @@ cd ..
 
 python load_all_glue_datasets.py
 
-python glue_score.py --model_hash ${model} " > $job_file
+python glue_score.py --model_hash ${model_hash} --id ${id} --models_dir ${models_dir} " > $job_file
 
 sbatch $job_file
