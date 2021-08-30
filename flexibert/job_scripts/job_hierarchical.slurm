@@ -20,8 +20,9 @@ cd ..
 
 python hierarchical.py --design_space_file '../design_space/design_space_test.yaml' \
 	--models_dir '/scratch/gpfs/stuli/txf_design-space/models/' \
-	--old_dataset_file '../dataset/dataset_test_bn.json' \
-	--new_dataset_file '../dataset/dataset_test_bn_2.json' \
+	--old_dataset_file '../dataset/dataset_test_bn_2.json' \
+	--new_dataset_file '../dataset/dataset_test_bn_3.json' \
+	--heterogeneous_feed_forward \
 	--embedding_size 16 \
 	--n_jobs 8
 

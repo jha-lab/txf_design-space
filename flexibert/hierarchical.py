@@ -17,8 +17,8 @@ from library import Graph, GraphLib
 from boshnas import BOSHNAS
 
 
-TOP_NUM_MODELS = 5
-NUM_NEIGHBORS_FOR_INTERPOLATION = 5
+TOP_NUM_MODELS = 3
+NUM_NEIGHBORS_FOR_INTERPOLATION = 3
 
 
 def main():
@@ -148,9 +148,20 @@ def main():
         for n in range(num_neighbors):
             try:
                 new_library.extend(graphLib.interpolate_neighbors(top_models[i], \
-                    graphLib.get_graph(model_hash=top_models[i].neighbors[n])[0], 2, 1))
+                    graphLib.get_graph(model_hash=top_models[i].neighbors[n])[0], \
+                    args.old_layers_per_stack, args.new_layers_per_stack, \
+                    heterogeneous_feed_forward=args.heterogeneous_feed_forward))
             except:
                 pass
+
+    for i in tqdm(range(TOP_NUM_MODELS), desc='Expanding new library'):
+        for j in range(i+1, TOP_NUM_MODELS):
+            try:
+                new_library.extend(graphLib.interpolate_neighbors(top_models[i], \
+                    top_models[j], args.old_layers_per_stack, args.new_layers_1, \
+                    heterogeneous_feed_forward=args.heterogeneous_feed_forward))
+            except:
+                continue
             
     print('Length of new library: ', len(new_library))
 
