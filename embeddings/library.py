@@ -346,12 +346,13 @@ class GraphLib(object):
 								+ f'Graph-2: {graph.model_dict for graph in self.library if graph.hash == new_graph.hash}'
 						interpolants.append(new_graph)
 				else:
-					for f in itertools.product(*[possible_f[nff[stack]-1] for stack in range(stacks)]):
+					for f in itertools.product(*[possible_f[ \
+							stack_design_space['number_of_feed-forward_stacks'].index(nff[stack])] for stack in range(stacks)]):
 						model_dict = {'l': stacks * new_layers_per_stack, 'h': _get_stack(list(h), new_layers_per_stack), \
 							'n': _get_stack(list(n), new_layers_per_stack), 'o': _get_stack(list(o), new_layers_per_stack), \
 							'f': _get_stack(list(f), new_layers_per_stack), \
 							'p': _get_stack(list(p), new_layers_per_stack)}
-						new_graph = Graph(model_dict, self.dataset, self.ops_list, compute_hash=True)
+						new_graph = Graph(model_dict, self.ops_list, compute_hash=True)
 						count += 1
 						if check_isomorphism:
 							assert new_graph.hash not in [graph.hash for graph in self.library], \
