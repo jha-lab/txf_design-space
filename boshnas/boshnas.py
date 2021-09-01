@@ -37,10 +37,10 @@ class BOSHNAS():
 			self.npn_opt = torch.optim.AdamW(self.npn.parameters() , lr=0.05*LR)
 			self.npn_l = []
 		if pretrained:
-			self.student, self.student_opt, _, self.student_l = load_model(self.student, self.student_opt)
-			self.teacher, self.teacher_opt, self.epoch, self.teacher_l = load_model(self.teacher, self.teacher_opt)
+			self.student, self.student_opt, _, self.student_l = load_model(self.student, self.student_opt, self.path)
+			self.teacher, self.teacher_opt, self.epoch, self.teacher_l = load_model(self.teacher, self.teacher_opt, self.path)
 			if self.run_aleatoric:
-				self.npn, self.npn_opt, self.epoch, self.npn_l = load_model(self.npn, self.npn_opt)
+				self.npn, self.npn_opt, self.epoch, self.npn_l = load_model(self.npn, self.npn_opt, self.path)
 
 	def train(self, xtrain, ytrain):
 		global EPOCHS
