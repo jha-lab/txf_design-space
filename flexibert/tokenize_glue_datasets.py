@@ -363,12 +363,6 @@ def main():
     parser = argparse.ArgumentParser(
         description='Input parameters for preparing datasets',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--dataset_file',
-        metavar='',
-        type=str,
-        help='path to load the dataset',
-        default='../dataset/dataset_test.json')
-
     parser.add_argument('--models_dir',
         metavar='',
         type=str,
@@ -377,9 +371,6 @@ def main():
 
 
     args = parser.parse_args()
-
-    
-
 
     for task in GLUE_TASKS:
 

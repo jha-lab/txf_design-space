@@ -17,8 +17,8 @@ from library import Graph, GraphLib
 from boshnas import BOSHNAS
 
 
-TOP_NUM_MODELS = 3
-NUM_NEIGHBORS_FOR_INTERPOLATION = 3
+TOP_NUM_MODELS = 5
+NUM_NEIGHBORS_FOR_INTERPOLATION = 5
 
 
 def main():
