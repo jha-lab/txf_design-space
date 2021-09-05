@@ -160,7 +160,7 @@ class DataTrainingArguments:
                 assert extension in ["csv", "json", "txt"], "`validation_file` should be a csv, a json or a txt file."
     '''
 
-def save_dataset(args,id):
+def save_dataset(args):
 
     parser = HfArgumentParser(( DataTrainingArguments))
     if len(args) == 2 and args[1].endswith(".json"):
@@ -334,17 +334,12 @@ def main():
     parser = argparse.ArgumentParser(
         description='Input parameters for preparing datasets',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--id',
-        metavar='',
-        type=str,
-        help='Princeton NET ID',
-        default='bdedhia')
 
     args = parser.parse_args()
 
     args_data = get_args()
 
-    save_dataset(args_data,args.id)
+    save_dataset(args_data)
 
 
 if __name__ == '__main__':
