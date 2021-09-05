@@ -4,3 +4,5 @@
 models/
 **.out
 **temp.json
+flexibert/job_scripts/
+flexibert/tests/
