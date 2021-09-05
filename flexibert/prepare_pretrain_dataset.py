@@ -1,24 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
-# Copyright 2020 The HuggingFace Team All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""
-Fine-tuning the library models for masked language modeling (BERT, ALBERT, RoBERTa...) on a text file or a dataset.
-
-Here is the full list of checkpoints on the hub that can be fine-tuned by this script:
-https://huggingface.co/models?filter=masked-lm
-"""
+# Adapted from the Huggingface library
 # You can also adapt this script on your own masked language modeling task. Pointers for this are left as comments.
 
 #os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -190,27 +172,27 @@ def save_dataset(args,id):
 
 
     
-    datasets = load_dataset('bookcorpus','plain_text',cache_dir='/scratch/gpfs/bdedhia')
+    datasets = load_dataset('bookcorpus','plain_text',cache_dir='../')
 
     cc_news_valid = load_dataset('cc_news','plain_text',split=f"train[:{data_args.validation_split_percentage}%]")
     non_text_column_names = [name for name in cc_news_valid.column_names if name != 'text']
     cc_news_valid = cc_news_valid.remove_columns(non_text_column_names)
 
-    bookcorpus_valid = load_dataset('bookcorpus','plain_text',cache_dir='/scratch/gpfs/bdedhia',split=f"train[:{data_args.validation_split_percentage}%]")
-    #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia')
-    wikipedia_valid = load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/bdedhia',split=f"train[:{data_args.validation_split_percentage}%]")
+    bookcorpus_valid = load_dataset('bookcorpus','plain_text',cache_dir='../',split=f"train[:{data_args.validation_split_percentage}%]")
+    #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='../')
+    wikipedia_valid = load_dataset('wikipedia','20200501.en',cache_dir='../',split=f"train[:{data_args.validation_split_percentage}%]")
     wikipedia_valid = wikipedia_valid.remove_columns('title')
-    openwebtext_valid = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia/openwebtextfull',split=f"train[:{data_args.validation_split_percentage}%]")
+    openwebtext_valid = load_dataset('openwebtext','plain_text',cache_dir='..//openwebtextfull',split=f"train[:{data_args.validation_split_percentage}%]")
     combined_valid = interleave_datasets([cc_news_valid,bookcorpus_valid,wikipedia_valid,openwebtext_valid])
 
     datasets['validation'] = combined_valid
 
     cc_news_train = load_dataset('cc_news','plain_text',split=f"train[{data_args.validation_split_percentage}%:]")
     cc_news_train =  cc_news_train.remove_columns(non_text_column_names)
-    bookcorpus_train = load_dataset('bookcorpus','plain_text',cache_dir='/scratch/gpfs/bdedhia',split=f"train[{data_args.validation_split_percentage}%:]")
-    #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia')
-    openwebtext_train = load_dataset('openwebtext','plain_text',cache_dir='/scratch/gpfs/bdedhia/openwebtextfull',split=f"train[{data_args.validation_split_percentage}%:]")
-    wikipedia_train = load_dataset('wikipedia','20200501.en',cache_dir='/scratch/gpfs/bdedhia',split=f"train[{data_args.validation_split_percentage}%:]")
+    bookcorpus_train = load_dataset('bookcorpus','plain_text',cache_dir='../',split=f"train[{data_args.validation_split_percentage}%:]")
+    #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='../')
+    openwebtext_train = load_dataset('openwebtext','plain_text',cache_dir='..//openwebtextfull',split=f"train[{data_args.validation_split_percentage}%:]")
+    wikipedia_train = load_dataset('wikipedia','20200501.en',cache_dir='../',split=f"train[{data_args.validation_split_percentage}%:]")
     wikipedia_train = wikipedia_train.remove_columns('title')
     combined_train = interleave_datasets([cc_news_train,bookcorpus_train,wikipedia_train,openwebtext_train])
     datasets['train'] = combined_train
@@ -337,7 +319,7 @@ def save_dataset(args,id):
             load_from_cache_file=not data_args.overwrite_cache,
         )
 
-    tokenized_datasets.save_to_disk(f'/scratch/gpfs/{id}/tokenized_pretraining_dataset')
+    tokenized_datasets.save_to_disk(f'../tokenized_pretraining_dataset')
 
 
 def get_args():

@@ -43,7 +43,7 @@ def main():
     parser.add_argument('--models_dir',
         metavar='',
         type=str,
-        default='/scratch/gpfs/stuli/txf_design-space/models/')
+        default='../models/')
     parser.add_argument('--dataset',
         metavar='',
         type=str,

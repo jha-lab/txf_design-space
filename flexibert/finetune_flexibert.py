@@ -390,7 +390,7 @@ def finetune(args):
 
     datasets = datasets.map(preprocess_function, batched=True, load_from_cache_file=not data_args.overwrite_cache)
     '''
-    datasets = load_from_disk(f'/scratch/gpfs/{model_args.id}/GLUE_data/{data_args.task_name}') 
+    datasets = load_from_disk(f'../GLUE_data/{data_args.task_name}') 
     if training_args.do_train:
         if "train" not in datasets:
             raise ValueError("--do_train requires a train dataset")

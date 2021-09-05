@@ -172,7 +172,7 @@ class ModelArguments:
     )
 
 
-def save_dataset(args, id):
+def save_dataset(args):
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
@@ -340,7 +340,7 @@ def save_dataset(args, id):
 
     datasets = datasets.map(preprocess_function, batched=True, load_from_cache_file=not data_args.overwrite_cache)
 
-    datasets.save_to_disk(f'/scratch/gpfs/{id}/GLUE_data/{data_args.task_name}')
+    datasets.save_to_disk(f'../GLUE_data/{data_args.task_name}')
 
 def get_training_args(models_dir, task):
 
@@ -363,12 +363,6 @@ def main():
     parser = argparse.ArgumentParser(
         description='Input parameters for preparing datasets',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--id',
-        metavar='',
-        type=str,
-        help='Princeton NET ID',
-        default='bdedhia')
-
     parser.add_argument('--dataset_file',
         metavar='',
         type=str,
@@ -391,7 +385,7 @@ def main():
 
         args_data = get_training_args(args.models_dir,task)
 
-        save_dataset(args_data,args.id)
+        save_dataset(args_data)
 
 
 

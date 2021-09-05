@@ -1,24 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
-# Copyright 2020 The HuggingFace Team All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""
-Fine-tuning the library models for masked language modeling (BERT, ALBERT, RoBERTa...) on a text file or a dataset.
-
-Here is the full list of checkpoints on the hub that can be fine-tuned by this script:
-https://huggingface.co/models?filter=masked-lm
-"""
+# Adapted from the Huggingface library
 # You can also adapt this script on your own masked language modeling task. Pointers for this are left as comments.
 
 #os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -184,7 +166,7 @@ class DataTrainingArguments:
                 assert extension in ["csv", "json", "txt"], "`validation_file` should be a csv, a json or a txt file."
     '''
 
-def pretrain(args, model_dict, id):
+def pretrain(args, model_dict):
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
@@ -432,7 +414,7 @@ def pretrain(args, model_dict, id):
         )
     '''
 
-    tokenized_datasets = load_from_disk(f'/scratch/gpfs/{id}/tokenized_pretraining_dataset')
+    tokenized_datasets = load_from_disk(f'../tokenized_pretraining_dataset')
     if training_args.do_train:
         if "train" not in tokenized_datasets:
             raise ValueError("--do_train requires a train dataset")

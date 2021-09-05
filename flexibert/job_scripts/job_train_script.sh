@@ -5,11 +5,9 @@
 
 # Author : Shikhar Tuli
 
-task="sst2"
-cluster="tiger"
-id="stuli"
+task="glue"
+cluster_gpu=""
 pretrain="0"
-partition="gpu"
 autotune="0"
 autotune_trials=""
 model_hash=""
@@ -32,10 +30,8 @@ Help()
    echo -e "Syntax: source ${CYAN}./job_scripts/job_train_script.sh${ENDC} [${YELLOW}flags${ENDC}]"
    echo "Flags:"
    echo -e "${YELLOW}-t${ENDC} | ${YELLOW}--task${ENDC} [default = ${GREEN}\"sst2\"${ENDC}] \t\t\t Name of GLUE task"
-   echo -e "${YELLOW}-c${ENDC} | ${YELLOW}--cluster${ENDC} [default = ${GREEN}\"tiger\"${ENDC}] \t\t Selected cluster - adroit, tiger or della"
-   echo -e "${YELLOW}-i${ENDC} | ${YELLOW}--id${ENDC} [default = ${GREEN}\"stuli\"${ENDC}] \t\t\t Selected PU-NetID to email slurm updates"
+   echo -e "${YELLOW}-c${ENDC} | ${YELLOW}--cluster_gpu${ENDC} [default = ${GREEN}\"2\"${ENDC}] \t\t\t Number of GPUs per cluster"
    echo -e "${YELLOW}-p${ENDC} | ${YELLOW}--pretrain${ENDC} [default = ${GREEN}\"0\"${ENDC}] \t\t To pre-train the given model"
-   echo -e "${YELLOW}-t${ENDC} | ${YELLOW}--partition${ENDC} [default = ${GREEN}\"gpu\"${ENDC}] \t\t Della parition - gpu or gpu-ee"
    echo -e "${YELLOW}-a${ENDC} | ${YELLOW}--autotune${ENDC} [default = ${GREEN}\"0\"${ENDC}] \t\t To autotune the training recipe"
    echo -e "${YELLOW}-l${ENDC} | ${YELLOW}--autotune_trials${ENDC} [default = ${GREEN}\"\"${ENDC}] \t\t Number of trials for autotuning"
    echo -e "${YELLOW}-m${ENDC} | ${YELLOW}--model_hash${ENDC} [default = ${GREEN}\"\"${ENDC}] \t\t Model hash"
@@ -56,24 +52,9 @@ case "$1" in
         task=$1
         shift
         ;;
-    -c | --cluster)
-        shift
-        cluster=$1
-        shift
-        ;;
-    -i | --id)
-        shift
-        id=$1
-        shift
-        ;;
     -p | --pretrain)
         shift
         pretrain=$1
-        shift
-        ;;
-    -t | --partition)
-        shift
-        partition=$1
         shift
         ;;
     -a | --autotune)
@@ -125,21 +106,7 @@ case "$1" in
        return 1;
        ;;
 esac
-done  
-
-if [[ $cluster == "adroit" ]]
-then
-  cluster_gpu="gpu:tesla_v100:4"
-elif [[ $cluster == "tiger" ]]
-then
-  cluster_gpu="gpu:4"
-elif [[ $cluster == "della" ]]
-then
-  cluster_gpu="gpu:2"
-else
-	echo "Unrecognized cluster"
-	return 1
-fi
+done
 
 job_file="./job_${model_hash}_.slurm"
 mkdir -p "./job_scripts/${task}/"
@@ -227,18 +194,5 @@ else
             --output_dir ${output_dir}" >> $job_file
     fi
 fi
-# if [[ $pretrain == "1" ]]
-# then
-#     echo "python -c 'import os, time, random, json; \
-#         os.makedirs(\"${models_dir}${task}/${model_hash}\", exist_ok=True); \
-#         os.makedirs(\"${models_dir}pretrained/${model_hash}\", exist_ok=True); \
-#         json.dump({\"glue_score\": random.random()}, \
-#         open(\"${models_dir}${task}/${model_hash}/all_results.json\", \"w+\"))'" >> $job_file
-# else
-#     echo "python -c 'import os, time, random, json; \
-#         os.makedirs(\"${models_dir}${task}/${model_hash}\", exist_ok=True); \
-#         json.dump({\"glue_score\": random.random()}, \
-#         open(\"${models_dir}${task}/${model_hash}/all_results.json\", \"w+\"))'" >> $job_file
-# fi
 
 sbatch $job_file

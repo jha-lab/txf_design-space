@@ -60,9 +60,7 @@ def worker(model_dict: dict,
 	chosen_neighbor_hash: str,
 	dataset_file: str,
 	autotune: bool,
-	autotune_trials: int,
-	cluster: str,
-	id: str):
+	autotune_trials: int):
 	"""Worker to finetune or pretrain the given model
 	
 	Args:
@@ -76,8 +74,6 @@ def worker(model_dict: dict,
 		dataset_file (str): path to the dataset file
 		autotune (bool): whether to automatically tune the training recipe
 		autotune_trials (int): number of trials for autotuning. Only used if autotune is True
-		cluster (str): name of the cluster - "adroit" or "tiger"
-		id (str): PU-NetID that is used to run slurm commands
 	
 	Returns:
 		job_id, pretrain (str, bool): Job ID for the slurm scheduler and whether pretraining
@@ -118,12 +114,8 @@ def worker(model_dict: dict,
 		
 		model_name_or_path = f'{models_dir}pretrained/{model_hash}/'
 
-	partition = get_della_parition()
-
 	args = ['--task', task]
 	args.extend(['--partition', partition])
-	args.extend(['--cluster', cluster])
-	args.extend(['--id', id])
 	args.extend(['--dataset_file', dataset_file])
 	args.extend(['--pretrain', '1' if pretrain else '0'])
 	args.extend(['--autotune', '1' if autotune else '0'])
@@ -139,14 +131,6 @@ def worker(model_dict: dict,
 	slurm_stdout = subprocess.check_output(command, shell=True, text=True)
 
 	return slurm_stdout.split()[-1], pretrain
-
-
-def get_della_parition():
-	"""Get parition information from GPU usage"""
-	slurm_stdout = subprocess.check_output('squeue', shell=True, text=True)
-
-	return 'gpu' if sum([1 if slurm_stdout.split()[i] == 'gpu-ee' else 0 \
-		for i in range(len(slurm_stdout.split()))]) >= 2 else 'gpu-ee'
 
 
 def get_job_info(job_id: int):
@@ -366,7 +350,7 @@ def main():
 		metavar='',
 		type=str,
 		help='path to "models" directory containing "pretrained" sub-directory',
-		default='/scratch/gpfs/stuli/txf_design-space/models/')
+		default='../models/')
 	parser.add_argument('--num_init',
 		metavar='',
 		type=int,
@@ -385,16 +369,6 @@ def main():
 		type=int,
 		help='number of parallel jobs for training BOSHNAS',
 		default=8)
-	parser.add_argument('--cluster',
-		metavar='',
-		type=str,
-		help='name of the cluster - "adroit" or "tiger"',
-		default='della')
-	parser.add_argument('--id',
-		metavar='',
-		type=str,
-		help='PU-NetID that is used to run slurm commands',
-		default='stuli')
 	parser.set_defaults(autotune=False)
 
 	args = parser.parse_args()
@@ -425,7 +399,7 @@ def main():
 	#   the model hash and all_results.json. Wait for spawning more jobs
 	# 7. Update the BOSHNAS model and put next queries in queue
 	# 8. Optional: Use aleatoric uncertainty and re-finetune models if accuracy converges
-	# 9. Stop training if a stopping criterion is reached
+	# 9. Stop training if a stopping criterion is met
 	
 	# Initialize a dictionary mapping the model hash to its corresponding job_id
 	model_jobs = []
@@ -741,7 +715,7 @@ def main():
 	# Update dataset with newly trained models
 	best_performance = update_dataset(graphLib, args.task, finetune_dir, new_dataset_file)
 
-	print(f'{pu.bcolors.OKGREEN}Convergence criterion reached!{pu.bcolors.ENDC}')
+	print(f'{pu.bcolors.OKGREEN}Convergence criterion met!{pu.bcolors.ENDC}')
 
 
 if __name__ == '__main__':
