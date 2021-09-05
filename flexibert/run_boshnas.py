@@ -42,11 +42,14 @@ CONF_INTERVAL = 0.005 # Corresponds to 0.5% accuracy for 95% confidence interval
 OVERLAP_THRESHOLD = 0.8 # Corresponds to the minimum overlap for model to be considered
 
 DEBUG = False
-ACCURACY_PATIENCE = 10 # Convergence criterion for accuracy
-ALEATORIC_QUERIES = 10 # Number of queries to be run with aleatoric uncertainty
+ACCURACY_PATIENCE = 5 # Convergence criterion for accuracy
+ALEATORIC_QUERIES = 5 # Number of queries to be run with aleatoric uncertainty
 K = 10 # Number of parallel cold restarts for BOSHNAS
 UNC_PROB = 0.1
 DIV_PROB = 0.1
+HOMOGENEOUS_ONLY = False
+if HOMOGENEOUS_ONLY:
+	UNC_PROB, DIV_PROB = 0, 1
 
 
 def worker(model_dict: dict,
@@ -184,7 +187,7 @@ def print_jobs(model_jobs: list):
 	print(tabulate.tabulate(rows, header))
 
 
-def wait_for_jobs(model_jobs: list, running_limit: int = 8, patience: int = 1):
+def wait_for_jobs(model_jobs: list, running_limit: int = 4, patience: int = 1):
 	"""Wait for current jobs in queue to complete
 	
 	Args:
@@ -324,6 +327,13 @@ def get_neighbor_hash(model: 'Graph', graphLib: 'GraphLib', trained_hashes: list
 				chosen_neighbor_hash = neighbor_hash
 
 	return chosen_neighbor_hash
+
+
+def is_homogenous(graphObject):
+    model_dict = graphObject.model_dict
+    hashed_f = [hash(str(item)) for item in model_dict['f']]
+    return True if len(set(model_dict['h'])) == 1 and len(set(model_dict['n'])) == 1 and len(set(model_dict['o'])) == 1 \
+        and len(set(hashed_f)) == 1 and len(set(model_dict['p'])) == 1 else False
 
 
 def main():
@@ -680,7 +690,8 @@ def main():
 			# TODO: Add skopt.sampler.Sobol points instead
 			div_prediction_idx = random.randint(0, len(graphLib))
 
-			while graphLib.library[div_prediction_idx].hash in trained_hashes + pipeline_hashes:
+			while graphLib.library[div_prediction_idx].hash in trained_hashes + pipeline_hashes \
+				or (HOMOGENEOUS_ONLY and not is_homogenous(graphLib.library[div_prediction_idx])):
 				div_prediction_idx = random.randint(0, len(graphLib))
 
 			model = graphLib.library[div_prediction_idx]
@@ -689,11 +700,11 @@ def main():
 			job_id, pretrain = worker(model_dict=model.model_dict, model_hash=model.hash, task=args.task, 
 					epochs=args.epochs, models_dir=args.models_dir, chosen_neighbor_hash=None, dataset_file=args.dataset_file,
 					autotune=args.autotune, autotune_trials=autotune_trials, cluster=args.cluster, id=args.id)
-			assert pretrain is True
+			# assert pretrain is True
 
 			new_queries += 1
 			
-			model_jobs.append({'model_hash': model_hash, 
+			model_jobs.append({'model_hash': model.hash, 
 				'job_id': job_id, 
 				'train_type': 'P+F' if pretrain else 'F'})
 
