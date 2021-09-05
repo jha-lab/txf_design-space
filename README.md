@@ -76,7 +76,7 @@ cd ../
 ```
 Other flags can be used to control the training procedure (check using `python flexibert/run_boshnas.py --help`). This script uses the SLURM scheduler over mutiple compute nodes in a cluster (each cluster assumed to have 2 GPUs, this can be changed in code). SLURM can aso used in scenarios where distributed nodes are not available.
 
-## Generate graph library for next level of hierarchy
+### Generate graph library for next level of hierarchy
 
 To generate a graph library with `layers_per_stack=1` from the best models in the first level, use the following command:
 ```
