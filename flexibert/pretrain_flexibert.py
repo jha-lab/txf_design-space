@@ -25,12 +25,14 @@ def get_training_args(seed, output_dir):
 	--per_gpu_train_batch_size 32 \
 	--num_train_epochs 6.0 \
 	--adam_epsilon 1e-6 \
+	--adam_beta2 0.98 \
 	--learning_rate 1e-4 \
 	--save_total_limit 2 \
 	--warmup_steps 10000 \
 	--lr_scheduler_type linear \
 	--output_dir {} \
     --overwrite_output_dir \
+    --fp16 \
         ".format( seed, output_dir)
 
 	return shlex.split(a)
@@ -50,7 +52,7 @@ def test():
 
 	args = parser.parse_args()
 
-	graphLib = GraphLib.load_from_dataset('../dataset/dataset_test.json')
+	graphLib = GraphLib.load_from_dataset('../dataset/dataset_test_bn.json')
 
 	seed = 1
 
@@ -78,7 +80,6 @@ def test():
 
 		model_dict = { 'l': 4, 'o': ['l']*4, 'h': [128]*4, 'n': [2]*4, 'f': [[4*128]]*4, 'p': ['dft']*4}
 
-
 	elif args.model == 'convbert_2_256':
 
 		model_dict = { 'l': 2, 'o': ['c']*2, 'h': [256]*2, 'n': [4]*2, 'f': [[4*256]]*2, 'p': [9]*2}
@@ -86,6 +87,10 @@ def test():
 	elif args.model == 'convbert_4_128':
 
 		model_dict = { 'l': 4, 'o': ['c']*4, 'h': [128]*4, 'n': [2]*4, 'f': [[4*128]]*4, 'p': [9]*4}
+
+	elif args.model == 'bert_mini':
+
+		model_dict = { 'l': 4, 'o': ['sa']*4, 'h': [256]*4, 'n': [4]*4, 'f': [[1024]]*4, 'p': ['sdp']*4}
 
 
 	model_graph = graphLib.get_graph(model_dict=model_dict)[0]
@@ -135,4 +140,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    test()
