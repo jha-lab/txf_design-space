@@ -22,8 +22,8 @@ def get_training_args(seed, output_dir):
 	--do_train \
 	--do_eval \
 	--max_seq_length 512 \
-	--per_gpu_train_batch_size 32 \
-	--num_train_epochs 6.0 \
+	--per_gpu_train_batch_size 64 \
+	--num_train_epochs 12.0 \
 	--adam_epsilon 1e-6 \
 	--adam_beta2 0.98 \
 	--learning_rate 1e-4 \
