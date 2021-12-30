@@ -23,7 +23,7 @@ def get_training_args(seed, output_dir):
 	--do_eval \
 	--max_seq_length 512 \
 	--per_gpu_train_batch_size 64 \
-	--num_train_epochs 12.0 \
+	--max_steps 300000 \
 	--adam_epsilon 1e-6 \
 	--adam_beta2 0.98 \
 	--learning_rate 1e-4 \
@@ -38,20 +38,9 @@ def get_training_args(seed, output_dir):
 	return shlex.split(a)
 
 
-def test():
+def test(args):
 	"""Run pretraining
 	"""
-	parser = argparse.ArgumentParser(
-		description='Input parameters for pretraining',
-		formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-	parser.add_argument('--model',
-		metavar='',
-		type=str,
-		help='Model to pretrain',
-		default='fnet_mini')
-
-	args = parser.parse_args()
-
 	graphLib = GraphLib.load_from_dataset('../dataset/dataset_test_bn.json')
 
 	seed = 1
@@ -108,8 +97,19 @@ def test():
 	print(f"MLM Loss on cc_news is {metrics['eval_loss']:0.2f}")
 
 
-def main():
+def main(args):
 	"""Pretraining front-end function"""
+	graphLib = GraphLib.load_from_dataset(args.dataset_file)
+
+	model_graph, _ = graphLib.get_graph(model_hash=args.model_hash)
+
+	seed = 1
+	args_train = get_training_args(seed, args.output_dir)
+
+	metrics = pretrain(args_train, model_graph.model_dict)
+
+
+if __name__ == '__main__':
 	parser = argparse.ArgumentParser(
 		description='Input parameters for pretraining',
 		formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -126,18 +126,16 @@ def main():
 		type=str,
 		help='path to load the dataset',
 		default='../dataset/dataset_test_bn.json')
+	parser.add_argument('--model',
+		metavar='',
+		type=str,
+		help='model to pretrain',
+		default='bert_mini')
 
 	args = parser.parse_args()
 
-	graphLib = GraphLib.load_from_dataset(args.dataset_file)
+	if not args.model_hash:
+		test(args)
+	else:
+		main(args)
 
-	model_graph, _ = graphLib.get_graph(model_hash=args.model_hash)
-
-	seed = 1
-	args_train = get_training_args(seed, args.output_dir)
-
-	metrics = pretrain(args_train, model_graph.model_dict)
-
-
-if __name__ == '__main__':
-    test()
