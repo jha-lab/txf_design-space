@@ -23,7 +23,7 @@ def get_training_args(seed, output_dir, local_rank):
 	--do_eval \
 	--max_seq_length 512 \
 	--per_gpu_train_batch_size 64 \
-	--max_steps 300000 \
+	--max_steps 1000000 \
 	--adam_epsilon 1e-6 \
 	--adam_beta2 0.98 \
 	--learning_rate 1e-4 \
