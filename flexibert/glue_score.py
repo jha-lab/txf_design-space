@@ -37,7 +37,7 @@ def get_training_args(models_dir, task, id, model_hash, autotune, autotune_trial
 		{"--autotune" if autotune else ""} \
 		--autotune_trials {autotune_trials} \
 		--logging_steps 50 \
-		--max_seq_length 128 \
+		--max_seq_length 256 \
 		--per_device_train_batch_size 64 \
 		--load_best_model_at_end \
 		--learning_rate 2e-5 \
@@ -66,7 +66,8 @@ def main():
 	parser.add_argument('--id',
 		metavar='',
 		type=str,
-		help='PU Net ID')
+		help='PU Net ID',
+		default='stuli')
 	parser.add_argument('--autotune',
 		dest='autotune',
 		action='store_true')
@@ -97,13 +98,13 @@ def main():
 
 			glue_scores[task+'_spearman'] = metrics['eval_spearmanr']
 			glue_scores[task+'_pearson'] = metrics['eval_pearson']
-			task_score = (metrics['eval_spearmanr']+metrics['eval_pearson'])/2
+			task_score = (metrics['eval_spearmanr']+metrics['eval_pearson'])/2.0
 
 		elif task == 'mrpc' or task == 'qqp':
 
 			glue_scores[task+'_accuracy'] = metrics['eval_accuracy']
 			glue_scores[task+'_f1'] = metrics['eval_f1']
-			task_score = (metrics['eval_accuracy']+metrics['eval_f1'])/2
+			task_score = (metrics['eval_accuracy']+metrics['eval_f1'])/2.0
 
 		elif task in ["sst2", "mnli",  "qnli", "rte", "wnli"]:
 
@@ -114,9 +115,9 @@ def main():
 				
 		score+=task_score
 
-	glue_scores['glue_score'] = score*1.0/9
+	glue_scores['glue_score'] = score*1.0/9.0
 						
-	# print(f"{args.model_hash}:", score*1.0/9)
+	print(f"GLUE score for model with hash '{args.model_hash}': {score*1.0/9.0}")
 
 	output_dir = f"{args.models_dir}glue/{args.model_hash}/"
 
