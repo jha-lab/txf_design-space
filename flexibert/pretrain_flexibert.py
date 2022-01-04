@@ -27,6 +27,7 @@ def get_training_args(seed, output_dir, local_rank):
 	--adam_epsilon 1e-6 \
 	--adam_beta2 0.98 \
 	--learning_rate 1e-4 \
+	--weight_decay 0.01 \
 	--save_total_limit 2 \
 	--warmup_steps 10000 \
 	--lr_scheduler_type linear \
