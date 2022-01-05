@@ -37,7 +37,7 @@ def get_training_args(models_dir, task, id, model_hash, autotune, autotune_trial
 		{"--autotune" if autotune else ""} \
 		--autotune_trials {autotune_trials} \
 		--logging_steps 50 \
-		--max_seq_length 256 \
+		--max_seq_length 512 \
 		--per_device_train_batch_size 64 \
 		--load_best_model_at_end \
 		--learning_rate 2e-5 \
