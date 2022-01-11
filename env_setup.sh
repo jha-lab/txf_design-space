@@ -35,6 +35,7 @@ pip install grakel
 pip install datasets
 pip install networkx
 pip install tabulate
+pip install optuna
 
 # Check installation
 python check_install.py
