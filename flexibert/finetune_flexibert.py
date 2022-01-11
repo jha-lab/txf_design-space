@@ -468,11 +468,11 @@ def finetune(args):
         checkpoint = None
         if last_checkpoint is not None:
             checkpoint = last_checkpoint
-        elif os.path.isdir(model_args.model_name_or_path):
-            # Check the config from that potential checkpoint has the right number of labels before using it as a
-            # checkpoint.
-            if AutoConfig.from_pretrained(model_args.model_name_or_path).num_labels == num_labels:
-                checkpoint = model_args.model_name_or_path
+        # elif os.path.isdir(model_args.model_name_or_path):
+        #     # Check the config from that potential checkpoint has the right number of labels before using it as a
+        #     # checkpoint.
+        #     if AutoConfig.from_pretrained(model_args.model_name_or_path).num_labels == num_labels:
+        #         checkpoint = model_args.model_name_or_path
 
         if data_args.autotune:
             
