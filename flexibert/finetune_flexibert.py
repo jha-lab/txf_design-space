@@ -460,6 +460,7 @@ def finetune(args):
     def my_hp_space(trial):
         return {
             "learning_rate": trial.suggest_float("learning_rate", 2e-5, 5e-4, log=True),
+            "per_device_train_batch_size": trial.suggest_categorical("per_device_train_batch_size", [16, 32, 64])
         }
 
     # Training
@@ -485,6 +486,7 @@ def finetune(args):
 
             #print("Done hyperparameter tuning")
             trainer.args.learning_rate = best_result.hyperparameters['learning_rate']
+            trainer.args.per_device_train_batch_size = best_result.hyperparameters['per_device_train_batch_size']
             output_file = training_args.output_dir + 'best_hp.json'
             with open(output_file, 'w') as fp:
                 json.dump(best_result.hyperparameters, fp)
