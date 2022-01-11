@@ -349,7 +349,7 @@ def get_training_args(models_dir, task):
     training_args = f'--task_name {task} \
         --do_train \
         --do_eval \
-        --max_seq_length 128 \
+        --max_seq_length 512 \
         --output_dir {models_dir}{task}\
         --overwrite_output_dir'
 
