@@ -27,7 +27,7 @@ GLUE_TASKS_DATASET = ['CoLA', 'MNLI-mm', 'MRPC', 'QNLI', 'QQP', 'RTE', 'SST-2', 
 
 def get_training_args(models_dir, task, id, model_hash, autotune, autotune_trials):
 
-	model_name_or_path = f'{models_dir}pretrained/{model_hash}'
+	model_name_or_path = f'{models_dir}pretrained_9/{model_hash}'
 
 	training_args = f'--model_name_or_path {model_name_or_path} \
 		--task_name {task} \
@@ -40,9 +40,12 @@ def get_training_args(models_dir, task, id, model_hash, autotune, autotune_trial
 		--max_seq_length 512 \
 		--per_device_train_batch_size 64 \
 		--load_best_model_at_end \
+		--metric_for_best_model eval_loss \
 		--learning_rate 2e-5 \
-		--num_train_epochs 4 \
+		--weight_decay 0.01 \
+		--num_train_epochs 5 \
 		--overwrite_output_dir \
+		--fp16 \
 		--output_dir {models_dir}{task}/{model_hash}/'
 
 	training_args = shlex.split(training_args)
@@ -75,7 +78,7 @@ def main():
 		metavar='',
 		type=int,
 		help='number of trials for optuna',
-		default=5)
+		default=20)
 	parser.set_defaults(autotune=False)
 
 	args = parser.parse_args()
@@ -85,7 +88,7 @@ def main():
 
 	for task in GLUE_TASKS:
 
-		autotune = args.autotune and not( task=='qqp' or task == 'qnli')
+		autotune = args.autotune # and not (task=='qqp' or task == 'qnli')
 		training_args = get_training_args(args.models_dir, task, args.id, args.model_hash, autotune, args.autotune_trials)
 		metrics = finetune(training_args)
 
@@ -98,13 +101,13 @@ def main():
 
 			glue_scores[task+'_spearman'] = metrics['eval_spearmanr']
 			glue_scores[task+'_pearson'] = metrics['eval_pearson']
-			task_score = (metrics['eval_spearmanr']+metrics['eval_pearson'])/2.0
+			task_score = max(metrics['eval_spearmanr'], metrics['eval_pearson']) # (metrics['eval_spearmanr']+metrics['eval_pearson'])/2.0
 
 		elif task == 'mrpc' or task == 'qqp':
 
 			glue_scores[task+'_accuracy'] = metrics['eval_accuracy']
 			glue_scores[task+'_f1'] = metrics['eval_f1']
-			task_score = (metrics['eval_accuracy']+metrics['eval_f1'])/2.0
+			task_score = max(metrics['eval_accuracy'], metrics['eval_f1']) # (metrics['eval_accuracy']+metrics['eval_f1'])/2.0
 
 		elif task in ["sst2", "mnli",  "qnli", "rte", "wnli"]:
 
@@ -130,14 +133,3 @@ def main():
 if __name__ == '__main__':
  
 	main()
-
-
-
-
-
-
-
-
-
-
-
