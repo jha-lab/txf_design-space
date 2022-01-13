@@ -32,7 +32,7 @@ DISS_MAT_TEMP = '/scratch/gpfs/stuli/diss_mat_temp.npy'
 IDX_SET_TEMP = '/scratch/gpfs/stuli/idx_set_temp.npy'
 
 
-def model_dict_to_graph(model_dict, ops_list):
+def model_dict_to_graph(model_dict, ops_list = None):
 	"""Converts model_dict to model_graph which is a tuple of
 	adjacency matrix and ops
 
@@ -75,14 +75,14 @@ def model_dict_to_graph(model_dict, ops_list):
 	for layer in range(layers): 
 		for head in range(num_heads[layer]):
 			op = f'{operation[layer]}_h{hidden[layer]}_p-{parameter[layer]}'
-			if op not in ops_list:
+			if ops_list is not None and op not in ops_list:
 				raise ValueError(f'Operation: {op}, not in ops_list')
 			else:
 				ops.append(op)
 		ops.append('add_norm')
 		for f in range(num_feed_forward[layer]):
 			op = f'f{feed_forward[layer][f]}'
-			if op not in ops_list:
+			if ops_list is not None and op not in ops_list:
 				raise ValueError(f'Operation: {op}, not in ops_list')
 			ops.extend([op, 'add_norm'])
 	ops.append('output')

@@ -612,7 +612,10 @@ class Graph(object):
 			self.hash = None
 
 		# Keep operation indices for similarity metrics
-		self.ops_idx = [ops_list.index(op) for op in self.graph[1]]
+		if ops_list:
+			self.ops_idx = [ops_list.index(op) for op in self.graph[1]]
+		else:
+			self.ops_idx = None
 
 		# Initialize embedding
 		self.embedding = None
