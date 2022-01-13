@@ -33,7 +33,6 @@ def get_training_args(seed, output_dir, local_rank):
 	--lr_scheduler_type linear \
 	--output_dir {} \
     --overwrite_output_dir \
-    --fp16 \
     --local_rank {} \
         ".format(seed, output_dir, local_rank)
 
@@ -83,8 +82,29 @@ def test(args):
 
 		model_dict = { 'l': 4, 'o': ['sa']*4, 'h': [256]*4, 'n': [4]*4, 'f': [[1024]]*4, 'p': ['sdp']*4}
 
+	elif args.model_name == 'flexibert_mini':
 
-	model_graph = graphLib.get_graph(model_dict=model_dict)[0]
+		model_dict = { 'l': 4, 'o': ['sa', 'sa', 'l', 'l'], 'h': [256, 256, 128, 128], 'n': [2, 2, 4, 4], \
+			'f': [[512, 512, 512], [512, 512, 512], [1024], [1024]], 'p': ['sdp', 'sdp', 'dct', 'dct']}
+
+	elif args.model_name == 'flexibert_mini_no_second_order':
+
+		model_dict = {'l': 2, 'h': [128, 128], 'n': [4, 4], 'o': ['sa', 'sa'], 'f': [[1024], [1024]], 'p': ['sdp', 'sdp']}
+
+	elif args.model_name == 'flexibert_mini_no_heteroscedastic':
+
+		model_dict = {'l': 4, 'h': [256, 256, 128, 128], 'n': [4, 4, 4, 4], 'o': ['l', 'l', 'sa', 'sa'], \
+			'f': [[1024, 1024, 1024], [1024, 1024, 1024], [512, 512, 512], [512, 512, 512]], 'p': ['dct', 'dct', 'sdp', 'sdp']}
+
+	elif args.model_name == 'flexibert_large':
+
+		model_dict = { 'l': 24, 'o': ['sa']*12 + ['l']*12, 'h': [1024]*12 + [512]*12, 'n': [8]*12 + [16]*12, \
+			'f': [[2048, 2048, 2048]]*12 + [[4096]]*12 , 'p': ['sdp']*12 + ['dct']*12}
+
+	if args.model_name != 'flexibert_large':
+		model_graph = graphLib.get_graph(model_dict=model_dict)[0]
+	else:
+		model_graph = Graph(model_dict=model_dict, ops_list=None, compute_hash=True)
 
 	output_dir = "../models/pretrained/"+str(model_graph.hash)+'/'
 
