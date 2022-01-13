@@ -162,7 +162,7 @@ class DataTrainingArguments:
 
 def save_dataset(args):
 
-    parser = HfArgumentParser(( DataTrainingArguments))
+    parser = HfArgumentParser(DataTrainingArguments)
     if len(args) == 2 and args[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
         # let's parse it to get our arguments.
@@ -170,11 +170,11 @@ def save_dataset(args):
     else:
         data_args= parser.parse_args_into_dataclasses(args)
 
-
+    data_args = data_args[0]
     
     datasets = load_dataset('bookcorpus','plain_text',cache_dir='../')
 
-    cc_news_valid = load_dataset('cc_news','plain_text',split=f"train[:{data_args.validation_split_percentage}%]")
+    cc_news_valid = load_dataset('cc_news','plain_text',cache_dir='../',split=f"train[:{data_args.validation_split_percentage}%]")
     non_text_column_names = [name for name in cc_news_valid.column_names if name != 'text']
     cc_news_valid = cc_news_valid.remove_columns(non_text_column_names)
 
@@ -187,7 +187,7 @@ def save_dataset(args):
 
     datasets['validation'] = combined_valid
 
-    cc_news_train = load_dataset('cc_news','plain_text',split=f"train[{data_args.validation_split_percentage}%:]")
+    cc_news_train = load_dataset('cc_news','plain_text',cache_dir='../',split=f"train[{data_args.validation_split_percentage}%:]")
     cc_news_train =  cc_news_train.remove_columns(non_text_column_names)
     bookcorpus_train = load_dataset('bookcorpus','plain_text',cache_dir='../',split=f"train[{data_args.validation_split_percentage}%:]")
     #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='../')
@@ -288,36 +288,6 @@ def save_dataset(args):
             load_from_cache_file=not data_args.overwrite_cache,
         )
 
-
-        # Main data processing function that will concatenate all texts from our dataset and generate chunks of
-        # max_seq_length.
-        def group_texts(examples):
-            # Concatenate all texts.
-            concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
-            total_length = len(concatenated_examples[list(examples.keys())[0]])
-            # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
-            # customize this part to your needs.
-            total_length = (total_length // max_seq_length) * max_seq_length
-            # Split by chunks of max_len.
-            result = {
-                k: [t[i : i + max_seq_length] for i in range(0, total_length, max_seq_length)]
-                for k, t in concatenated_examples.items()
-            }
-            return result
-
-        # Note that with `batched=True`, this map processes 1,000 texts together, so group_texts throws away a
-        # remainder for each of those groups of 1,000 texts. You can adjust that batch_size here but a higher value
-        # might be slower to preprocess.
-        #
-        # To speed up this part, we use multiprocessing. See the documentation of the map method for more information:
-        # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.map
-
-        tokenized_datasets = tokenized_datasets.map(
-            group_texts,
-            batched=True,
-            num_proc=data_args.preprocessing_num_workers,
-            load_from_cache_file=not data_args.overwrite_cache,
-        )
 
     tokenized_datasets.save_to_disk(f'../tokenized_pretraining_dataset')
 
