@@ -183,7 +183,8 @@ def save_dataset(args):
     wikipedia_valid = load_dataset('wikipedia','20200501.en',cache_dir='../',split=f"train[:{data_args.validation_split_percentage}%]")
     wikipedia_valid = wikipedia_valid.remove_columns('title')
     openwebtext_valid = load_dataset('openwebtext','plain_text',cache_dir='..//openwebtextfull',split=f"train[:{data_args.validation_split_percentage}%]")
-    combined_valid = interleave_datasets([cc_news_valid,bookcorpus_valid,wikipedia_valid,openwebtext_valid])
+    c4_valid = load_dataset('c4','en',cache_dir='../',split=f"validation")
+    combined_valid = interleave_datasets([cc_news_valid,bookcorpus_valid,wikipedia_valid,openwebtext_valid,c4_valid])
 
     datasets['validation'] = combined_valid
 
@@ -194,7 +195,8 @@ def save_dataset(args):
     openwebtext_train = load_dataset('openwebtext','plain_text',cache_dir='..//openwebtextfull',split=f"train[{data_args.validation_split_percentage}%:]")
     wikipedia_train = load_dataset('wikipedia','20200501.en',cache_dir='../',split=f"train[{data_args.validation_split_percentage}%:]")
     wikipedia_train = wikipedia_train.remove_columns('title')
-    combined_train = interleave_datasets([cc_news_train,bookcorpus_train,wikipedia_train,openwebtext_train])
+    c4_train = load_dataset('c4','en',cache_dir='../',split=f"train")
+    combined_train = interleave_datasets([cc_news_train,bookcorpus_train,wikipedia_train,openwebtext_train,c4_train])
     datasets['train'] = combined_train
 
     print("Dataset loaded")
