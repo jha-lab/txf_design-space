@@ -182,8 +182,10 @@ def save_dataset(args):
     #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='../')
     wikipedia_valid = load_dataset('wikipedia','20200501.en',cache_dir='../',split=f"train[:{data_args.validation_split_percentage}%]")
     wikipedia_valid = wikipedia_valid.remove_columns('title')
-    openwebtext_valid = load_dataset('openwebtext','plain_text',cache_dir='..//openwebtextfull',split=f"train[:{data_args.validation_split_percentage}%]")
+    openwebtext_valid = load_dataset('openwebtext','plain_text',cache_dir='../',split=f"train[:{data_args.validation_split_percentage}%]")
     c4_valid = load_dataset('c4','en',cache_dir='../',split=f"validation")
+    c4_valid = c4_valid.remove_columns('timestamp')
+    c4_valid = c4_valid.remove_columns('url')
     combined_valid = interleave_datasets([cc_news_valid,bookcorpus_valid,wikipedia_valid,openwebtext_valid,c4_valid])
 
     datasets['validation'] = combined_valid
@@ -192,10 +194,12 @@ def save_dataset(args):
     cc_news_train =  cc_news_train.remove_columns(non_text_column_names)
     bookcorpus_train = load_dataset('bookcorpus','plain_text',cache_dir='../',split=f"train[{data_args.validation_split_percentage}%:]")
     #openwebtext = load_dataset('openwebtext','plain_text',cache_dir='../')
-    openwebtext_train = load_dataset('openwebtext','plain_text',cache_dir='..//openwebtextfull',split=f"train[{data_args.validation_split_percentage}%:]")
+    openwebtext_train = load_dataset('openwebtext','plain_text',cache_dir='../',split=f"train[{data_args.validation_split_percentage}%:]")
     wikipedia_train = load_dataset('wikipedia','20200501.en',cache_dir='../',split=f"train[{data_args.validation_split_percentage}%:]")
     wikipedia_train = wikipedia_train.remove_columns('title')
     c4_train = load_dataset('c4','en',cache_dir='../',split=f"train")
+    c4_train = c4_train.remove_columns('timestamp')
+    c4_train = c4_train.remove_columns('url')
     combined_train = interleave_datasets([cc_news_train,bookcorpus_train,wikipedia_train,openwebtext_train,c4_train])
     datasets['train'] = combined_train
 
