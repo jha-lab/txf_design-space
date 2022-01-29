@@ -64,8 +64,8 @@ def model_dict_to_graph(model_dict, ops_list = None):
 		# Then, the output of the operation block goes to add-norm
 		# This then goes to a feed-forward layer
 		# Then we have the last add-norm layer after the feed-forward layer
-		# These feed-forward layers and add-norm blocks are stacked multiple times
-		V += num_heads[layer] + 1 + (1 + 1) * num_feed_forward[layer]
+		# These feed-forward layers are stacked multiple times
+		V += num_heads[layer] + 1 + num_feed_forward[layer] + 1
 	V += 1 # Finally, the output vertex
 
 	matrix = np.zeros((V, V), dtype=int)
@@ -84,7 +84,8 @@ def model_dict_to_graph(model_dict, ops_list = None):
 			op = f'f{feed_forward[layer][f]}'
 			if ops_list is not None and op not in ops_list:
 				raise ValueError(f'Operation: {op}, not in ops_list')
-			ops.extend([op, 'add_norm'])
+			ops.extend([op])
+		ops.append('add_norm')
 	ops.append('output')
 
 	assert len(ops) == V, \
@@ -100,10 +101,10 @@ def model_dict_to_graph(model_dict, ops_list = None):
 			matrix[i][i + 1 + num_heads[layer]] = 1 # residual to add_norm
 			i += num_heads[layer] + 1 # Re-instate i to add_norm
 			for f in range(num_feed_forward[layer]):
-				matrix[i][i + 1] = 1 # add_norm to feed_forward
-				matrix[i + 1][i + 2] = 1 # feed_forward to add_norm
-				matrix[i][i + 2] = 1 # residual to add_norm
-				i += 2 # Re-instate i to add_norm as output of current encoder layer
+				matrix[i + f][i + f + 1] = 1 # add_norm to feed-forward or feed-forward to next
+			matrix[i + num_feed_forward[layer]][i + num_feed_forward[layer] + 1] = 1 # last feed-forward to add_norm
+			matrix[i][i + num_feed_forward[layer] + 1] = 1 # residual to add_norm
+			i += num_feed_forward[layer] + 1 # Re-instate i to add_norm as output of current encoder layer
 	matrix[-2][-1] = 1 # add_norm to output
  
 	assert is_upper_tri(matrix), \
