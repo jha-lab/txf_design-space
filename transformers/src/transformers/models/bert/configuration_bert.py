@@ -176,8 +176,16 @@ class BertConfig(PretrainedConfig):
         self.hidden_dim_list = model_dict['h']
         self.attention_heads_list = model_dict['n']
         self.ff_dim_list = model_dict['f']
-        #self.nff_list = model_dict['nff']
         self.similarity_list = model_dict['p'] #options = if 'sa'-->'sdp'/'wma' , elif 'l'-->'dft'/'dct', elif 'c' --> 5,9,13
-        #self.hidden_size = model_dict['h'][-1] 
-        #self.num_attention_heads = model_dict['a'][-1]
+
+        self.from_model_dict_hetero = False
+
+    def from_model_dict_hetero(self, model_dict):
+
+        self.num_hidden_layers = model_dict['l']
+        self.attention_heads_list = model_dict['o'] #options = 'l_dft', 'l_dct', 'sa_sdp', 'sa_wma', 'c_5', 'c_9', 'c_13'
+        self.hidden_dim_list = model_dict['h']
+        self.ff_dim_list = model_dict['f']
+
+        self.from_model_dict_hetero = True
 
