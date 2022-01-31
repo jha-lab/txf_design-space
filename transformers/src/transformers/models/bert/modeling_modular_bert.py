@@ -282,6 +282,47 @@ class BertSelfAttentionModular(nn.Module):
         return outputs
 
 
+# Adapted from https://github.com/google-research/google-research/blob/master/f_net/fourier.py
+def fftn(x):
+    """
+    Applies n-dimensional Fast Fourier Transform (FFT) to input array.
+    Args:
+        x: Input n-dimensional array.
+    Returns:
+        n-dimensional Fourier transform of input n-dimensional array.
+    """
+    out = x
+    for axis in reversed(range(x.ndim)[1:]):  # We don't need to apply FFT to last axis
+        out = torch.fft.fft(out, axis=axis)
+    return out
+
+
+class SeparableConv1D(nn.Module):
+    """This class implements separable convolution, i.e. a depthwise and a pointwise layer"""
+
+    def __init__(self, config, input_filters, output_filters, kernel_size, **kwargs):
+        super().__init__()
+        self.depthwise = nn.Conv1d(
+            input_filters,
+            input_filters,
+            kernel_size=kernel_size,
+            groups=input_filters,
+            padding=kernel_size // 2,
+            bias=False,
+        )
+        self.pointwise = nn.Conv1d(input_filters, output_filters, kernel_size=1, bias=False)
+        self.bias = nn.Parameter(torch.zeros(output_filters, 1))
+
+        self.depthwise.weight.data.normal_(mean=0.0, std=config.initializer_range)
+        self.pointwise.weight.data.normal_(mean=0.0, std=config.initializer_range)
+
+    def forward(self, hidden_states):
+        x = self.depthwise(hidden_states)
+        x = self.pointwise(x)
+        x += self.bias
+        return x
+
+
 # Adding a heterogenous attention module
 class BertHeteroAttentionModular(nn.Module):
     def __init__(self, config, layer_id):
@@ -289,16 +330,19 @@ class BertHeteroAttentionModular(nn.Module):
 
         assert config.from_model_dict_hetero is True, 'Heterogeneous attention only with model_dict_hetero'
 
-        if config.hidden_dim_list[layer_id] % len(config.attention_heads_list[layer_id]) != 0 and not hasattr(config, "embedding_size"):
-            raise ValueError(
-                f"The hidden size ({config.hidden_size}) is not a multiple of the number of attention "
-                f"heads ({config.num_attention_heads})"
-            )
+        # if config.hidden_dim_list[layer_id] % len(config.attention_heads_list[layer_id]) != 0 and not hasattr(config, "embedding_size"):
+        #     raise ValueError(
+        #         f"The hidden size ({config.hidden_size}) is not a multiple of the number of attention "
+        #         f"heads ({config.num_attention_heads})"
+        #     )
 
         self.num_attention_heads = len(config.attention_heads_list[layer_id])
         self.hidden_size = config.hidden_dim_list[layer_id]
 
+        # TODO: specify attention_head_size for each head
+
         # Fixing attention_head_size to default values for grow-and-prune weight transfer
+        # self.attention_head_size = int(self.hidden_size / self.num_attention_heads)
         self.attention_head_size = int(self.hidden_size / 2 ** math.floor(math.log(self.num_attention_heads, 2)))
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
@@ -317,11 +361,23 @@ class BertHeteroAttentionModular(nn.Module):
         self.attention_types = [attention.split('_')[0] for attention in config.attention_heads_list[layer_id]]
         self.sim_types = [attention.split('_')[1] for attention in config.attention_heads_list[layer_id]]
 
-        wma_count = 0
+        wma_count, conv_count = 0, 0
         for sim_type in self.sim_types:
             if sim_type == 'wma':
-                setattr(self, f'W{wma_count}', torch.nn.Parameter(torch.FloatTensor(self.attention_head_size,self.attention_head_size).uniform_(-0.1, 0.1)))
+                setattr(self, f'W{wma_count}', torch.nn.Parameter(
+                    torch.FloatTensor(self.attention_head_size, self.attention_head_size).uniform_(-0.1, 0.1)))
                 wma_count += 1
+            elif sim_type.isnumeric():
+                setattr(self, f'key_conv_attn_layer{conv_count}', SeparableConv1D(
+                    config, self.attention_head_size, self.attention_head_size, int(sim_type)))
+                setattr(self, f'conv_kernel_layer{conv_count}', nn.Linear(
+                    self.attention_head_size, int(sim_type)))
+                setattr(self, f'conv_out_layer{conv_count}', nn.Linear(
+                    self.attention_head_size, self.attention_head_size))
+                setattr(self, f'unfold{conv_count}', nn.Unfold(
+                    kernel_size=[int(sim_type), 1], padding=[int((int(sim_type) - 1) / 2), 0]))
+                conv_count += 1
+
 
     def transpose_for_scores(self, x):
         new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
@@ -340,6 +396,7 @@ class BertHeteroAttentionModular(nn.Module):
     ):
         
         mixed_query_layer = self.query(hidden_states)
+        batch_size = hidden_states.size(0)
 
         # If this is instantiated as a cross-attention module, the keys
         # and values come from an encoder; the attention mask needs to be
@@ -377,18 +434,28 @@ class BertHeteroAttentionModular(nn.Module):
             past_key_value = (key_layer, value_layer)
 
         attention_scores_size = query_layer.size()[:-1] + (query_layer.size()[-2],)
-        attention_scores = torch.zeros(*attention_scores_size)
+        attention_scores = torch.zeros(*attention_scores_size).to(device=hidden_states.device)
 
         wma_count = 0
         for attention_head in range(self.num_attention_heads):
-            if self.sim_types[attention_head] == 'sdp':
-                # Take the dot product between "query" and "key" to get the raw attention scores.
-                attention_scores[:, attention_head, :, :] = torch.matmul(query_layer[:, attention_head, :, :], 
-                    key_layer[:, attention_head, :, :].transpose(-1, -2))
-            elif self.sim_types[attention_head] == 'wma':
-                attention_scores[:, attention_head, :, :] = torch.matmul(torch.matmul(query_layer[:, attention_head, :, :], getattr(self, f'W{wma_count}')), 
-                    key_layer[:, attention_head, :, :].transpose(-1, -2))
-                wma_count += 1
+            if self.attention_types[attention_head] == 'sa':
+                if self.sim_types[attention_head] == 'sdp':
+                    # Take the dot product between "query" and "key" to get the raw attention scores.
+                    attention_scores[:, attention_head, :, :] = torch.matmul(query_layer[:, attention_head, :, :], 
+                        key_layer[:, attention_head, :, :].transpose(-1, -2))
+                elif self.sim_types[attention_head] == 'wma':
+                    # Take a weighted multiplicative addition between "query" and "key" vectors.
+                    attention_scores[:, attention_head, :, :] = torch.matmul(torch.matmul(query_layer[:, attention_head, :, :], getattr(self, f'W{wma_count}')), 
+                        key_layer[:, attention_head, :, :].transpose(-1, -2))
+                    wma_count += 1
+            elif self.attention_types[attention_head] == 'l':
+                # Attention operation not used in linear-transform based attention head.
+                # Attention scores only used for relative encodings.
+                pass
+            elif self.attention_types[attention_head] == 'c':
+                # Attention operation not used in convolution based attention head.
+                # Attention scores only used for relative encodings.
+                pass
 
         if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
 
@@ -406,7 +473,6 @@ class BertHeteroAttentionModular(nn.Module):
                 relative_position_scores_query = torch.einsum("bhld,lrd->bhlr", query_layer, positional_embedding)
                 relative_position_scores_key = torch.einsum("bhrd,lrd->bhlr", key_layer, positional_embedding)
                 attention_scores = attention_scores + relative_position_scores_query + relative_position_scores_key
-
         
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         
@@ -426,17 +492,63 @@ class BertHeteroAttentionModular(nn.Module):
             attention_probs = attention_probs * head_mask
 
         context_layer = torch.matmul(attention_probs, value_layer)
+        print(f'context_layer.size(): {context_layer.size()}')
+
+        conv_count = 0
+        for attention_head in range(self.num_attention_heads):
+            if self.attention_types[attention_head] == 'sa':
+                pass
+            elif self.attention_types[attention_head] == 'l':
+                if self.sim_types[attention_head] == 'dft':
+                    fft_output = fftn(value_layer[:, attention_head, :, :]).real
+                    # Add fft to relative position embeddings
+                    context_layer[:, attention_head, :, :] += fft_output
+
+                elif self.sim_types[attention_head] == 'dct':
+                    dct_output = dct_2d(value_layer[:, attention_head, :, :])
+                    # Add dct to relative position embeddings
+                    context_layer[:, attention_head, :, :] += dct_output
+            elif self.attention_types[attention_head] == 'c':
+                mixed_key_conv_attn_layer = getattr(self, f'key_conv_attn_layer{conv_count}')(
+                    key_layer[:, attention_head, :, :].transpose(1, 2))
+                mixed_key_conv_attn_layer = mixed_key_conv_attn_layer.transpose(1, 2)
+                print(f'mixed_key_conv_attn_layer.size(): {mixed_key_conv_attn_layer.size()}')
+
+                conv_attn_layer = torch.multiply(mixed_key_conv_attn_layer, query_layer[:, attention_head, :, :])
+                conv_kernel_layer = getattr(self, f'conv_kernel_layer{conv_count}')(conv_attn_layer)
+                print(f'conv_kernel_layer.size(): {conv_kernel_layer.size()}')
+                conv_kernel_layer = torch.reshape(conv_kernel_layer, [-1, int(self.sim_types[attention_head]), 1])
+                conv_kernel_layer = torch.softmax(conv_kernel_layer, dim=1)
+                print(f'conv_kernel_layer.size() after reshape: {conv_kernel_layer.size()}')
+
+                conv_out_layer = getattr(self, f'conv_out_layer{conv_count}')(value_layer[:, attention_head, :, :])
+                conv_out_layer = torch.reshape(conv_out_layer, [batch_size, -1, self.attention_head_size])
+                conv_out_layer = conv_out_layer.transpose(1, 2).contiguous().unsqueeze(-1)
+                conv_out_layer = getattr(self, f'unfold{conv_count}')(conv_out_layer)
+                conv_out_layer = conv_out_layer.transpose(1, 2).reshape(
+                    batch_size, -1, self.attention_head_size, int(self.sim_types[attention_head]))
+                print(f'conv_out_layer.size(): {conv_out_layer.size()}')
+                conv_out_layer = torch.reshape(conv_out_layer, [-1, self.attention_head_size, int(self.sim_types[attention_head])])
+                print(f'conv_out_layer.size() after reshape: {conv_out_layer.size()}')
+                conv_out_layer = torch.matmul(conv_out_layer, conv_kernel_layer)
+                conv_out_layer = torch.reshape(conv_out_layer, [-1, self.attention_head_size])
+
+                conv_out = torch.reshape(conv_out_layer, [batch_size, -1, self.attention_head_size])
+                conv_count += 1
+                
+                context_layer[:, attention_head, :, :] += conv_out
+
 
         context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
         new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
-
 
         outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
 
         if self.is_decoder:
             outputs = outputs + (past_key_value,)
 
+        print(f'outputs[0].size(): {outputs[0].size()}')
 
         return outputs
 
@@ -590,7 +702,12 @@ class BertLinearAttentionModular(nn.Module):
 class BertSelfOutputModular(nn.Module):
     def __init__(self, config, layer_id):
         super().__init__()
-        self.dense = nn.Linear(config.hidden_dim_list[layer_id], config.hidden_dim_list[layer_id])
+        num_attention_heads = len(config.attention_heads_list[layer_id])
+        hidden_size = config.hidden_dim_list[layer_id]
+        attention_head_size = int(hidden_size / 2 ** math.floor(math.log(num_attention_heads, 2)))
+        all_head_size = num_attention_heads * attention_head_size
+
+        self.dense = nn.Linear(all_head_size, config.hidden_dim_list[layer_id])
         self.LayerNorm = nn.LayerNorm(config.hidden_dim_list[layer_id], eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
@@ -804,31 +921,6 @@ class BertLayerModular(nn.Module):
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
         return layer_output
-
-class SeparableConv1D(nn.Module):
-    """This class implements separable convolution, i.e. a depthwise and a pointwise layer"""
-
-    def __init__(self, config, input_filters, output_filters, kernel_size, **kwargs):
-        super().__init__()
-        self.depthwise = nn.Conv1d(
-            input_filters,
-            input_filters,
-            kernel_size=kernel_size,
-            groups=input_filters,
-            padding=kernel_size // 2,
-            bias=False,
-        )
-        self.pointwise = nn.Conv1d(input_filters, output_filters, kernel_size=1, bias=False)
-        self.bias = nn.Parameter(torch.zeros(output_filters, 1))
-
-        self.depthwise.weight.data.normal_(mean=0.0, std=config.initializer_range)
-        self.pointwise.weight.data.normal_(mean=0.0, std=config.initializer_range)
-
-    def forward(self, hidden_states):
-        x = self.depthwise(hidden_states)
-        x = self.pointwise(x)
-        x += self.bias
-        return x
 
 
 class ConvBertSelfAttentionModular(nn.Module):
