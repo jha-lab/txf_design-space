@@ -702,10 +702,14 @@ class BertLinearAttentionModular(nn.Module):
 class BertSelfOutputModular(nn.Module):
     def __init__(self, config, layer_id):
         super().__init__()
-        num_attention_heads = len(config.attention_heads_list[layer_id])
-        hidden_size = config.hidden_dim_list[layer_id]
-        attention_head_size = int(hidden_size / 2 ** math.floor(math.log(num_attention_heads, 2)))
-        all_head_size = num_attention_heads * attention_head_size
+
+        if config.from_model_dict_hetero is True:
+            num_attention_heads = len(config.attention_heads_list[layer_id])
+            hidden_size = config.hidden_dim_list[layer_id]
+            attention_head_size = int(hidden_size / 2 ** math.floor(math.log(num_attention_heads, 2)))
+            all_head_size = num_attention_heads * attention_head_size
+        else:
+            all_head_size = config.hidden_dim_list[layer_id]
 
         self.dense = nn.Linear(all_head_size, config.hidden_dim_list[layer_id])
         self.LayerNorm = nn.LayerNorm(config.hidden_dim_list[layer_id], eps=config.layer_norm_eps)
@@ -722,7 +726,7 @@ class BertAttentionModular(nn.Module):
     def __init__(self, config, layer_id):
         super().__init__()
 
-        if config.from_model_dict_hetero:
+        if config.from_model_dict_hetero is True:
             self.self = BertHeteroAttentionModular(config, layer_id)
         else:
             if not(config.attention_type[layer_id] == 'sa' or config.attention_type[layer_id] == 'l'):
