@@ -183,7 +183,7 @@ class BertConfig(PretrainedConfig):
     def from_model_dict_hetero(self, model_dict):
 
         self.num_hidden_layers = model_dict['l']
-        self.attention_heads_list = model_dict['o'] #options = 'l_dft', 'l_dct', 'sa_sdp', 'sa_wma', 'c_5', 'c_9', 'c_13'
+        self.attention_heads_list = model_dict['o'] #options = 'l_dft_{attention_head_size}', 'l_dct_{}', 'sa_sdp_{}', 'sa_wma_{}', 'c_5_{}', 'c_9_{}', 'c_13_{}'
         self.hidden_dim_list = model_dict['h']
         self.ff_dim_list = model_dict['f']
 
