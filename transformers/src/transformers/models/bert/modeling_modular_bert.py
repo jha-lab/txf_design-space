@@ -339,11 +339,13 @@ class BertHeteroAttentionModular(nn.Module):
         self.num_attention_heads = len(config.attention_heads_list[layer_id])
         self.hidden_size = config.hidden_dim_list[layer_id]
 
-        # TODO: specify attention_head_size for each head
-
-        # Fixing attention_head_size to default values for grow-and-prune weight transfer
+        # Fixing attention_head_size to specified values for grow-and-prune weight transfer
         # self.attention_head_size = int(self.hidden_size / self.num_attention_heads)
-        self.attention_head_size = int(self.hidden_size / 2 ** math.floor(math.log(self.num_attention_heads, 2)))
+        # self.attention_head_size = int(self.hidden_size / 2 ** math.floor(math.log(self.num_attention_heads, 2)))
+        attention_head_sizes = [int(attention.split('_')[2]) for attention in config.attention_heads_list[layer_id]]
+        assert len(set(attention_head_sizes)) == 1, f'All attention heads should have the same size for layer ID: {layer_id}'
+        self.attention_head_size = attention_head_sizes[0]
+
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
         self.query = nn.Linear(self.hidden_size, self.all_head_size)
