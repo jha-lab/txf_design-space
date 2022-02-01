@@ -707,8 +707,7 @@ class BertSelfOutputModular(nn.Module):
 
         if config.from_model_dict_hetero is True:
             num_attention_heads = len(config.attention_heads_list[layer_id])
-            hidden_size = config.hidden_dim_list[layer_id]
-            attention_head_size = int(hidden_size / 2 ** math.floor(math.log(num_attention_heads, 2)))
+            attention_head_size = int(config.attention_heads_list[layer_id][0].split('_')[2])
             all_head_size = num_attention_heads * attention_head_size
         else:
             all_head_size = config.hidden_dim_list[layer_id]
@@ -1583,59 +1582,131 @@ class BertModelModular(BertPreTrainedModel):
 
     def load_model_from_source(self,source_model):
         """
-        Loads the BertModelModular from a source model. Updates weights of the layers uptil h matches. Also updates the weights 
+        Loads the BertModelModular from a source model. Updates weights of the layers uptil the hidden dimension matches. Also updates the weights 
         for matching feed forward dimensions.
         """
-
         count = 0
-
         total = len(self.embeddings.state_dict())+len(self.encoder.state_dict())
 
         source_config = source_model.config
 
+        assert self.config.from_model_dict_hetero == source_config.from_model_dict_hetero, \
+            'Source model should (not) have heterogeneous configuration'
+
         #Load embeddings if input size same:
-
         if self.config.hidden_dim_list[0] == source_config.hidden_dim_list[0]:
-
             self.embeddings.load_state_dict(source_model.embeddings.state_dict())
-
             count+=len(source_model.embeddings.state_dict())
 
             #print("-"*3,"Loaded embeddings weights from source","-"*3)
 
         #Loading encoder
+        if self.config.from_model_dict_hetero:
+            with torch.no_grad():
+                for i in range(min(self.config.num_hidden_layers,source_config.num_hidden_layers)):
+                    if self.config.hidden_dim_list[i] == source_config.hidden_dim_list[i] and \
+                        self.config.attention_heads_list[i][0].split('_')[2] == source_config.attention_heads_list[i][0].split('_')[2]:
 
-        for i in range(min(self.config.num_hidden_layers,source_config.num_hidden_layers)):
+                        lower_all_head_size = min(self.encoder.layer[i].attention.self.query.weight.shape[1], 
+                            source_model.encoder.layer[i].attention.self.query.weight.shape[1])
+                        self.encoder.layer[i].attention.self.query.weight[:lower_all_head_size, :] = \
+                            source_model.encoder.layer[i].attention.self.query.weight[:lower_all_head_size, :]
+                        self.encoder.layer[i].attention.self.query.bias[:lower_all_head_size] = \
+                            source_model.encoder.layer[i].attention.self.query.bias[:lower_all_head_size]
+                        self.encoder.layer[i].attention.self.key.weight[:lower_all_head_size, :] = \
+                            source_model.encoder.layer[i].attention.self.key.weight[:lower_all_head_size, :]
+                        self.encoder.layer[i].attention.self.key.bias[:lower_all_head_size] = \
+                            source_model.encoder.layer[i].attention.self.key.bias[:lower_all_head_size]
+                        self.encoder.layer[i].attention.self.value.weight[:lower_all_head_size, :] = \
+                            source_model.encoder.layer[i].attention.self.value.weight[:lower_all_head_size, :]
+                        self.encoder.layer[i].attention.self.value.bias[:lower_all_head_size] = \
+                            source_model.encoder.layer[i].attention.self.value.bias[:lower_all_head_size]
 
-            #Loading self attention 
+                        self.encoder.layer[i].attention.self.dropout.load_state_dict(
+                            source_model.encoder.layer[i].attention.self.dropout.state_dict())
+                        self.encoder.layer[i].attention.self.distance_embedding.load_state_dict(
+                            source_model.encoder.layer[i].attention.self.distance_embedding.state_dict())
 
-            
-            if self.config.attention_type[i] == source_config.attention_type[i] :
-                
-                if self.config.hidden_dim_list[i] ==  source_config.hidden_dim_list[i] and \
-                self.config.attention_heads_list[i] ==  source_config.attention_heads_list[i] and \
-                self.config.similarity_list[i] == source_config.similarity_list[i]:
+                        curr_sim_types = [attention.split('_')[1] for attention in self.config.attention_heads_list[i]]
+                        source_sim_types = [attention.split('_')[1] for attention in source_config.attention_heads_list[i]]
+
+                        wma_count, conv_count = 0, 0
+                        for j in range(min(len(self.config.attention_heads_list[i]), len(source_config.attention_heads_list[i]))):
+                            # We only transfer attention weights if the corresponding head is the same
+                            if curr_sim_types[j] == source_sim_types[j]:
+                                if curr_sim_types[j] == 'wma':
+                                    setattr(self.encoder.layer[i].attention.self, f'W{wma_count}', 
+                                        getattr(source_model.encoder.layer[i].attention.self, f'W{wma_count}'))
+                                    wma_count += 1
+                                elif curr_sim_types[j].isnumeric():
+                                    curr_key_conv_attn_layer = getattr(self.encoder.layer[i].attention.self, f'key_conv_attn_layer{conv_count}')
+                                    source_key_conv_attn_layer = getattr(source_model.encoder.layer[i].attention.self, f'key_conv_attn_layer{conv_count}')
+                                    curr_key_conv_attn_layer.load_state_dict(source_key_conv_attn_layer.state_dict())
+
+                                    curr_conv_kernel_layer = getattr(self.encoder.layer[i].attention.self, f'conv_kernel_layer{conv_count}')
+                                    source_conv_kernel_layer = getattr(source_model.encoder.layer[i].attention.self, f'conv_kernel_layer{conv_count}')
+                                    curr_conv_kernel_layer.load_state_dict(source_conv_kernel_layer.state_dict())
+
+                                    curr_conv_out_layer = getattr(self.encoder.layer[i].attention.self, f'conv_out_layer{conv_count}')
+                                    source_conv_out_layer = getattr(source_model.encoder.layer[i].attention.self, f'conv_out_layer{conv_count}')
+                                    curr_conv_out_layer.load_state_dict(source_conv_out_layer.state_dict())
+
+                                    curr_unfold = getattr(self.encoder.layer[i].attention.self, f'unfold{conv_count}')
+                                    source_unfold = getattr(source_model.encoder.layer[i].attention.self, f'unfold{conv_count}')
+                                    curr_unfold.load_state_dict(source_unfold.state_dict())
+
+                                    conv_count += 1
+
+                        curr_all_head_size = len(self.config.attention_heads_list[i]) * int(self.config.attention_heads_list[i][0].split('_')[2])
+                        source_all_head_size = len(source_config.attention_heads_list[i]) * int(source_config.attention_heads_list[i][0].split('_')[2])
+
+                        if curr_all_head_size == source_all_head_size:
+                            self.encoder.layer[i].attention.output.load_state_dict(source_model.encoder.layer[i].attention.output.state_dict())
+                        else:
+                            self.encoder.layer[i].attention.output.dense.weight[:, :lower_all_head_size] = \
+                                source_model.encoder.layer[i].attention.output.dense.weight[:, :lower_all_head_size]
+                            self.encoder.layer[i].attention.output.dense.bias = \
+                                source_model.encoder.layer[i].attention.output.dense.bias
+
+                        self.encoder.layer[i].attention.output.LayerNorm.load_state_dict(source_model.encoder.layer[i].attention.output.LayerNorm.state_dict())
+                        self.encoder.layer[i].attention.output.dropout.load_state_dict(source_model.encoder.layer[i].attention.output.dropout.state_dict())
+
+                        # TODO: Add partial transfer of feed-forward layers
+                        if self.config.ff_dim_list[i] == source_config.ff_dim_list[i] :
+                            self.encoder.layer[i].intermediate.load_state_dict(source_model.encoder.layer[i].intermediate.state_dict())
+                            count+=len(source_model.encoder.layer[i].intermediate.state_dict())
+
+                            if i + 1 < min(self.config.num_hidden_layers,source_config.num_hidden_layers) \
+                                and self.config.hidden_dim_list[i+1] == source_config.hidden_dim_list[i+1]:
+                                self.encoder.layer[i].output.load_state_dict(source_model.encoder.layer[i].output.state_dict())
+                                count+=len(source_model.encoder.layer[i].output.state_dict())
+        else:
+            for i in range(min(self.config.num_hidden_layers,source_config.num_hidden_layers)):
+                #Loading self attention 
+                if self.config.attention_type[i] == source_config.attention_type[i] :
                     
-                    self.encoder.layer[i].attention.load_state_dict(source_model.encoder.layer[i].attention.state_dict())
-                    count+=len(source_model.encoder.layer[i].attention.state_dict())
+                    if self.config.hidden_dim_list[i] ==  source_config.hidden_dim_list[i] and \
+                    self.config.attention_heads_list[i] ==  source_config.attention_heads_list[i] and \
+                    self.config.similarity_list[i] == source_config.similarity_list[i]:
+                        
+                        self.encoder.layer[i].attention.load_state_dict(source_model.encoder.layer[i].attention.state_dict())
+                        count+=len(source_model.encoder.layer[i].attention.state_dict())
 
-                    if self.config.ff_dim_list[i] == source_config.ff_dim_list[i] :
-                        self.encoder.layer[i].intermediate.load_state_dict(source_model.encoder.layer[i].intermediate.state_dict())
-                        count+=len(source_model.encoder.layer[i].intermediate.state_dict())
-                        #print("Intermediate loaded")
+                        if self.config.ff_dim_list[i] == source_config.ff_dim_list[i] :
+                            self.encoder.layer[i].intermediate.load_state_dict(source_model.encoder.layer[i].intermediate.state_dict())
+                            count+=len(source_model.encoder.layer[i].intermediate.state_dict())
+                            #print("Intermediate loaded")
 
-                        if i + 1 < min(self.config.num_hidden_layers,source_config.num_hidden_layers) \
-                            and self.config.hidden_dim_list[i+1] == source_config.hidden_dim_list[i+1]:
-                            self.encoder.layer[i].output.load_state_dict(source_model.encoder.layer[i].output.state_dict())
-                            count+=len(source_model.encoder.layer[i].output.state_dict())
-                            #print("Output loaded")
+                            if i + 1 < min(self.config.num_hidden_layers,source_config.num_hidden_layers) \
+                                and self.config.hidden_dim_list[i+1] == source_config.hidden_dim_list[i+1]:
+                                self.encoder.layer[i].output.load_state_dict(source_model.encoder.layer[i].output.state_dict())
+                                count+=len(source_model.encoder.layer[i].output.state_dict())
+                                #print("Output loaded")
 
-                    #print("-"*3,"Loaded Weights for Layer:",i,"-"*3)
-
-            else:
-
-                #print("-"*3,"Done Loading Source","-"*3)
-                break
+                        #print("-"*3,"Loaded Weights for Layer:",i,"-"*3)
+                else:
+                    #print("-"*3,"Done Loading Source","-"*3)
+                    break
 
         return count*1.0/total
 
