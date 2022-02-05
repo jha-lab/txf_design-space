@@ -1580,7 +1580,7 @@ class BertModelModular(BertPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embeddings.word_embeddings = value
 
-    def load_model_from_source(self,source_model):
+    def load_model_from_source(self, source_model, debug=False):
         """
         Loads the BertModelModular from a source model. Updates weights of the layers uptil the hidden dimension matches. Also updates the weights 
         for matching feed forward dimensions.
@@ -1604,23 +1604,15 @@ class BertModelModular(BertPreTrainedModel):
         if self.config.from_model_dict_hetero:
             with torch.no_grad():
                 for i in range(min(self.config.num_hidden_layers,source_config.num_hidden_layers)):
+                    if debug:
+                        print(f'Checking layer {i}...')
                     if self.config.hidden_dim_list[i] == source_config.hidden_dim_list[i] and \
                         self.config.attention_heads_list[i][0].split('_')[2] == source_config.attention_heads_list[i][0].split('_')[2]:
 
+                        attention_head_size = int(self.config.attention_heads_list[i][0].split('_')[2])
+
                         lower_all_head_size = min(self.encoder.layer[i].attention.self.query.weight.shape[1], 
                             source_model.encoder.layer[i].attention.self.query.weight.shape[1])
-                        self.encoder.layer[i].attention.self.query.weight[:lower_all_head_size, :] = \
-                            source_model.encoder.layer[i].attention.self.query.weight[:lower_all_head_size, :]
-                        self.encoder.layer[i].attention.self.query.bias[:lower_all_head_size] = \
-                            source_model.encoder.layer[i].attention.self.query.bias[:lower_all_head_size]
-                        self.encoder.layer[i].attention.self.key.weight[:lower_all_head_size, :] = \
-                            source_model.encoder.layer[i].attention.self.key.weight[:lower_all_head_size, :]
-                        self.encoder.layer[i].attention.self.key.bias[:lower_all_head_size] = \
-                            source_model.encoder.layer[i].attention.self.key.bias[:lower_all_head_size]
-                        self.encoder.layer[i].attention.self.value.weight[:lower_all_head_size, :] = \
-                            source_model.encoder.layer[i].attention.self.value.weight[:lower_all_head_size, :]
-                        self.encoder.layer[i].attention.self.value.bias[:lower_all_head_size] = \
-                            source_model.encoder.layer[i].attention.self.value.bias[:lower_all_head_size]
 
                         self.encoder.layer[i].attention.self.dropout.load_state_dict(
                             source_model.encoder.layer[i].attention.self.dropout.state_dict())
@@ -1634,6 +1626,21 @@ class BertModelModular(BertPreTrainedModel):
                         for j in range(min(len(self.config.attention_heads_list[i]), len(source_config.attention_heads_list[i]))):
                             # We only transfer attention weights if the corresponding head is the same
                             if curr_sim_types[j] == source_sim_types[j]:
+                                if debug:
+                                    print(f'\tTransfering attention head {j}: {self.config.attention_heads_list[i][j]}')
+                                self.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size] = \
+                                    source_model.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size]
+                                self.encoder.layer[i].attention.self.query.bias[j*attention_head_size:(j+1)*attention_head_size] = \
+                                    source_model.encoder.layer[i].attention.self.query.bias[j*attention_head_size:(j+1)*attention_head_size]
+                                self.encoder.layer[i].attention.self.key.weight[j*attention_head_size:(j+1)*attention_head_size] = \
+                                    source_model.encoder.layer[i].attention.self.key.weight[j*attention_head_size:(j+1)*attention_head_size]
+                                self.encoder.layer[i].attention.self.key.bias[j*attention_head_size:(j+1)*attention_head_size] = \
+                                    source_model.encoder.layer[i].attention.self.key.bias[j*attention_head_size:(j+1)*attention_head_size]
+                                self.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size] = \
+                                    source_model.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size]
+                                self.encoder.layer[i].attention.self.value.bias[j*attention_head_size:(j+1)*attention_head_size] = \
+                                    source_model.encoder.layer[i].attention.self.value.bias[j*attention_head_size:(j+1)*attention_head_size]
+                                
                                 if curr_sim_types[j] == 'wma':
                                     setattr(self.encoder.layer[i].attention.self, f'W{wma_count}', 
                                         getattr(source_model.encoder.layer[i].attention.self, f'W{wma_count}'))
@@ -1663,8 +1670,8 @@ class BertModelModular(BertPreTrainedModel):
                         if curr_all_head_size == source_all_head_size:
                             self.encoder.layer[i].attention.output.load_state_dict(source_model.encoder.layer[i].attention.output.state_dict())
                         else:
-                            self.encoder.layer[i].attention.output.dense.weight[:, :lower_all_head_size] = \
-                                source_model.encoder.layer[i].attention.output.dense.weight[:, :lower_all_head_size]
+                            self.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size] = \
+                                source_model.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size]
                             self.encoder.layer[i].attention.output.dense.bias = \
                                 source_model.encoder.layer[i].attention.output.dense.bias
 
