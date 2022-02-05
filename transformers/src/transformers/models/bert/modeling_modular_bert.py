@@ -494,7 +494,7 @@ class BertHeteroAttentionModular(nn.Module):
             attention_probs = attention_probs * head_mask
 
         context_layer = torch.matmul(attention_probs, value_layer)
-        print(f'context_layer.size(): {context_layer.size()}')
+        # print(f'context_layer.size(): {context_layer.size()}')
 
         conv_count = 0
         for attention_head in range(self.num_attention_heads):
@@ -514,14 +514,14 @@ class BertHeteroAttentionModular(nn.Module):
                 mixed_key_conv_attn_layer = getattr(self, f'key_conv_attn_layer{conv_count}')(
                     key_layer[:, attention_head, :, :].transpose(1, 2))
                 mixed_key_conv_attn_layer = mixed_key_conv_attn_layer.transpose(1, 2)
-                print(f'mixed_key_conv_attn_layer.size(): {mixed_key_conv_attn_layer.size()}')
+                # print(f'mixed_key_conv_attn_layer.size(): {mixed_key_conv_attn_layer.size()}')
 
                 conv_attn_layer = torch.multiply(mixed_key_conv_attn_layer, query_layer[:, attention_head, :, :])
                 conv_kernel_layer = getattr(self, f'conv_kernel_layer{conv_count}')(conv_attn_layer)
-                print(f'conv_kernel_layer.size(): {conv_kernel_layer.size()}')
+                # print(f'conv_kernel_layer.size(): {conv_kernel_layer.size()}')
                 conv_kernel_layer = torch.reshape(conv_kernel_layer, [-1, int(self.sim_types[attention_head]), 1])
                 conv_kernel_layer = torch.softmax(conv_kernel_layer, dim=1)
-                print(f'conv_kernel_layer.size() after reshape: {conv_kernel_layer.size()}')
+                # print(f'conv_kernel_layer.size() after reshape: {conv_kernel_layer.size()}')
 
                 conv_out_layer = getattr(self, f'conv_out_layer{conv_count}')(value_layer[:, attention_head, :, :])
                 conv_out_layer = torch.reshape(conv_out_layer, [batch_size, -1, self.attention_head_size])
@@ -529,9 +529,9 @@ class BertHeteroAttentionModular(nn.Module):
                 conv_out_layer = getattr(self, f'unfold{conv_count}')(conv_out_layer)
                 conv_out_layer = conv_out_layer.transpose(1, 2).reshape(
                     batch_size, -1, self.attention_head_size, int(self.sim_types[attention_head]))
-                print(f'conv_out_layer.size(): {conv_out_layer.size()}')
+                # print(f'conv_out_layer.size(): {conv_out_layer.size()}')
                 conv_out_layer = torch.reshape(conv_out_layer, [-1, self.attention_head_size, int(self.sim_types[attention_head])])
-                print(f'conv_out_layer.size() after reshape: {conv_out_layer.size()}')
+                # print(f'conv_out_layer.size() after reshape: {conv_out_layer.size()}')
                 conv_out_layer = torch.matmul(conv_out_layer, conv_kernel_layer)
                 conv_out_layer = torch.reshape(conv_out_layer, [-1, self.attention_head_size])
 
@@ -550,7 +550,7 @@ class BertHeteroAttentionModular(nn.Module):
         if self.is_decoder:
             outputs = outputs + (past_key_value,)
 
-        print(f'outputs[0].size(): {outputs[0].size()}')
+        # print(f'outputs[0].size(): {outputs[0].size()}')
 
         return outputs
 
