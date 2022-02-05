@@ -280,7 +280,12 @@ def pretrain(args, model_dict):
     tokenizer = RobertaTokenizer.from_pretrained(main_dir+'roberta_tokenizer/')
 
     config = BertConfig(vocab_size = tokenizer.vocab_size)
-    config.from_model_dict(model_dict)
+
+    if 'p' in model_dict.keys():
+        config.from_model_dict(model_dict)
+    else:
+        config.from_model_dict_hetero(model_dict)
+
     model = BertForMaskedLMModular(config)
     '''
     tokenizer_kwargs = {
@@ -414,7 +419,7 @@ def pretrain(args, model_dict):
         )
     '''
 
-    tokenized_datasets = load_from_disk(f'../tokenized_pretraining_dataset')
+    tokenized_datasets = load_from_disk(main_dir + '/tokenized_pretraining_dataset')
     if training_args.do_train:
         if "train" not in tokenized_datasets:
             raise ValueError("--do_train requires a train dataset")
@@ -483,7 +488,10 @@ def pretrain(args, model_dict):
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
 
-    return metrics
+    if config.from_model_dict_hetero is True:
+        return metrics, trainer.state.log_history
+    else:
+        return metrics
 
 
 def _mp_fn(index):
