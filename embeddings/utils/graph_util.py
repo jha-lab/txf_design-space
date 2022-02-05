@@ -47,16 +47,32 @@ def model_dict_to_graph(model_dict, ops_list = None):
 		ValueError: if a required operation is not in ops_list
 		AssertionError: if a sanity check fails
 	"""
+	if 'p' in model_dict.keys():
+		from_model_dict_hetero = False
+	else:
+		from_model_dict_hetero = True
+
 	layers = model_dict.get('l')
 	operation = model_dict.get('o')
 	hidden = model_dict.get('h')
-	num_heads = model_dict.get('n')
+
+	if from_model_dict_hetero:
+		num_heads = [len(layer) for layer in model_dict['o']]
+	else:
+		num_heads = model_dict.get('n')
+
 	feed_forward = model_dict.get('f')
 	num_feed_forward = [len(feed_forward[layer]) for layer in range(layers)]
-	parameter = model_dict.get('p')
+	
+	if not from_model_dict_hetero:
+		parameter = model_dict.get('p')
 
-	assert layers == len(operation) == len(hidden) == len(num_heads) == len(feed_forward) == len(parameter), \
-		f'Input model_dict is incorrect:\n{model_dict}'
+	if from_model_dict_hetero:
+		assert layers == len(operation) == len(hidden) == len(num_heads) == len(feed_forward), \
+			f'Input model_dict is incorrect:\n{model_dict}'
+	else:
+		assert layers == len(operation) == len(hidden) == len(num_heads) == len(feed_forward) == len(parameter), \
+			f'Input model_dict is incorrect:\n{model_dict}'
 
 	V = 1 # One vertex for the input
 	for layer in range(layers):
@@ -74,7 +90,10 @@ def model_dict_to_graph(model_dict, ops_list = None):
 	ops = ['input']
 	for layer in range(layers): 
 		for head in range(num_heads[layer]):
-			op = f'{operation[layer]}_h{hidden[layer]}_p-{parameter[layer]}'
+			if from_model_dict_hetero:
+				op = model_dict['o'][layer][head]
+			else:
+				op = f'{operation[layer]}_h{hidden[layer]}_p-{parameter[layer]}'
 			if ops_list is not None and op not in ops_list:
 				raise ValueError(f'Operation: {op}, not in ops_list')
 			else:
