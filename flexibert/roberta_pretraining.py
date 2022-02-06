@@ -489,7 +489,7 @@ def pretrain(args, model_dict):
         trainer.save_metrics("eval", metrics)
 
     if config.from_model_dict_hetero is True:
-        return metrics, trainer.state.log_history
+        return metrics, trainer.state.log_history, model
     else:
         return metrics
 
