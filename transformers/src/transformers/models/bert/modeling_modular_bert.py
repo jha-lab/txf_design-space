@@ -1653,15 +1653,15 @@ class BertModelModular(BertPreTrainedModel):
                                             self.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size] = \
                                                 self.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size]
                                         else:
-                                            self.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :] = \
+                                            self.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size] = \
                                                 nn.Parameter(torch.from_numpy(rp.fit_transform(
-                                                    source_model.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :].cpu().numpy())))
-                                            self.encoder.layer[i].attention.self.key.weight[j*attention_head_size:(j+1)*attention_head_size, :] = \
+                                                    source_model.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size].cpu().numpy())))
+                                            self.encoder.layer[i].attention.self.key.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size] = \
                                                 nn.Parameter(torch.from_numpy(rp.fit_transform(
-                                                    source_model.encoder.layer[i].attention.self.key.weight[j*attention_head_size:(j+1)*attention_head_size, :].cpu().numpy())))
-                                            self.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :] = \
+                                                    source_model.encoder.layer[i].attention.self.key.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size].cpu().numpy())))
+                                            self.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size] = \
                                                 nn.Parameter(torch.from_numpy(rp.fit_transform(
-                                                    source_model.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :].cpu().numpy())))
+                                                    source_model.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size].cpu().numpy())))
                                     else:
                                         self.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :] = \
                                             self.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :]
@@ -1707,9 +1707,9 @@ class BertModelModular(BertPreTrainedModel):
                                     self.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size] = \
                                         self.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size]
                                 else:
-                                    self.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size] = \
+                                    self.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size] = \
                                         nn.Parameter(torch.from_numpy(np.transpose(rp.fit_transform(np.transpose(
-                                            source_model.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size].cpu().numpy())))))
+                                            source_model.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size].cpu().numpy())))))
                             else:
                                 self.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size] = \
                                         self.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size]
@@ -1745,9 +1745,9 @@ class BertModelModular(BertPreTrainedModel):
                                 self.encoder.layer[i].output.dense.weight[:lower_hidden_size, :output_lower_dim] = \
                                     self.encoder.layer[i].output.dense.weight[:lower_hidden_size, :output_lower_dim]
                             else:
-                                self.encoder.layer[i].output.dense.weight[:, :output_lower_dim] = \
+                                self.encoder.layer[i].output.dense.weight[:lower_hidden_size, :output_lower_dim] = \
                                     nn.Parameter(torch.from_numpy(np.transpose(rp.fit_transform(
-                                        np.transpose(source_model.encoder.layer[i].output.dense.weight[:, :output_lower_dim].cpu().numpy())))))
+                                        np.transpose(source_model.encoder.layer[i].output.dense.weight[:lower_hidden_size, :output_lower_dim].cpu().numpy())))))
                         else:
                             self.encoder.layer[i].output.dense.weight[:, :output_lower_dim] = source_model.encoder.layer[i].output.dense.weight[:, :output_lower_dim]
 
