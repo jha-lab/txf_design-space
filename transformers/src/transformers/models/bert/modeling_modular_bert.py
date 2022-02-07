@@ -1649,10 +1649,10 @@ class BertModelModular(BertPreTrainedModel):
                                 source_model.encoder.layer[i].attention.self.distance_embedding.state_dict())
                         else:
                             if self.transfer_mode == 'OD':
-                                self.encoder.layer[i].attention.self.distance_embedding.weight[:, :lower_hidden_size] = \
-                                    source_model.encoder.layer[i].attention.self.distance_embedding.weight[:, :lower_hidden_size]
+                                self.encoder.layer[i].attention.self.distance_embedding.weight[:, :lower_attention_head_size] = \
+                                    source_model.encoder.layer[i].attention.self.distance_embedding.weight[:, :lower_attention_head_size]
                             else:
-                                self.encoder.layer[i].attention.self.distance_embedding.weight[:, :lower_hidden_size] = \
+                                self.encoder.layer[i].attention.self.distance_embedding.weight[:, :lower_attention_head_size] = \
                                     nn.Parameter(torch.from_numpy(rp_att.fit_transform(
                                         source_model.encoder.layer[i].attention.self.distance_embedding.weight.cpu().numpy())))
 
