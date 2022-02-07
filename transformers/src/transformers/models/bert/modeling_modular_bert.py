@@ -1599,12 +1599,29 @@ class BertModelModular(BertPreTrainedModel):
         assert self.config.from_model_dict_hetero == source_config.from_model_dict_hetero, \
             'Source model should (not) have heterogeneous configuration'
 
-        #Load embeddings if input size same:
+        #Load embeddings if input size same, otherwise, using projection
         if self.config.hidden_dim_list[0] == source_config.hidden_dim_list[0]:
             self.embeddings.load_state_dict(source_model.embeddings.state_dict())
             count+=len(source_model.embeddings.state_dict())
+        else:
+            lower_hidden_size = min(self.config.hidden_dim_list[0], source_config.hidden_dim_list[0])
+            rp = random_projection.GaussianRandomProjection(lower_hidden_size)
 
-            #print("-"*3,"Loaded embeddings weights from source","-"*3)
+            with torch.no_grad():
+                self.embeddings.LayerNorm.weight[:lower_hidden_size] = source_model.embeddings.LayerNorm.weight[:lower_hidden_size]
+                self.embeddings.LayerNorm.bias[:lower_hidden_size] = source_model.embeddings.LayerNorm.bias[:lower_hidden_size]
+                
+                if self.transfer_mode == 'OD':
+                    self.embeddings.word_embeddings.weight[:, :lower_hidden_size] = source_model.embeddings.word_embeddings.weight[:, :lower_hidden_size]
+                    self.embeddings.position_embeddings.weight[:, :lower_hidden_size] = source_model.embeddings.position_embeddings.weight[:, :lower_hidden_size]
+                    self.embeddings.token_type_embeddings.weight[:, :lower_hidden_size] = source_model.embeddings.token_type_embeddings.weight[:, :lower_hidden_size]
+                else:
+                    self.embeddings.word_embeddings.weight[:, :lower_hidden_size] = nn.Parameter(torch.from_numpy(rp.fit_transform(
+                        source_model.embeddings.word_embeddings.weight[:, :lower_hidden_size].cpu().numpy())))
+                    self.embeddings.position_embeddings.weight[:, :lower_hidden_size] = nn.Parameter(torch.from_numpy(rp.fit_transform(
+                        source_model.embeddings.position_embeddings.weight[:, :lower_hidden_size].cpu().numpy())))
+                    self.embeddings.token_type_embeddings.weight[:, :lower_hidden_size] = nn.Parameter(torch.from_numpy(rp.fit_transform(
+                        source_model.embeddings.token_type_embeddings.weight[:, :lower_hidden_size].cpu().numpy())))
 
         #Loading encoder
         if self.config.from_model_dict_hetero:
@@ -1618,14 +1635,29 @@ class BertModelModular(BertPreTrainedModel):
                         attention_head_size = int(self.config.attention_heads_list[i][0].split('_')[2])
                         lower_all_head_size = min(self.encoder.layer[i].attention.self.query.weight.shape[1], 
                             source_model.encoder.layer[i].attention.self.query.weight.shape[1])
+                        lower_attention_head_size = min(attention_head_size, int(source_config.attention_heads_list[i][0].split('_')[2]))
                         lower_hidden_size = min(self.config.hidden_dim_list[i], source_config.hidden_dim_list[i])
 
                         rp = random_projection.GaussianRandomProjection(lower_hidden_size)
+                        rp_att = random_projection.GaussianRandomProjection(lower_attention_head_size)
 
                         self.encoder.layer[i].attention.self.dropout.load_state_dict(
                             source_model.encoder.layer[i].attention.self.dropout.state_dict())
-                        self.encoder.layer[i].attention.self.distance_embedding.load_state_dict(
-                            source_model.encoder.layer[i].attention.self.distance_embedding.state_dict())
+
+                        if attention_head_size == int(source_config.attention_heads_list[i][0].split('_')[2]):
+                            self.encoder.layer[i].attention.self.distance_embedding.load_state_dict(
+                                source_model.encoder.layer[i].attention.self.distance_embedding.state_dict())
+                        else:
+                            if self.transfer_mode == 'OD':
+                                self.encoder.layer[i].attention.self.distance_embedding.weight[:, :lower_hidden_size] = \
+                                    source_model.encoder.layer[i].attention.self.distance_embedding.weight[:, :lower_hidden_size]
+                            else:
+                                self.encoder.layer[i].attention.self.distance_embedding.weight[:, :lower_hidden_size] = \
+                                    nn.Parameter(torch.from_numpy(rp_att.fit_transform(
+                                        source_model.encoder.layer[i].attention.self.distance_embedding.weight.cpu().numpy())))
+
+                        curr_attn_types = [attention.split('_')[0] for attention in self.config.attention_heads_list[i]]
+                        source_attn_types = [attention.split('_')[0] for attention in source_config.attention_heads_list[i]]
 
                         curr_sim_types = [attention.split('_')[1] for attention in self.config.attention_heads_list[i]]
                         source_sim_types = [attention.split('_')[1] for attention in source_config.attention_heads_list[i]]
@@ -1633,7 +1665,7 @@ class BertModelModular(BertPreTrainedModel):
                         wma_count, conv_count = 0, 0
                         for j in range(min(len(self.config.attention_heads_list[i]), len(source_config.attention_heads_list[i]))):
                             # We only transfer attention weights if the corresponding head is the same
-                            if curr_sim_types[j] == source_sim_types[j]:
+                            if curr_attn_types[j] == source_attn_types[j]:
                                 if debug:
                                     print(f'\tTransfering attention head {j}: {self.config.attention_heads_list[i][j]}')
 
@@ -1670,27 +1702,53 @@ class BertModelModular(BertPreTrainedModel):
                                         self.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :] = \
                                             self.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :]
 
-                                if curr_sim_types[j] == 'wma':
-                                    setattr(self.encoder.layer[i].attention.self, f'W{wma_count}', 
-                                        getattr(source_model.encoder.layer[i].attention.self, f'W{wma_count}'))
+                                if curr_sim_types[j] == 'wma' and source_sim_types[j] == 'wma':
+                                    if attention_head_size == int(source_config.attention_heads_list[i][0].split('_')[2]):
+                                        setattr(self.encoder.layer[i].attention.self, f'W{wma_count}', 
+                                            getattr(source_model.encoder.layer[i].attention.self, f'W{wma_count}'))
+                                    else:
+                                        curr_w = getattr(self.encoder.layer[i].attention.self, f'W{wma_count}')
+                                        source_w = getattr(source_model.encoder.layer[i].attention.self, f'W{wma_count}')
+
+                                        if self.transfer_mode == 'OD':
+                                            curr_w[:lower_attention_head_size, :lower_attention_head_size] = source[:lower_attention_head_size, :lower_attention_head_size]
+                                        else:
+                                            source_w = rp_att.fit_transform(source_w.cpu().numpy())
+                                            source_w = rp_att.fit_transform(np.transpose(source_w))
+                                            curr_w[:lower_attention_head_size, :lower_attention_head_size] = nn.Parameter(torch.from_nump(source_w))
                                     wma_count += 1
                                 elif curr_sim_types[j].isnumeric():
+                                    lower_sim_type = min(int(curr_sim_types[j]), int(source_sim_types[j]))
+
                                     curr_key_conv_attn_layer = getattr(self.encoder.layer[i].attention.self, f'key_conv_attn_layer{conv_count}')
                                     source_key_conv_attn_layer = getattr(source_model.encoder.layer[i].attention.self, f'key_conv_attn_layer{conv_count}')
-                                    curr_key_conv_attn_layer.load_state_dict(source_key_conv_attn_layer.state_dict())
-
                                     curr_conv_kernel_layer = getattr(self.encoder.layer[i].attention.self, f'conv_kernel_layer{conv_count}')
                                     source_conv_kernel_layer = getattr(source_model.encoder.layer[i].attention.self, f'conv_kernel_layer{conv_count}')
-                                    curr_conv_kernel_layer.load_state_dict(source_conv_kernel_layer.state_dict())
-
                                     curr_conv_out_layer = getattr(self.encoder.layer[i].attention.self, f'conv_out_layer{conv_count}')
                                     source_conv_out_layer = getattr(source_model.encoder.layer[i].attention.self, f'conv_out_layer{conv_count}')
-                                    curr_conv_out_layer.load_state_dict(source_conv_out_layer.state_dict())
-
                                     curr_unfold = getattr(self.encoder.layer[i].attention.self, f'unfold{conv_count}')
                                     source_unfold = getattr(source_model.encoder.layer[i].attention.self, f'unfold{conv_count}')
+                                    
                                     curr_unfold.load_state_dict(source_unfold.state_dict())
 
+                                    if attention_head_size == int(source_config.attention_heads_list[i][0].split('_')[2]) and int(curr_sim_types[j]) == int(source_sim_types[j]):
+                                        curr_key_conv_attn_layer.load_state_dict(source_key_conv_attn_layer.state_dict())
+                                        curr_conv_kernel_layer.load_state_dict(source_conv_kernel_layer.state_dict())
+                                        curr_conv_out_layer.load_state_dict(source_conv_out_layer.state_dict())
+                                    else:
+                                        # TODO: Implement RP for convolutional layers
+                                        curr_key_conv_attn_layer.bias[:lower_attention_head_size, :] = source_key_conv_attn_layer.bias[:lower_attention_head_size, :]
+                                        curr_key_conv_attn_layer.depthwise.weight[:lower_attention_head_size, :, :lower_sim_type] = \
+                                            torch.functional.F.interpolate(source_key_conv_attn_layer.depthwise.weight[:lower_attention_head_size, :, :], lower_sim_type)
+                                        curr_key_conv_attn_layer.pointwise.weight[:lower_attention_head_size, :lower_attention_head_size] = \
+                                            source_key_conv_attn_layer.pointwise.weight[:lower_attention_head_size, :lower_attention_head_size]
+
+                                        curr_conv_kernel_layer.weight[:lower_sim_type, :lower_attention_head_size] = source_conv_kernel_layer.weight[:lower_sim_type, :lower_attention_head_size]
+                                        curr_conv_kernel_layer.bias[:lower_sim_type] = source_conv_kernel_layer.bias[:lower_sim_type]
+
+                                        curr_conv_out_layer.weight[:lower_attention_head_size, :lower_attention_head_size] = \
+                                            source_conv_out_layer.weight[:lower_attention_head_size, :lower_attention_head_size]
+                                        curr_conv_out_layer.bias[:lower_attention_head_size] = source_conv_out_layer.bias[:lower_attention_head_size]
                                     conv_count += 1
 
                         curr_all_head_size = len(self.config.attention_heads_list[i]) * int(self.config.attention_heads_list[i][0].split('_')[2])
