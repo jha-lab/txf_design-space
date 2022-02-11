@@ -27,7 +27,7 @@ GLUE_TASKS_DATASET = ['CoLA', 'MNLI-mm', 'MRPC', 'QNLI', 'QQP', 'RTE', 'SST-2', 
 
 def get_training_args(models_dir, task, id, model_hash, autotune, autotune_trials):
 
-	model_name_or_path = f'{models_dir}pretrained_9/{model_hash}'
+	model_name_or_path = f'{models_dir}pretrained/{model_hash}'
 
 	training_args = f'--model_name_or_path {model_name_or_path} \
 		--task_name {task} \
