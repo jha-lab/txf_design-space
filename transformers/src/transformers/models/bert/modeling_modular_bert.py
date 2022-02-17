@@ -1601,9 +1601,15 @@ class BertModelModular(BertPreTrainedModel):
 
         #Load embeddings if input size same, otherwise, using projection
         if self.config.hidden_dim_list[0] == source_config.hidden_dim_list[0]:
+            if debug:
+                print('Loading embeddings directly')
+
             self.embeddings.load_state_dict(source_model.embeddings.state_dict())
             count+=len(source_model.embeddings.state_dict())
         else:
+            if debug:
+                print(f'Transfering embeddings using mode: {self.transfer_mode}')
+
             lower_hidden_size = min(self.config.hidden_dim_list[0], source_config.hidden_dim_list[0])
             rp = random_projection.GaussianRandomProjection(lower_hidden_size)
 
@@ -1645,9 +1651,15 @@ class BertModelModular(BertPreTrainedModel):
                             source_model.encoder.layer[i].attention.self.dropout.state_dict())
 
                         if attention_head_size == int(source_config.attention_heads_list[i][0].split('_')[2]):
+                            if debug:
+                                print(f'\tLoading distace embeddings directly')
+
                             self.encoder.layer[i].attention.self.distance_embedding.load_state_dict(
                                 source_model.encoder.layer[i].attention.self.distance_embedding.state_dict())
                         else:
+                            if debug:
+                                print(f'\tTransfering distance embeddings using mode: {self.transfer_mode}')
+
                             if self.transfer_mode == 'OD':
                                 self.encoder.layer[i].attention.self.distance_embedding.weight[:, :lower_attention_head_size] = \
                                     source_model.encoder.layer[i].attention.self.distance_embedding.weight[:, :lower_attention_head_size]
@@ -1679,11 +1691,11 @@ class BertModelModular(BertPreTrainedModel):
                                     if self.config.hidden_dim_list[i] != source_config.hidden_dim_list[i]:
                                         if self.transfer_mode == 'OD':
                                             self.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size] = \
-                                                self.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size]
+                                                source_model.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size]
                                             self.encoder.layer[i].attention.self.key.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size] = \
-                                                self.encoder.layer[i].attention.self.key.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size]
+                                                source_model.encoder.layer[i].attention.self.key.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size]
                                             self.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size] = \
-                                                self.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size]
+                                                source_model.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size]
                                         else:
                                             self.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size] = \
                                                 nn.Parameter(torch.from_numpy(rp.fit_transform(
@@ -1696,11 +1708,11 @@ class BertModelModular(BertPreTrainedModel):
                                                     source_model.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :lower_hidden_size].cpu().numpy())))
                                     else:
                                         self.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :] = \
-                                            self.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :]
+                                            source_model.encoder.layer[i].attention.self.query.weight[j*attention_head_size:(j+1)*attention_head_size, :]
                                         self.encoder.layer[i].attention.self.key.weight[j*attention_head_size:(j+1)*attention_head_size, :] = \
-                                            self.encoder.layer[i].attention.self.key.weight[j*attention_head_size:(j+1)*attention_head_size, :]
+                                            source_model.encoder.layer[i].attention.self.key.weight[j*attention_head_size:(j+1)*attention_head_size, :]
                                         self.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :] = \
-                                            self.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :]
+                                            source_model.encoder.layer[i].attention.self.value.weight[j*attention_head_size:(j+1)*attention_head_size, :]
 
                                 if curr_sim_types[j] == 'wma' and source_sim_types[j] == 'wma':
                                     if attention_head_size == int(source_config.attention_heads_list[i][0].split('_')[2]):
@@ -1763,14 +1775,14 @@ class BertModelModular(BertPreTrainedModel):
                             if self.config.hidden_dim_list[i] != source_config.hidden_dim_list[i]:
                                 if self.transfer_mode == 'OD':
                                     self.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size] = \
-                                        self.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size]
+                                        source_model.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size]
                                 else:
                                     self.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size] = \
                                         nn.Parameter(torch.from_numpy(np.transpose(rp.fit_transform(np.transpose(
                                             source_model.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size].cpu().numpy())))))
                             else:
                                 self.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size] = \
-                                        self.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size]
+                                        source_model.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size]
 
                                 assert self.encoder.layer[i].attention.output.dense.weight.shape[0] == lower_hidden_size
 
@@ -1794,6 +1806,8 @@ class BertModelModular(BertPreTrainedModel):
                                 source_model.encoder.layer[i].intermediate.sequential[2*f].weight.shape[1])
                             self.encoder.layer[i].intermediate.sequential[2*f].weight[:lower_dim_0, :lower_dim_1] = \
                                 source_model.encoder.layer[i].intermediate.sequential[2*f].weight[:lower_dim_0, :lower_dim_1]
+                            self.encoder.layer[i].intermediate.sequential[2*f].bias[:lower_dim_0] = \
+                                source_model.encoder.layer[i].intermediate.sequential[2*f].bias[:lower_dim_0]
                             
                         output_lower_dim = min(self.config.ff_dim_list[i][-1], source_config.ff_dim_list[i][-1])
                         self.encoder.layer[i].output.dense.bias[:lower_hidden_size] = source_model.encoder.layer[i].output.dense.bias[:lower_hidden_size]
@@ -1801,7 +1815,7 @@ class BertModelModular(BertPreTrainedModel):
                         if self.config.hidden_dim_list[i] != source_config.hidden_dim_list[i]:
                             if self.transfer_mode == 'OD':
                                 self.encoder.layer[i].output.dense.weight[:lower_hidden_size, :output_lower_dim] = \
-                                    self.encoder.layer[i].output.dense.weight[:lower_hidden_size, :output_lower_dim]
+                                    source_model.encoder.layer[i].output.dense.weight[:lower_hidden_size, :output_lower_dim]
                             else:
                                 self.encoder.layer[i].output.dense.weight[:lower_hidden_size, :output_lower_dim] = \
                                     nn.Parameter(torch.from_numpy(np.transpose(rp.fit_transform(
@@ -2258,10 +2272,35 @@ class BertForMaskedLMModular(BertPreTrainedModel):
                 "bi-directional self-attention."
             )
 
-        self.bert = BertModelModular(config, add_pooling_layer=False, transfer_mode=transfer_mode)
+        assert transfer_mode in ['OD', 'RP'], '"transfer_mode" should be either ordered (OD) or random projection (RP)'
+        self.transfer_mode = transfer_mode
+
+        self.bert = BertModelModular(config, add_pooling_layer=False, transfer_mode=self.transfer_mode)
         self.cls = BertOnlyMLMHeadModular(config)
 
         self.init_weights()
+
+    def load_model_from_source(self, source_model, debug=False):
+        initial_state_dict = copy.deepcopy(self.state_dict())
+        
+        # Transfer weights
+        self.bert.load_model_from_source(source_model.bert, debug)
+        if debug:
+            print(f'Transfering MLM head\n')
+        self.cls.load_state_dict(source_model.cls.state_dict())
+
+        # Get ratio of transfer of weights
+        not_transferred_weights, not_transferred_weights_sum, total_weights = 0, 0, 0
+        for key, value in self.state_dict().items():
+            not_transferred_weights = torch.sum(torch.eq(value, initial_state_dict[key]))
+            not_transferred_weights_sum += not_transferred_weights
+            total_weights += torch.prod(torch.tensor(value.shape))
+            if debug:
+                if not_transferred_weights != 0: print(f'Model key: {key} is not transferred (or has {not_transferred_weights} same weights)')
+
+        # Return weight transfer ratio
+        return (1 - not_transferred_weights_sum/total_weights)
+
 
     def get_output_embeddings(self):
         return self.cls.predictions.decoder
