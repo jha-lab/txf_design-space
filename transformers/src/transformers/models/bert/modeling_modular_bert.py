@@ -1674,6 +1674,9 @@ class BertModelModular(BertPreTrainedModel):
                         curr_sim_types = [attention.split('_')[1] for attention in self.config.attention_heads_list[i]]
                         source_sim_types = [attention.split('_')[1] for attention in source_config.attention_heads_list[i]]
 
+                        curr_all_head_size = len(self.config.attention_heads_list[i]) * int(self.config.attention_heads_list[i][0].split('_')[2])
+                        source_all_head_size = len(source_config.attention_heads_list[i]) * int(source_config.attention_heads_list[i][0].split('_')[2])
+
                         wma_count, conv_count = 0, 0
                         for j in range(min(len(self.config.attention_heads_list[i]), len(source_config.attention_heads_list[i]))):
                             # We only transfer attention weights if the corresponding head is the same
@@ -1763,28 +1766,25 @@ class BertModelModular(BertPreTrainedModel):
                                         curr_conv_out_layer.bias[:lower_attention_head_size] = source_conv_out_layer.bias[:lower_attention_head_size]
                                     conv_count += 1
 
-                        curr_all_head_size = len(self.config.attention_heads_list[i]) * int(self.config.attention_heads_list[i][0].split('_')[2])
-                        source_all_head_size = len(source_config.attention_heads_list[i]) * int(source_config.attention_heads_list[i][0].split('_')[2])
-
-                        if curr_all_head_size == source_all_head_size and self.config.hidden_dim_list[i] == source_config.hidden_dim_list[i]:
-                            self.encoder.layer[i].attention.output.load_state_dict(source_model.encoder.layer[i].attention.output.state_dict())
-                        else:
-                            self.encoder.layer[i].attention.output.dense.bias[:lower_hidden_size] = \
-                                source_model.encoder.layer[i].attention.output.dense.bias[:lower_hidden_size]
-
-                            if self.config.hidden_dim_list[i] != source_config.hidden_dim_list[i]:
-                                if self.transfer_mode == 'OD':
-                                    self.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size] = \
-                                        source_model.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size]
-                                else:
-                                    self.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size] = \
-                                        nn.Parameter(torch.from_numpy(np.transpose(rp.fit_transform(np.transpose(
-                                            source_model.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size].cpu().numpy())))))
+                            if curr_all_head_size == source_all_head_size and self.config.hidden_dim_list[i] == source_config.hidden_dim_list[i]:
+                                self.encoder.layer[i].attention.output.load_state_dict(source_model.encoder.layer[i].attention.output.state_dict())
                             else:
-                                self.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size] = \
-                                        source_model.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size]
+                                self.encoder.layer[i].attention.output.dense.bias[:lower_hidden_size] = \
+                                    source_model.encoder.layer[i].attention.output.dense.bias[:lower_hidden_size]
 
-                                assert self.encoder.layer[i].attention.output.dense.weight.shape[0] == lower_hidden_size
+                                if self.config.hidden_dim_list[i] != source_config.hidden_dim_list[i]:
+                                    if self.transfer_mode == 'OD':
+                                        self.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size] = \
+                                            source_model.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size]
+                                    else:
+                                        self.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size] = \
+                                            nn.Parameter(torch.from_numpy(np.transpose(rp.fit_transform(np.transpose(
+                                                source_model.encoder.layer[i].attention.output.dense.weight[:lower_hidden_size, j*attention_head_size:(j+1)*attention_head_size].cpu().numpy())))))
+                                else:
+                                    self.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size] = \
+                                            source_model.encoder.layer[i].attention.output.dense.weight[:, j*attention_head_size:(j+1)*attention_head_size]
+
+                                    assert self.encoder.layer[i].attention.output.dense.weight.shape[0] == lower_hidden_size
 
                         if self.config.hidden_dim_list[i] == source_config.hidden_dim_list[i]:
                             self.encoder.layer[i].attention.output.LayerNorm.load_state_dict(source_model.encoder.layer[i].attention.output.LayerNorm.state_dict())
