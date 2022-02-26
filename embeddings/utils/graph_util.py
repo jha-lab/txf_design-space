@@ -185,7 +185,7 @@ def hash_func(str, algo='md5'):
   return eval(f"hashlib.{algo}(str)")
 
 
-def hash_graph(matrix, ops, algo='md5'):
+def hash_graph(matrix, ops, algo='md5', model_dict=None):
 	"""Computes a graph-invariant hash of the matrix and ops pair.
 
 	Args:
@@ -193,6 +193,8 @@ def hash_graph(matrix, ops, algo='md5'):
 		ops: list operations of length equal to both dimensions of
 			matrix.
 		algo: hash algorithm among ["md5", "sha256", "sha512"]
+		model_dict (optional): the model dictionary; optional for backward
+			compatibility with FlexiBERT
 
 	Returns:
 		Hash of the matrix and ops based on algo.
@@ -219,6 +221,9 @@ def hash_graph(matrix, ops, algo='md5'):
 		hashes = new_hashes
 
 	fingerprint = hash_func(str(sorted(hashes)).encode('utf-8'), algo).hexdigest()
+
+	if model_dict is not None:
+		fingerprint = hash_func(str(fingerprint + str(model_dict['h']) + str(model_dict['f'])).encode('utf-8'), algo).hexdigest()
 
 	return fingerprint
 
