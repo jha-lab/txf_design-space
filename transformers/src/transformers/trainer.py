@@ -909,12 +909,15 @@ class Trainer:
         # Load potential model checkpoint
         if isinstance(resume_from_checkpoint, bool) and resume_from_checkpoint:
             resume_from_checkpoint = get_last_checkpoint(self.args.output_dir)
+            checkpoint_steps = int(resume_from_checkpoint.split('-')[-1])
             if resume_from_checkpoint is None:
                 raise ValueError(f"No valid checkpoint found in output directory ({self.args.output_dir})")
 
         if resume_from_checkpoint is not None:
             if not os.path.isfile(os.path.join(resume_from_checkpoint, WEIGHTS_NAME)):
                 raise ValueError(f"Can't find a valid checkpoint at {resume_from_checkpoint}")
+
+            checkpoint_steps = int(resume_from_checkpoint.split('-')[-1])
 
             logger.info(f"Loading model from {resume_from_checkpoint}).")
 
@@ -964,7 +967,7 @@ class Trainer:
         delay_optimizer_creation = self.sharded_ddp is not None and self.sharded_ddp != ShardedDDPOption.SIMPLE
         if self.args.deepspeed:
             deepspeed_engine, optimizer, lr_scheduler = deepspeed_init(
-                self, num_training_steps=max_steps, resume_from_checkpoint=resume_from_checkpoint
+                self, num_training_steps=(max_steps - checkpoint_steps), resume_from_checkpoint=resume_from_checkpoint
             )
             self.model = deepspeed_engine.module
             self.model_wrapped = deepspeed_engine
@@ -972,7 +975,7 @@ class Trainer:
             self.optimizer = optimizer
             self.lr_scheduler = lr_scheduler
         elif not delay_optimizer_creation:
-            self.create_optimizer_and_scheduler(num_training_steps=max_steps)
+            self.create_optimizer_and_scheduler(num_training_steps=(max_steps - checkpoint_steps))
 
         self.state = TrainerState()
         self.state.is_hyper_param_search = trial is not None
@@ -984,7 +987,7 @@ class Trainer:
             self.model_wrapped = model
 
         if delay_optimizer_creation:
-            self.create_optimizer_and_scheduler(num_training_steps=max_steps)
+            self.create_optimizer_and_scheduler(num_training_steps=(max_steps - checkpoint_steps))
 
         # Check if saved optimizer or scheduler states exist
         self._load_optimizer_and_scheduler(resume_from_checkpoint)
