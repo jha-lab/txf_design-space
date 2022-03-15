@@ -907,6 +907,7 @@ class Trainer:
             self.optimizer, self.lr_scheduler = None, None
 
         # Load potential model checkpoint
+        checkpoint_steps = 0
         if isinstance(resume_from_checkpoint, bool) and resume_from_checkpoint:
             resume_from_checkpoint = get_last_checkpoint(self.args.output_dir)
             checkpoint_steps = int(resume_from_checkpoint.split('-')[-1])
