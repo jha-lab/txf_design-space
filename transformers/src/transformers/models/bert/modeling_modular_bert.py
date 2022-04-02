@@ -439,28 +439,31 @@ class BertHeteroAttentionModular(nn.Module):
             past_key_value = (key_layer, value_layer)
 
         attention_scores_size = query_layer.size()[:-1] + (query_layer.size()[-2],)
-        attention_scores = torch.zeros(*attention_scores_size).to(device=hidden_states.device)
+        # attention_scores = torch.zeros(*attention_scores_size).to(device=hidden_states.device)
 
+        attention_scores_list = []
         wma_count = 0
         for attention_head in range(self.num_attention_heads):
             if self.attention_types[attention_head] == 'sa':
                 if self.sim_types[attention_head] == 'sdp':
                     # Take the dot product between "query" and "key" to get the raw attention scores.
-                    attention_scores[:, attention_head, :, :] = torch.matmul(query_layer[:, attention_head, :, :], 
-                        key_layer[:, attention_head, :, :].transpose(-1, -2))
+                    attention_scores_list.append(torch.matmul(query_layer[:, attention_head, :, :], 
+                        key_layer[:, attention_head, :, :].transpose(-1, -2)))
                 elif self.sim_types[attention_head] == 'wma':
                     # Take a weighted multiplicative addition between "query" and "key" vectors.
-                    attention_scores[:, attention_head, :, :] = torch.matmul(torch.matmul(query_layer[:, attention_head, :, :], getattr(self, f'W{wma_count}')), 
-                        key_layer[:, attention_head, :, :].transpose(-1, -2))
+                    attention_scores_list.append(torch.matmul(torch.matmul(query_layer[:, attention_head, :, :], getattr(self, f'W{wma_count}')), 
+                        key_layer[:, attention_head, :, :].transpose(-1, -2)))
                     wma_count += 1
             elif self.attention_types[attention_head] == 'l':
                 # Attention operation not used in linear-transform based attention head.
                 # Attention scores only used for relative encodings.
-                pass
+                attention_scores_list.append(torch.zeros(*[s for i, s in enumerate(attention_scores_size) if i != 1]).to(device=hidden_states.device))
             elif self.attention_types[attention_head] == 'c':
                 # Attention operation not used in convolution based attention head.
                 # Attention scores only used for relative encodings.
-                pass
+                attention_scores_list.append(torch.zeros(*[s for i, s in enumerate(attention_scores_size) if i != 1]).to(device=hidden_states.device))
+
+        attention_scores = torch.stack(attention_scores_list, 1)
 
         if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
 
