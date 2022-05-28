@@ -321,11 +321,11 @@ class TFBertHeteroAttentionModular(tf.keras.layers.Layer):
 
         assert config.from_model_dict_hetero is True, 'Heterogeneous attention only with model_dict_hetero'
 
-        if config.hidden_dim_list[layer_id] % len(config.attention_heads_list[layer_id]) != 0:
-            raise ValueError(
-                f"The hidden size ({config.hidden_size}) is not a multiple of the number "
-                f"of attention heads ({config.num_attention_heads})"
-            )
+        # if config.hidden_dim_list[layer_id] % len(config.attention_heads_list[layer_id]) != 0:
+        #     raise ValueError(
+        #         f"The hidden size ({config.hidden_size}) is not a multiple of the number "
+        #         f"of attention heads ({config.num_attention_heads})"
+        #     )
 
         self.num_attention_heads = len(config.attention_heads_list[layer_id])
         self.hidden_size = config.hidden_dim_list[layer_id]
