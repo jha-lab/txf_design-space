@@ -402,6 +402,7 @@ class BertHeteroAttentionModular(nn.Module):
         
         mixed_query_layer = self.query(hidden_states)
         batch_size = hidden_states.size(0)
+        max_seq_length = hidden_states.size(1)
 
         # If this is instantiated as a cross-attention module, the keys
         # and values come from an encoder; the attention mask needs to be
@@ -439,28 +440,31 @@ class BertHeteroAttentionModular(nn.Module):
             past_key_value = (key_layer, value_layer)
 
         attention_scores_size = query_layer.size()[:-1] + (query_layer.size()[-2],)
-        attention_scores = torch.zeros(*attention_scores_size).to(device=hidden_states.device)
+        # attention_scores = torch.zeros(*attention_scores_size).to(device=hidden_states.device)
 
+        attention_scores_list = []
         wma_count = 0
         for attention_head in range(self.num_attention_heads):
             if self.attention_types[attention_head] == 'sa':
                 if self.sim_types[attention_head] == 'sdp':
                     # Take the dot product between "query" and "key" to get the raw attention scores.
-                    attention_scores[:, attention_head, :, :] = torch.matmul(query_layer[:, attention_head, :, :], 
-                        key_layer[:, attention_head, :, :].transpose(-1, -2))
+                    attention_scores_list.append(torch.matmul(query_layer[:, attention_head, :, :], 
+                        key_layer[:, attention_head, :, :].transpose(-1, -2)))
                 elif self.sim_types[attention_head] == 'wma':
                     # Take a weighted multiplicative addition between "query" and "key" vectors.
-                    attention_scores[:, attention_head, :, :] = torch.matmul(torch.matmul(query_layer[:, attention_head, :, :], getattr(self, f'W{wma_count}')), 
-                        key_layer[:, attention_head, :, :].transpose(-1, -2))
+                    attention_scores_list.append(torch.matmul(torch.matmul(query_layer[:, attention_head, :, :], getattr(self, f'W{wma_count}')), 
+                        key_layer[:, attention_head, :, :].transpose(-1, -2)))
                     wma_count += 1
             elif self.attention_types[attention_head] == 'l':
                 # Attention operation not used in linear-transform based attention head.
                 # Attention scores only used for relative encodings.
-                pass
+                attention_scores_list.append(torch.zeros(*[s for i, s in enumerate(attention_scores_size) if i != 1]).to(device=hidden_states.device))
             elif self.attention_types[attention_head] == 'c':
                 # Attention operation not used in convolution based attention head.
                 # Attention scores only used for relative encodings.
-                pass
+                attention_scores_list.append(torch.zeros(*[s for i, s in enumerate(attention_scores_size) if i != 1]).to(device=hidden_states.device))
+
+        attention_scores = torch.stack(attention_scores_list, 1)
 
         if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
 
@@ -500,19 +504,20 @@ class BertHeteroAttentionModular(nn.Module):
         # print(f'context_layer.size(): {context_layer.size()}')
 
         conv_count = 0
+        context_layer_list = []
         for attention_head in range(self.num_attention_heads):
             if self.attention_types[attention_head] == 'sa':
-                pass
+                context_layer_list.append(torch.zeros(*[batch_size, max_seq_length, self.attention_head_size]))
             elif self.attention_types[attention_head] == 'l':
                 if self.sim_types[attention_head] == 'dft':
                     fft_output = fftn(value_layer[:, attention_head, :, :]).real
                     # Add fft to relative position embeddings
-                    context_layer[:, attention_head, :, :] += fft_output
+                    context_layer_list.append(context_layer[:, attention_head, :, :] + fft_output)
 
                 elif self.sim_types[attention_head] == 'dct':
                     dct_output = dct_2d(value_layer[:, attention_head, :, :])
                     # Add dct to relative position embeddings
-                    context_layer[:, attention_head, :, :] += dct_output
+                    context_layer_list.append(context_layer[:, attention_head, :, :] + dct_output)
             elif self.attention_types[attention_head] == 'c':
                 mixed_key_conv_attn_layer = getattr(self, f'key_conv_attn_layer{conv_count}')(
                     key_layer[:, attention_head, :, :].transpose(1, 2))
@@ -541,9 +546,10 @@ class BertHeteroAttentionModular(nn.Module):
                 conv_out = torch.reshape(conv_out_layer, [batch_size, -1, self.attention_head_size])
                 conv_count += 1
                 
-                context_layer[:, attention_head, :, :] += conv_out
+                context_layer_list.append(context_layer[:, attention_head, :, :] + conv_out)
 
 
+        context_layer = torch.stack(context_layer_list, 1)
         context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
         new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)

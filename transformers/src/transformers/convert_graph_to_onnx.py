@@ -180,7 +180,7 @@ def infer_shapes(nlp: Pipeline, framework: str) -> Tuple[List[str], List[str], D
 
         else:
             # Let's assume batch is the first axis with only 1 element (~~ might not be always true ...)
-            axes = {[axis for axis, numel in enumerate(tensor.shape) if numel == 1][0]: "batch"}
+            axes = {0: "batch"}
             if is_input:
                 if len(tensor.shape) == 2:
                     axes[1] = "sequence"
@@ -253,7 +253,7 @@ def load_graph_from_args(
     return pipeline(pipeline_name, model=model, tokenizer=tokenizer, framework=framework, model_kwargs=models_kwargs)
 
 
-def convert_pytorch(nlp: Pipeline, opset: int, output: Path, use_external_format: bool):
+def convert_pytorch(nlp: Pipeline, model, opset: int, output: Path, use_external_format: bool):
     """
     Export a PyTorch backed pipeline to ONNX Intermediate Representation (IR
 
@@ -275,11 +275,13 @@ def convert_pytorch(nlp: Pipeline, opset: int, output: Path, use_external_format
     print(f"Using framework PyTorch: {torch.__version__}")
 
     with torch.no_grad():
-        input_names, output_names, dynamic_axes, tokens = infer_shapes(nlp, "pt")
+        input_names, output_names, dynamic_axes, tokens = infer_shapes(nlp, "pt")        
         ordered_input_names, model_args = ensure_valid_input(nlp.model, tokens, input_names)
 
+        # print(tokens, model_args, ordered_input_names, output_names, dynamic_axes)
+
         export(
-            nlp.model,
+            model,
             model_args,
             f=output.as_posix(),
             input_names=ordered_input_names,
@@ -331,7 +333,7 @@ def convert_tensorflow(nlp: Pipeline, opset: int, output: Path):
 
 def convert(
     framework: str,
-    model: str,
+    model: Optional,
     output: Path,
     opset: int,
     tokenizer: Optional[str] = None,
@@ -358,7 +360,7 @@ def convert(
     print(f"ONNX opset version set to: {opset}")
 
     # Load the pipeline
-    nlp = load_graph_from_args(pipeline_name, framework, model, tokenizer, **model_kwargs)
+    nlp = load_graph_from_args(pipeline_name, framework, 'roberta-base', tokenizer, **model_kwargs)
 
     if not output.parent.exists():
         print(f"Creating folder {output.parent}")
@@ -368,7 +370,7 @@ def convert(
 
     # Export the graph
     if framework == "pt":
-        convert_pytorch(nlp, opset, output, use_external_format)
+        convert_pytorch(nlp, model, opset, output, use_external_format)
     else:
         convert_tensorflow(nlp, opset, output)
 
@@ -455,51 +457,46 @@ if __name__ == "__main__":
     # Make sure output is absolute path
     args.output = Path(args.output).absolute()
 
-    try:
-        print("\n====== Converting model to ONNX ======")
-        # Convert
-        convert(
-            args.framework,
-            args.model,
-            args.output,
-            args.opset,
-            args.tokenizer,
-            args.use_external_format,
-            args.pipeline,
-        )
+    print("\n====== Converting model to ONNX ======")
+    # Convert
+    convert(
+        args.framework,
+        args.model,
+        args.output,
+        args.opset,
+        args.tokenizer,
+        args.use_external_format,
+        args.pipeline,
+    )
 
-        if args.quantize:
-            # Ensure requirements for quantization on onnxruntime is met
-            check_onnxruntime_requirements(ORT_QUANTIZE_MINIMUM_VERSION)
+    if args.quantize:
+        # Ensure requirements for quantization on onnxruntime is met
+        check_onnxruntime_requirements(ORT_QUANTIZE_MINIMUM_VERSION)
 
-            # onnxruntime optimizations doesn't provide the same level of performances on TensorFlow than PyTorch
-            if args.framework == "tf":
-                print(
-                    "\t Using TensorFlow might not provide the same optimization level compared to PyTorch.\n"
-                    "\t For TensorFlow users you can try optimizing the model directly through onnxruntime_tools.\n"
-                    "\t For more information, please refer to the onnxruntime documentation:\n"
-                    "\t\thttps://github.com/microsoft/onnxruntime/tree/master/onnxruntime/python/tools/transformers\n"
-                )
+        # onnxruntime optimizations doesn't provide the same level of performances on TensorFlow than PyTorch
+        if args.framework == "tf":
+            print(
+                "\t Using TensorFlow might not provide the same optimization level compared to PyTorch.\n"
+                "\t For TensorFlow users you can try optimizing the model directly through onnxruntime_tools.\n"
+                "\t For more information, please refer to the onnxruntime documentation:\n"
+                "\t\thttps://github.com/microsoft/onnxruntime/tree/master/onnxruntime/python/tools/transformers\n"
+            )
 
-            print("\n====== Optimizing ONNX model ======")
+        print("\n====== Optimizing ONNX model ======")
 
-            # Quantization works best when using the optimized version of the model
-            args.optimized_output = optimize(args.output)
+        # Quantization works best when using the optimized version of the model
+        args.optimized_output = optimize(args.output)
 
-            # Do the quantization on the right graph
-            args.quantized_output = quantize(args.optimized_output)
+        # Do the quantization on the right graph
+        args.quantized_output = quantize(args.optimized_output)
 
-        # And verify
-        if args.check_loading:
-            print("\n====== Check exported ONNX model(s) ======")
-            verify(args.output)
+    # And verify
+    if args.check_loading:
+        print("\n====== Check exported ONNX model(s) ======")
+        verify(args.output)
 
-            if hasattr(args, "optimized_output"):
-                verify(args.optimized_output)
+        if hasattr(args, "optimized_output"):
+            verify(args.optimized_output)
 
-            if hasattr(args, "quantized_output"):
-                verify(args.quantized_output)
-
-    except Exception as e:
-        print(f"Error while converting the model: {e}")
-        exit(1)
+        if hasattr(args, "quantized_output"):
+            verify(args.quantized_output)
