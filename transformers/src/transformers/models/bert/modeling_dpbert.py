@@ -92,9 +92,9 @@ BERT_PRETRAINED_MODEL_ARCHIVE_LIST = [
 
 
 def prune(weight_matrix, pruning_threshold, json_file, parameter=False):
-    condition = torch.logical_or(weight_matrix < -1.0 * pruning_threshold, weight_matrix > pruning_threshold)
-
-    weight_matrix = torch.where(condition, weight_matrix, torch.zeros_like(weight_matrix, device=weight_matrix.device))
+    if pruning_threshold > 0:
+        condition = torch.logical_or(weight_matrix < -1.0 * pruning_threshold, weight_matrix > pruning_threshold)
+        weight_matrix = torch.where(condition, weight_matrix, torch.zeros_like(weight_matrix, device=weight_matrix.device))
 
     if os.path.exists(json_file):
         sparsity = json.load(open(json_file))
@@ -102,6 +102,20 @@ def prune(weight_matrix, pruning_threshold, json_file, parameter=False):
         sparsity = []
     sparsity.append([int(weight_matrix.numel() - torch.count_nonzero(weight_matrix)), int(weight_matrix.numel())])
     json.dump(sparsity, open(json_file, 'w+'))
+
+    if parameter: return nn.Parameter(weight_matrix, requires_grad=True)
+    return weight_matrix
+
+
+def top_k(weight_matrix, k, parameter=False):
+    if k == weight_matrix.shape[3]: return weight_matrix
+
+    for batch in range(weight_matrix.shape[0]):
+        for head in range(weight_matrix.shape[1]):
+            for row in range(weight_matrix.shape[2]):
+                weight_row = weight_matrix[batch, head, row, :]
+                top_k = torch.topk(weight_row, int(k))
+                weight_matrix[batch, head, row, :] = torch.where(weight_row > top_k.values[-1], weight_row, torch.zeros_like(weight_row, device=weight_matrix.device))
 
     if parameter: return nn.Parameter(weight_matrix, requires_grad=True)
     return weight_matrix
@@ -255,6 +269,7 @@ class BertSelfAttention(nn.Module):
 
         try:
             self.pruning_threshold = config.pruning_threshold
+            self.k = config.k
             self.sparsity_file = config.sparsity_file
         except:
             pass
@@ -349,6 +364,8 @@ class BertSelfAttention(nn.Module):
         # Normalize the attention scores to probabilities.
         attention_probs = nn.Softmax(dim=-1)(attention_scores)
 
+        attention_probs = top_k(attention_probs, self.k)
+
         attention_probs = prune(attention_probs, self.pruning_threshold, self.sparsity_file)
 
         # This is actually dropping out entire tokens to attend to, which might
@@ -383,6 +400,7 @@ class BertSelfOutput(nn.Module):
 
         try:
             self.pruning_threshold = config.pruning_threshold
+            self.k = config.k
             self.sparsity_file = config.sparsity_file
         except:
             pass
@@ -461,6 +479,7 @@ class BertIntermediate(nn.Module):
 
         try:
             self.pruning_threshold = config.pruning_threshold
+            self.k = config.k
             self.sparsity_file = config.sparsity_file
         except:
             pass
@@ -483,6 +502,7 @@ class BertOutput(nn.Module):
 
         try:
             self.pruning_threshold = config.pruning_threshold
+            self.k = config.k
             self.sparsity_file = config.sparsity_file
         except:
             pass
@@ -513,6 +533,7 @@ class BertLayer(nn.Module):
 
         try:
             self.pruning_threshold = config.pruning_threshold
+            self.k = config.k
             self.sparsity_file = config.sparsity_file
         except:
             pass
@@ -599,6 +620,7 @@ class BertEncoder(nn.Module):
 
         try:
             self.pruning_threshold = config.pruning_threshold
+            self.k = config.k
             self.sparsity_file = config.sparsity_file
         except:
             pass
@@ -706,6 +728,7 @@ class BertPooler(nn.Module):
 
         try:
             self.pruning_threshold = config.pruning_threshold
+            self.k = config.k
             self.sparsity_file = config.sparsity_file
         except:
             pass
@@ -951,6 +974,7 @@ class DPBertModel(BertPreTrainedModel):
         self.init_weights()
         try:
             self.pruning_threshold = config.pruning_threshold
+            self.k = config.k
             self.sparsity_file = config.sparsity_file
         except:
             pass
@@ -1580,6 +1604,7 @@ class DPBertForSequenceClassification(BertPreTrainedModel):
         self.init_weights()
         try:
             self.pruning_threshold = config.pruning_threshold
+            self.k = config.k
             self.sparsity_file = config.sparsity_file
         except:
             pass
