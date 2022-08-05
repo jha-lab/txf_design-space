@@ -96,12 +96,13 @@ def prune(weight_matrix, pruning_threshold, json_file, parameter=False):
         condition = torch.logical_or(weight_matrix < -1.0 * pruning_threshold, weight_matrix > pruning_threshold)
         weight_matrix = torch.where(condition, weight_matrix, torch.zeros_like(weight_matrix, device=weight_matrix.device))
 
-    if os.path.exists(json_file):
-        sparsity = json.load(open(json_file))
-    else:
-        sparsity = []
-    sparsity.append([int(weight_matrix.numel() - torch.count_nonzero(weight_matrix)), int(weight_matrix.numel())])
-    json.dump(sparsity, open(json_file, 'w+'))
+    if json_file is not None:
+        if os.path.exists(json_file):
+            sparsity = json.load(open(json_file))
+        else:
+            sparsity = []
+        sparsity.append([int(weight_matrix.numel() - torch.count_nonzero(weight_matrix)), int(weight_matrix.numel())])
+        json.dump(sparsity, open(json_file, 'w+'))
 
     if parameter: return nn.Parameter(weight_matrix, requires_grad=True)
     return weight_matrix
@@ -1881,6 +1882,16 @@ class DPBertForQuestionAnswering(BertPreTrainedModel):
         self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         self.init_weights()
+        try:
+            self.pruning_threshold = config.pruning_threshold
+            self.k = config.k
+            self.sparsity_file = config.sparsity_file
+        except:
+            pass
+
+    def prune_weights(self):
+        self.bert.prune_weights()
+        self.qa_outputs.weight = prune(self.qa_outputs.weight, self.pruning_threshold, self.sparsity_file, parameter=True)
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @add_code_sample_docstrings(
