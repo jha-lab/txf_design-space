@@ -507,7 +507,7 @@ class BertHeteroAttentionModular(nn.Module):
         context_layer_list = []
         for attention_head in range(self.num_attention_heads):
             if self.attention_types[attention_head] == 'sa':
-                context_layer_list.append(torch.zeros(*[batch_size, max_seq_length, self.attention_head_size]))
+                context_layer_list.append(torch.zeros(*[batch_size, max_seq_length, self.attention_head_size]).to(device=hidden_states.device))
             elif self.attention_types[attention_head] == 'l':
                 if self.sim_types[attention_head] == 'dft':
                     fft_output = fftn(value_layer[:, attention_head, :, :]).real
@@ -2303,6 +2303,8 @@ class BertForMaskedLMModular(BertPreTrainedModel):
             total_weights += torch.prod(torch.tensor(value.shape))
             if debug:
                 if not_transferred_weights != 0: print(f'Model key: {key} is not transferred (or has {not_transferred_weights} same weights)')
+                else:
+                    print(f'Model key: {key} is transferred successfully!')
 
         # Return weight transfer ratio
         return (1 - not_transferred_weights_sum/total_weights)
