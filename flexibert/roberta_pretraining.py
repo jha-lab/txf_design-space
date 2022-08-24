@@ -286,7 +286,6 @@ def pretrain(args, model_dict):
     else:
         config.from_model_dict_hetero(model_dict)
 
-    model = BertForMaskedLMModular(config)
     '''
     tokenizer_kwargs = {
         "cache_dir": model_args.cache_dir,
@@ -305,9 +304,10 @@ def pretrain(args, model_dict):
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
     '''
-    '''
+    
     if model_args.model_name_or_path:
-        model = AutoModelForMaskedLM.from_pretrained(
+        logger.info(f"Loaded model from {model_args.model_name_or_path}")
+        model = BertForMaskedLMModular.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
@@ -317,8 +317,8 @@ def pretrain(args, model_dict):
         )
     else:
         logger.info("Training new model from scratch")
-        model = BertForMaskedLM.from_config(config)
-    '''
+        model = BertForMaskedLMModular(config)
+    
 
     model.resize_token_embeddings(len(tokenizer))
     
