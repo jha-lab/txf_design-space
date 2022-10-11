@@ -46,7 +46,7 @@ if is_tf_available():
     import tensorflow as tf
 
 
-def dynaprop_prune(parameters, min_norm: float, json_file=None: str):
+def dynaprop_prune(parameters, min_norm: float, json_file=None):
     if isinstance(parameters, torch.Tensor):
         parameters = [parameters]
     
