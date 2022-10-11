@@ -302,6 +302,15 @@ class TrainingArguments:
 
     """
 
+    dynaprop_min_norm: float = field(
+        default=None,
+        metadata={"help": "Minimum norm of gradients to prune while employing DynaProp."},
+    )
+    dynaprop_json_file: str = field(
+        default=None,
+        metadata={"help": "Path to the JSON file for storing sparsity results when using DynaProp."},
+    )
+
     output_dir: str = field(
         metadata={"help": "The output directory where the model predictions and checkpoints will be written."},
     )
