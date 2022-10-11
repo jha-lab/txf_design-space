@@ -302,15 +302,6 @@ class TrainingArguments:
 
     """
 
-    dynaprop_min_norm: float = field(
-        default=None,
-        metadata={"help": "Minimum norm of gradients to prune while employing DynaProp."},
-    )
-    dynaprop_json_file: str = field(
-        default=None,
-        metadata={"help": "Path to the JSON file for storing sparsity results when using DynaProp."},
-    )
-
     output_dir: str = field(
         metadata={"help": "The output directory where the model predictions and checkpoints will be written."},
     )
@@ -537,6 +528,15 @@ class TrainingArguments:
     mp_parameters: str = field(
         default="",
         metadata={"help": "Used by the SageMaker launcher to send mp-specific args. Ignored in Trainer"},
+    )
+
+    dynaprop_min_norm: float = field(
+        default=None,
+        metadata={"help": "Minimum norm of gradients to prune while employing DynaProp."},
+    )
+    dynaprop_json_file: str = field(
+        default=None,
+        metadata={"help": "Path to the JSON file for storing sparsity results when using DynaProp."},
     )
 
     def __post_init__(self):
