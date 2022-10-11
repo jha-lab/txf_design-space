@@ -46,6 +46,25 @@ if is_tf_available():
     import tensorflow as tf
 
 
+def dynaprop_prune(parameters, min_norm: float, json_file=None: str):
+    if isinstance(parameters, torch.Tensor):
+        parameters = [parameters]
+    
+    min_norm = float(min_norm)
+
+    for p in filter(lambda p: p.grad is not None, parameters):
+        condition = torch.logical_or(p.grad.data < -1.0 * min_norm, p.grid.data > min_norm)
+        p.grid.data = torch.where(condition, p.grid.data, torch.zeros_like(p.grid.data, device=p.grid.data.device))
+
+        if json_file is not None:
+            if os.path.exists(json_file):
+                sparsity = json.load(open(json_file))
+            else:
+                sparsity = []
+            sparsity.append([int(p.grid.data.numel() - torch.count_nonzero(p.grid.data)), int(p.grid.data.numel())])
+            json.dump(sparsity, open(json_file, 'w+'))
+
+
 def set_seed(seed: int):
     """
     Helper function for reproducible behavior to set the seed in ``random``, ``numpy``, ``torch`` and/or ``tf`` (if
