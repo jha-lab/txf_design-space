@@ -108,6 +108,7 @@ from .trainer_utils import (
     get_last_checkpoint,
     set_seed,
     speed_metrics,
+    dynaprop_prune
 )
 from .training_args import ParallelMode, TrainingArguments
 from .utils import logging
@@ -1151,6 +1152,11 @@ class Trainer:
                                 amp.master_params(self.optimizer) if self.use_apex else model.parameters(),
                                 self.args.max_grad_norm,
                             )
+
+                    # Implement DynaProp
+                    if self.args.dynaprop_min_norm is not None and self.args.dynaprop_min_norm > 0 and not self.deepspeed:
+                        # Implement pruning of gradients
+                        dynaprop_prune(model.parameters(), self.args.dynaprop_min_norm, self.args.dynaprop_json_file)
 
                     # Optimizer step
                     optimizer_was_run = True
