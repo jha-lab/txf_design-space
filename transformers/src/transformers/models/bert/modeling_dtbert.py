@@ -109,7 +109,7 @@ def dynatran_prune(weight_matrix, pruning_threshold, json_file, parameter=False)
 
 
 def top_k(weight_matrix, k, parameter=False):
-    if k == weight_matrix.shape[3]: return weight_matrix
+    if k >= weight_matrix.shape[3]: return weight_matrix
 
     for batch in range(weight_matrix.shape[0]):
         for head in range(weight_matrix.shape[1]):
