@@ -1078,6 +1078,7 @@ class Trainer:
                 for _ in train_dataloader:
                     break
 
+        sparsity = []
         for epoch in range(epochs_trained, num_train_epochs):
             if isinstance(train_dataloader, DataLoader) and isinstance(train_dataloader.sampler, DistributedSampler):
                 train_dataloader.sampler.set_epoch(epoch)
@@ -1156,7 +1157,7 @@ class Trainer:
                     # Implement DynaProp
                     if self.args.dynaprop_min_norm is not None and self.args.dynaprop_min_norm > 0 and not self.deepspeed:
                         # Implement pruning of gradients
-                        dynaprop_prune(model.parameters(), self.args.dynaprop_min_norm, self.args.dynaprop_json_file)
+                        sparsity = dynaprop_prune(model.parameters(), self.args.dynaprop_min_norm, sparsity)
 
                     # Optimizer step
                     optimizer_was_run = True
@@ -1200,6 +1201,9 @@ class Trainer:
                     )
             if self.control.should_training_stop:
                 break
+
+        if self.args.dynaprop_json_file is not None:
+            json.dump(sparsity, open(self.args.dynaprop_json_file, 'w+'))
 
         if self.args.past_index and hasattr(self, "_past"):
             # Clean the state at the end of training
