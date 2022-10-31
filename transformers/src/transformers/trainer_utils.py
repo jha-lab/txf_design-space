@@ -24,6 +24,7 @@ import random
 import re
 import threading
 import time
+import json
 from typing import Any, Dict, NamedTuple, Optional, Tuple, Union
 
 import numpy as np
@@ -46,23 +47,19 @@ if is_tf_available():
     import tensorflow as tf
 
 
-def dynaprop_prune(parameters, min_norm: float, json_file=None):
+def dynaprop_prune(parameters, min_norm: float, sparsity=[]):
     if isinstance(parameters, torch.Tensor):
         parameters = [parameters]
     
     min_norm = float(min_norm)
 
     for p in filter(lambda p: p.grad is not None, parameters):
-        condition = torch.logical_or(p.grad.data < -1.0 * min_norm, p.grid.data > min_norm)
-        p.grid.data = torch.where(condition, p.grid.data, torch.zeros_like(p.grid.data, device=p.grid.data.device))
+        condition = torch.logical_or(p.grad.data < -1.0 * min_norm, p.grad.data > min_norm)
+        p.grad.data = torch.where(condition, p.grad.data, torch.zeros_like(p.grad.data, device=p.grad.data.device))
 
-        if json_file is not None:
-            if os.path.exists(json_file):
-                sparsity = json.load(open(json_file))
-            else:
-                sparsity = []
-            sparsity.append([int(p.grid.data.numel() - torch.count_nonzero(p.grid.data)), int(p.grid.data.numel())])
-            json.dump(sparsity, open(json_file, 'w+'))
+        sparsity.append([int(p.grad.data.numel() - torch.count_nonzero(p.grad.data)), int(p.grad.data.numel())])
+
+    return sparsity
 
 
 def set_seed(seed: int):
