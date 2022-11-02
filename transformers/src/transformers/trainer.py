@@ -113,6 +113,7 @@ from .trainer_utils import (
 from .training_args import ParallelMode, TrainingArguments
 from .utils import logging
 from .utils.modeling_auto_mapping import MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES
+import json
 
 
 _is_native_amp_available = False
