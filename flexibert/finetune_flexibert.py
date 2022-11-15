@@ -50,6 +50,9 @@ from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
 
 
+GLUE_TASKS = ['cola', 'mnli', 'mrpc', 'qnli', 'qqp', 'rte', 'sst2', 'stsb', 'wnli']
+SUPERGLUE_TASKS = ['boolq', 'cb', 'copa', 'multirc', 'record', 'rte', 'wic', 'wsc.fixed']
+
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.6.0.dev0")
 
@@ -137,8 +140,8 @@ class DataTrainingArguments:
     def __post_init__(self):
         if self.task_name is not None:
             self.task_name = self.task_name.lower()
-            if self.task_name not in task_to_keys.keys():
-                raise ValueError("Unknown task, you should pick one in " + ",".join(task_to_keys.keys()))
+            if self.task_name not in GLUE_TASKS + SUPERGLUE_TASKS:
+                raise ValueError("Unknown task, you should pick one in " + ",".join(GLUE_TASKS + SUPERGLUE_TASKS))
         elif self.train_file is None or self.validation_file is None:
             raise ValueError("Need either a GLUE task or a training/validation file.")
         else:
@@ -251,7 +254,12 @@ def finetune(args):
     
     if data_args.task_name is not None:
         # Downloading and loading a dataset from the hub.
-        datasets = load_dataset("glue", data_args.task_name)
+        if data_args.task_name in GLUE_TASKS:
+            datasets = load_dataset("glue", data_args.task_name)
+        else:
+            datasets = load_dataset('../datasets/datasets/super_glue/super_glue.py', data_args.task_name)
+            if data_args.task_name == 'record':
+                datasets.rename_column_('answers', 'label')
     else:
         # Loading a dataset from your local files.
         # CSV/JSON training and evaluation files are needed.
@@ -329,18 +337,21 @@ def finetune(args):
     model = model_return()
 
     # Preprocessing the datasets
-    if data_args.task_name is not None:
-        sentence1_key, sentence2_key = task_to_keys[data_args.task_name]
+    if data_args.task_name in GLUE_TASKS + SUPERGLUE_TASKS: 
+        sentence_keys = datasets["train"].column_names
+        sentence_keys.remove('idx'); sentence_keys.remove('label')
+        if data_args.task_name == 'wic':
+            sentence_keys.remove('start1'); sentence_keys.remove('start2'); sentence_keys.remove('end1'); sentence_keys.remove('end2')
     else:
         # Again, we try to have some nice defaults but don't hesitate to tweak to your use case.
         non_label_column_names = [name for name in datasets["train"].column_names if name != "label"]
         if "sentence1" in non_label_column_names and "sentence2" in non_label_column_names:
-            sentence1_key, sentence2_key = "sentence1", "sentence2"
+            sentence_keys = "sentence1", "sentence2"
         else:
             if len(non_label_column_names) >= 2:
-                sentence1_key, sentence2_key = non_label_column_names[:2]
+                sentence_keys = non_label_column_names[:2]
             else:
-                sentence1_key, sentence2_key = non_label_column_names[0], None
+                sentence_keys = non_label_column_names[0], None
 
     # Padding strategy
     if data_args.pad_to_max_length:
@@ -375,12 +386,23 @@ def finetune(args):
             f"model ({tokenizer.model_max_length}). Using max_seq_length={tokenizer.model_max_length}."
         )
     max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
-    '''
+    
     def preprocess_function(examples):
         # Tokenize the texts
-        args = (
-            (examples[sentence1_key],) if sentence2_key is None else (examples[sentence1_key], examples[sentence2_key])
-        )
+        examples_list, examples1, examples2 = [], ['' for _ in range(len(examples['label']))], []
+        for s, sentence_key in enumerate(sentence_keys):
+            if s < len(sentence_keys) - 1:
+                for i, example in enumerate(examples[sentence_key]):
+                    if examples1[i] == '':
+                        examples1[i] = str(example)
+                    else:
+                        examples1[i] = examples1[i] + ' [SEP] ' + str(example)
+            else:
+                examples2 = examples[sentence_key]
+        if len(sentence_keys) == 1:
+            args = ((examples2))
+        else:
+            args = ((examples1, examples2))
         result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
 
         # Map labels to IDs (not necessary for GLUE tasks)
@@ -389,8 +411,9 @@ def finetune(args):
         return result
 
     datasets = datasets.map(preprocess_function, batched=True, load_from_cache_file=not data_args.overwrite_cache)
-    '''
-    datasets = load_from_disk(f'../GLUE_data/{data_args.task_name}') 
+    
+    # datasets = load_from_disk(f'../GLUE_data/{data_args.task_name}') 
+
     if training_args.do_train:
         if "train" not in datasets:
             raise ValueError("--do_train requires a train dataset")
@@ -419,7 +442,17 @@ def finetune(args):
 
     # Get the metric function
     if data_args.task_name is not None:
-        metric = load_metric("glue", data_args.task_name)
+        if data_args.task_name in GLUE_TASKS:
+            metric = load_metric("glue", data_args.task_name)
+        else:
+            if data_args.task_name == 'axb':
+                metric = load_metric('mathews_correlation')
+            elif data_args.task_name in ['multirc', 'record', 'wsc.fixed']:
+                metric = load_metric('glue', 'mrpc')
+            elif data_args.task_name == 'cb':
+                metric = load_metric('f1')
+            else:
+                metric = load_metric('accuracy')
     # TODO: When datasets metrics include regular accuracy, make an else here and remove special branch from
     # compute_metrics
 
@@ -429,7 +462,11 @@ def finetune(args):
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
         preds = np.squeeze(preds) if is_regression else np.argmax(preds, axis=1)
         if data_args.task_name is not None:
-            result = metric.compute(predictions=preds, references=p.label_ids)
+            if data_args.task_name == 'cb':
+                result = metric.compute(predictions=preds, references=p.label_ids, average='macro')
+            else:
+                result = metric.compute(predictions=preds, references=p.label_ids)
+            
             if len(result) > 1:
                 result["combined_score"] = np.mean(list(result.values())).item()
             return result
@@ -460,7 +497,7 @@ def finetune(args):
     def my_hp_space(trial):
         return {
             "learning_rate": trial.suggest_float("learning_rate", 2e-5, 5e-4, log=True),
-            "per_device_train_batch_size": trial.suggest_categorical("per_device_train_batch_size", [16, 32, 64])
+            "per_device_train_batch_size": trial.suggest_categorical("per_device_train_batch_size", [32, 64, 128]) # gradient_accumulation_steps is set to 4
         }
 
     # Training
