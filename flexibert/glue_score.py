@@ -37,15 +37,14 @@ def get_training_args(models_dir, task, id, model_hash, autotune, autotune_trial
 		--autotune_trials {autotune_trials} \
 		--logging_steps 50 \
 		--max_seq_length 512 \
-		--per_device_train_batch_size 16 \
-		--gradient_accumulation_steps 4 \
+		--per_device_train_batch_size 64 \
 		--load_best_model_at_end \
 		--metric_for_best_model eval_loss \
 		--learning_rate 2e-5 \
 		--weight_decay 0.01 \
 		--num_train_epochs 5 \
 		--overwrite_output_dir \
-		--output_dir {models_dir}/glue/{task}/{model_hash}/'
+		--output_dir {models_dir}/glue/{model_hash}/{task}/'
 
 	training_args = shlex.split(training_args)
 
