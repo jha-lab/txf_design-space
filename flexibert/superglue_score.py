@@ -81,6 +81,8 @@ def main():
 	parser.set_defaults(autotune=False)
 
 	args = parser.parse_args()
+
+	os.makedirs(f'{args.models_dir}/superglue/{args.model_hash}', exist_ok=True)
 	
 	superglue_scores = {}
 	score = 0
