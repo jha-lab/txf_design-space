@@ -84,6 +84,8 @@ def main():
 	glue_scores = {}
 	score = 0
 
+	os.makedirs(f'{args.models_dir}/glue/{args.model_hash}', exist_ok=True)
+
 	for task in GLUE_TASKS:
 
 		autotune = args.autotune # and not (task=='qqp' or task == 'qnli')
