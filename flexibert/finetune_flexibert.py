@@ -400,7 +400,7 @@ def finetune(args):
             else:
                 examples2 = examples[sentence_key]
         if len(sentence_keys) == 1:
-            args = ((examples2))
+            args = ((examples2,))
         else:
             args = ((examples1, examples2))
         result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
