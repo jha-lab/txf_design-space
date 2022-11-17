@@ -32,7 +32,7 @@ main_dir = os.path.abspath(os.path.dirname(__file__)).split('flexibert')[0]
 import numpy as np
 from datasets import load_dataset, load_metric
 from transformers.models.bert.modeling_modular_bert import BertModelModular, BertForSequenceClassificationModular
-from transformers import BertTokenizer, BertConfig
+from transformers import BertTokenizer, BertConfig, BertModel, BertForSequenceClassification
 from datasets import load_from_disk
 import transformers
 from transformers import (
@@ -323,13 +323,19 @@ def finetune(args):
         use_auth_token=True if model_args.use_auth_token else None,
     )
     tokenizer = BertTokenizer.from_pretrained(main_dir+'tokenizer/')
-    bertmodel = BertModelModular.from_pretrained(model_args.model_name_or_path)
+    try:
+        bertmodel = BertModelModular.from_pretrained(model_args.model_name_or_path)
+    except:
+        bertmodel = BertModel.from_pretrained(model_args.model_name_or_path)
     classifier_config = BertConfig.from_pretrained(model_args.model_name_or_path,num_labels=num_labels)
     #bertmodel.config.num_labels = num_labels 
 
     def model_return():
 
-        model = BertForSequenceClassificationModular(classifier_config)
+        try:
+            model = BertForSequenceClassificationModular(classifier_config)
+        except:
+            model = BertForSequenceClassification(classifier_config)
         model.bert.load_state_dict(bertmodel.state_dict())
 
         return model
