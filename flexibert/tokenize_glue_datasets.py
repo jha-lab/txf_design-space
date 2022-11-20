@@ -17,7 +17,7 @@ main_dir = os.path.abspath(os.path.dirname(__file__)).split('flexibert')[0]
 
 import numpy as np
 from datasets import load_dataset, load_metric
-from transformers.models.bert.modeling_modular_bert import BertModelModular, BertForSequenceClassificationModular
+from transformers.models.flexibert.modeling_flexibert import FlexiBERTModel, FlexiBERTForSequenceClassification
 from transformers import BertTokenizer, BertConfig
 import transformers
 from transformers import (
