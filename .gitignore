@@ -6,7 +6,7 @@
 **temp.json
 flexibert/tests/
 flexibert/figures/
-models/
+./models/
 GLUE_data/
 tokenized_pretraining_dataset/
 tokenized_pretraining_dataset_new/
