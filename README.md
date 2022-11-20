@@ -8,11 +8,14 @@ FlexiBERT is a tool which can be used to generate and evaluate different Transfo
 This repository has been forked from [huggingface/transformers](https://github.com/huggingface/transformers) and then expanded to incorporate more heterogenous Transformer architectures.
 
 ## Table of Contents
-- [Environment Setup](#environment-setup)
+- [Environment setup](#environment-setup)
   - [Clone this repository and initialize sub-modules](#clone-this-repository-and-initialize-sub-modules)
   - [Setup python environment](#setup-python-environment)
 - [Replicating results](#replicating-results)
 - [Pre-trained models](#pre-trained-models)
+- [Developer](#developer)
+- [Cite this work](#cite-this-work)
+- [License](#license)
 
 ## Environment setup
 
@@ -122,3 +125,29 @@ bert_tiny.load_model_from_source(flexibert_mini)
 ```
 
 We will be adding more pre-trained models so stay tuned!
+
+## Developer
+
+[Shikhar Tuli](https://github.com/shikhartuli). For any questions, comments or suggestions, please reach me at [stuli@princeton.edu](mailto:stuli@princeton.edu).
+
+## Cite this work
+
+Cite our work using the following bitex entry:
+```
+@article{tuli2022jair,
+      title={{FlexiBERT}: Are Current Transformer Architectures too Homogeneous and Rigid?}, 
+      author={Tuli, Shikhar and Dedhia, Bhishma and Tuli, Shreshth and Jha, Niraj K.},
+      year={2022},
+      eprint={2205.11656},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+```
+
+## License
+
+BSD-3-Clause. 
+Copyright (c) 2022, Shikhar Tuli and Jha Lab.
+All rights reserved.
+
+See License file for more details.
