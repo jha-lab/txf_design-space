@@ -24,13 +24,12 @@ SUPERGLUE_TASKS = ['boolq', 'cb', 'copa', 'multirc', 'wic', 'wsc.fixed']
 SUPERGLUE_TASKS_DATASET = ['BoolQ', 'CB', 'COPA', 'MultiRC', 'WiC', 'WSC']
 
 
-def get_training_args(models_dir, task, id, model_hash, autotune, autotune_trials):
+def get_training_args(models_dir, task, model_hash, autotune, autotune_trials):
 
 	model_name_or_path = f'{models_dir}pretrained/{model_hash}'
 
 	training_args = f'--model_name_or_path {model_name_or_path} \
 		--task_name {task} \
-		--id {id} \
 		--do_train \
 		--do_eval \
 		{"--autotune" if autotune else ""} \
@@ -65,11 +64,6 @@ def main():
 		metavar='',
 		type=str,
 		help='hash of the given model')
-	parser.add_argument('--id',
-		metavar='',
-		type=str,
-		help='PU Net ID',
-		default='stuli')
 	parser.add_argument('--autotune',
 		dest='autotune',
 		action='store_true')
@@ -91,7 +85,7 @@ def main():
 
 		print(f'Running task: {task}')
 		autotune = args.autotune
-		training_args = get_training_args(args.models_dir, task, args.id, args.model_hash, autotune, args.autotune_trials)
+		training_args = get_training_args(args.models_dir, task, args.model_hash, autotune, args.autotune_trials)
 		metrics = finetune(training_args)
 
 		if task == 'axb':
