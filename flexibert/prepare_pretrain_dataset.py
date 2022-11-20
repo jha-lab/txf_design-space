@@ -15,7 +15,7 @@ from typing import Optional
 main_dir = os.path.abspath(os.path.dirname(__file__)).split('flexibert')[0]
 
 from datasets import load_dataset, interleave_datasets
-from transformers.models.bert.modeling_modular_bert import BertModelModular, BertForMaskedLMModular
+from transformers.models.flexibert.modeling_flexibert import FlexiBERTModel, FlexiBERTForMaskedLM
 from transformers import RobertaTokenizer, BertConfig
 
 import transformers
