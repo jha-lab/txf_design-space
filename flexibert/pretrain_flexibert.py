@@ -12,6 +12,8 @@ from library import Graph, GraphLib
 from utils import graph_util
 import argparse
 
+from matplotlib import pyplot as plt
+
 import logging
 #logging.disable(logging.INFO)
 #logging.disable(logging.WARNING)
@@ -23,8 +25,9 @@ def get_training_args(seed, output_dir, local_rank):
 	--do_train \
 	--do_eval \
 	--max_seq_length 512 \
-	--per_gpu_train_batch_size 64 \
-	--max_steps 1000000 \
+	--per_gpu_train_batch_size 16 \
+	--gradient_accumulation_steps 4 \
+	--max_steps 100000 \
 	--adam_epsilon 1e-6 \
 	--adam_beta2 0.98 \
 	--learning_rate 1e-4 \
@@ -33,7 +36,6 @@ def get_training_args(seed, output_dir, local_rank):
 	--warmup_steps 10000 \
 	--lr_scheduler_type linear \
 	--output_dir {} \
-    --overwrite_output_dir \
     --local_rank {} \
         ".format(seed, output_dir, local_rank)
 
@@ -127,6 +129,11 @@ def test(args):
 
 	if args.model_name.endswith('hetero'):
 		metrics, log_history, model = pretrain(args_train, model_dict)
+
+		plt.plot([state['step'] for state in log_history[:-1]], [state['loss'] for state in log_history[:-1]])
+		plt.xlabel('Training steps')
+		plt.ylabel('Loss')
+		plt.savefig(os.path.join(output_dir, 'loss.pdf'))
 	else:
 		metrics = pretrain(args_train, model_dict)
 
