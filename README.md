@@ -9,7 +9,7 @@ This repository has been forked from [huggingface/transformers](https://github.c
 
 ## Table of Contents
 - [Environment Setup](#environment-setup)
-  - [Clone this repository](#clone-this-repository-and-initialize-sub-modules)
+  - [Clone this repository and initialize sub-modules](#clone-this-repository-and-initialize-sub-modules)
   - [Setup python environment](#setup-python-environment)
 - [Replicating results](#replicating-results)
 - [Pre-trained models](#pre-trained-models)
