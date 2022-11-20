@@ -133,7 +133,7 @@ def worker(model_dict: dict,
 	return slurm_stdout.split()[-1], pretrain
 
 
-def get_job_info(job_id: int):
+def get_job_info(job_id: int, cluster_name: str):
 	"""Obtain job info
 	
 	Args:
@@ -142,7 +142,8 @@ def get_job_info(job_id: int):
 	Returns:
 		start_time, elapsed_time, status (str, str, str): job details
 	"""
-	slurm_stdout = subprocess.check_output(f'ssh della-gpu "slist {job_id}"', shell=True, text=True)
+	# Make sure "slist" command is accessible
+	slurm_stdout = subprocess.check_output(f'ssh {cluster_name} "slist {job_id}"', shell=True, text=True)
 	slurm_stdout = slurm_stdout.split('\n')[2].split()
 
 	if len(slurm_stdout) > 7:
@@ -154,7 +155,7 @@ def get_job_info(job_id: int):
 	return start_time, elapsed_time, status
 
 
-def print_jobs(model_jobs: list):
+def print_jobs(model_jobs: list, cluster_name: str):
 	"""Print summary of all completed, pending and running jobs
 	
 	Args:
@@ -164,14 +165,14 @@ def print_jobs(model_jobs: list):
 
 	rows = []
 	for job in model_jobs:
-		start_time, elapsed_time, status = get_job_info(job['job_id'])
+		start_time, elapsed_time, status = get_job_info(job['job_id'], cluster_name)
 		rows.append([job['model_hash'], job['job_id'], job['train_type'], start_time, elapsed_time, status])
 
 	print()
 	print(tabulate.tabulate(rows, header))
 
 
-def wait_for_jobs(model_jobs: list, running_limit: int = 4, patience: int = 1):
+def wait_for_jobs(model_jobs: list, cluster_name: str, running_limit: int = 4, patience: int = 1):
 	"""Wait for current jobs in queue to complete
 	
 	Args:
@@ -179,7 +180,7 @@ def wait_for_jobs(model_jobs: list, running_limit: int = 4, patience: int = 1):
 		running_limit (int, optional): nuber of running jobs to limit
 		patience (int, optional): number of pending jobs to wait for
 	"""
-	print_jobs(model_jobs)
+	print_jobs(model_jobs, cluster_name)
 
 	last_completed_jobs = 0
 	last_running_jobs = 0
@@ -190,7 +191,7 @@ def wait_for_jobs(model_jobs: list, running_limit: int = 4, patience: int = 1):
 		completed_jobs, running_jobs, pending_jobs = 0, 0, 0
 
 		for job in model_jobs:
-			_, _, status = get_job_info(job['job_id'])
+			_, _, status = get_job_info(job['job_id'], cluster_name)
 			if status == 'COMPLETED': 
 				completed_jobs += 1
 			elif status == 'PENDING':
@@ -198,11 +199,11 @@ def wait_for_jobs(model_jobs: list, running_limit: int = 4, patience: int = 1):
 			elif status == 'RUNNING':
 				running_jobs += 1
 			elif status == 'FAILED':
-				print_jobs(model_jobs)
+				print_jobs(model_jobs, cluster_name)
 				raise RuntimeError('Some jobs failed.')
 
 		if last_completed_jobs != completed_jobs or last_running_jobs != running_jobs:
-			print_jobs(model_jobs)
+			print_jobs(model_jobs, cluster_name)
 
 		last_completed_jobs, last_running_jobs = completed_jobs, running_jobs 
 
@@ -351,6 +352,10 @@ def main():
 		type=str,
 		help='path to "models" directory containing "pretrained" sub-directory',
 		default='../models/')
+	parser.add_argument('--cluster_name',
+		metavar='',
+		type=str,
+		help='name of the cluster where jobs are running')
 	parser.add_argument('--num_init',
 		metavar='',
 		type=int,
@@ -413,12 +418,12 @@ def main():
 		model_jobs = json.load(open(model_jobs_file))
 
 		try:
-			wait_for_jobs(model_jobs)
+			wait_for_jobs(model_jobs, args.cluster_name)
 		except:
 			# Is there are failed jobs, remove them
 			model_jobs_copy = copy.deepcopy(model_jobs)
 			for job in model_jobs_copy:
-				_, _, status = get_job_info(job['job_id'])
+				_, _, status = get_job_info(job['job_id'], args.cluster_name)
 
 				
 
@@ -429,13 +434,13 @@ def main():
 					shutil.rmtree(os.path.join(finetune_dir, job['model_hash']), ignore_errors=True)
 
 			print(f'{pu.bcolors.WARNING}Removed failed jobs{pu.bcolors.ENDC}')
-			wait_for_jobs(model_jobs)
+			wait_for_jobs(model_jobs, args.cluster_name)
 	else:
 		os.makedirs(f'./job_scripts/{args.task}', exist_ok=True)
 
 	trained_hashes, pipeline_hashes = [], []
 	for job in model_jobs:
-		_, _, status = get_job_info(job['job_id'])
+		_, _, status = get_job_info(job['job_id'], args.cluster_name)
 		if status == 'COMPLETED':
 			trained_hashes.append(job['model_hash'])
 		else:
@@ -465,7 +470,7 @@ def main():
 			'train_type': 'P+F' if pretrain else 'F'})
 
 	# Wait for jobs to complete
-	wait_for_jobs(model_jobs)
+	wait_for_jobs(model_jobs, args.cluster_name)
 
 	# Save model jobs
 	json.dump(model_jobs, open(model_jobs_file, 'w+'))
@@ -491,7 +496,7 @@ def main():
 				'train_type': 'P+F' if pretrain else 'F'})
 
 	# Wait for jobs to complete
-	wait_for_jobs(model_jobs)
+	wait_for_jobs(model_jobs, args.cluster_name)
 
 	# Save model jobs
 	json.dump(model_jobs, open(model_jobs_file, 'w+'))
@@ -540,7 +545,7 @@ def main():
 		# Get a set of trained models and models that are currently in the pipeline
 		trained_hashes, pipeline_hashes = [], []
 		for job in model_jobs:
-			_, _, status = get_job_info(job['job_id'])
+			_, _, status = get_job_info(job['job_id'], args.cluster_name)
 			if status == 'COMPLETED':
 				trained_hashes.append(job['model_hash'])
 			else:
@@ -683,7 +688,7 @@ def main():
 				'train_type': 'P+F' if pretrain else 'F'})
 
 		# Wait for jobs to complete
-		wait_for_jobs(model_jobs)
+		wait_for_jobs(model_jobs, args.cluster_name)
 
 		# Save model jobs
 		json.dump(model_jobs, open(model_jobs_file, 'w+'))
@@ -707,7 +712,7 @@ def main():
 		old_best_performance = best_performance
 
 	# Wait for jobs to complete
-	wait_for_jobs(model_jobs, running_limit=0, patience=0)
+	wait_for_jobs(model_jobs, args.cluster_name, running_limit=0, patience=0)
 
 	# Save model jobs
 	json.dump(model_jobs, open(model_jobs_file, 'w+'))
