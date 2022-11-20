@@ -27,7 +27,7 @@ import shutil
 
 import torch
 from transformers import BertConfig
-from transformers.models.bert.modeling_modular_bert import BertModelModular
+from transformers.models.flexibert.modeling_flexibert import FlexiBERTModel
 
 from boshnas import BOSHNAS
 from acq import gosh_acq as acq
@@ -87,18 +87,18 @@ def worker(model_dict: dict,
 		model_config.from_model_dict(model_dict)
 
 		if task != "glue":
-			chosen_neighbor_model = BertModelModular.from_pretrained(
+			chosen_neighbor_model = FlexiBERTModel.from_pretrained(
 				f'{models_dir}{task}/{chosen_neighbor_hash}/')
-			current_model = BertModelModular(model_config)
+			current_model = FlexiBERTModel(model_config)
 			current_model.load_model_from_source(chosen_neighbor_model)
 			current_model.save_pretrained(
 				f'{models_dir}{task}/{model_hash}/')
 			model_name_or_path = f'{models_dir}{task}/{model_hash}/' 
 		else:
 			for task in GLUE_TASKS:
-				chosen_neighbor_model = BertModelModular.from_pretrained(
+				chosen_neighbor_model = FlexiBERTModel.from_pretrained(
 					f'{models_dir}{task}/{chosen_neighbor_hash}/')
-				current_model = BertModelModular(model_config)
+				current_model = FlexiBERTModel(model_config)
 				current_model.load_model_from_source(chosen_neighbor_model)
 				current_model.save_pretrained(
 					f'{models_dir}{task}/{model_hash}/')
@@ -294,13 +294,13 @@ def get_neighbor_hash(model: 'Graph', graphLib: 'GraphLib', trained_hashes: list
 			continue
 
 		# Initialize current model
-		current_model = BertModelModular(model_config)
+		current_model = FlexiBERTModel(model_config)
 
 		# Initialize neighbor model
 		neighbor_graph, _ = graphLib.get_graph(model_hash=neighbor_hash)
 		neighbor_config = BertConfig()
 		neighbor_config.from_model_dict(neighbor_graph.model_dict)
-		neighbor_model = BertModelModular(neighbor_config)
+		neighbor_model = FlexiBERTModel(neighbor_config)
 
 		# Get overlap from neighboring model
 		overlap = current_model.load_model_from_source(neighbor_model)
