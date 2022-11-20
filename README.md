@@ -100,4 +100,25 @@ To use the downloaded FlexiBERT-Mini model:
 flexibert_mini = FlexiBERTModel.from_pretrained('./models/flexibert_mini/')
 ```
 
+To instantiate a model in the FlexiBERT design space, create a model dictionary and generate a model configuration:
+```python
+model_dict = {'l': 4, 'o': ['sa', 'sa', 'l', 'l'], 'h': [256, 256, 128, 128], 'n': [2, 2, 4, 4],
+      'f': [[512, 512, 512], [512, 512, 512], [1024], [1024]], 'p': ['sdp', 'sdp', 'dct', 'dct']}
+flexibert_mini_config = FlexiBERTConfig()
+flexibert_mini_config.from_model_dict(model_dict)
+flexibert_mini = FlexiBERTModel(flexibert_mini_config)
+```
+
+You can also use the FlexiBERT 2.0 `hetero` model dictionary format (paper under review). To transfer weights to another model within the design space (both should be in standard or `hetero` format):
+```python
+model_dict = {'l': 2, 'o': ['sa', 'sa'], 'h': [128, 128], 'n': [2, 2],
+      'f': [[512], [512]], 'p': ['sdp', 'sdp']}
+bert_tiny_config = FlexiBERTConfig()
+bert_tiny_config.from_model_dict(model_dict)
+bert_tiny = FlexiBERTModel(bert_tiny_config, transfer_mode='RP')
+
+# Implement fine-grained knowledge transfer using random projections
+bert_tiny.load_model_from_source(flexibert_mini)
+```
+
 We will be adding more pre-trained models so stay tuned!
