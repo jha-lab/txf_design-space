@@ -15,7 +15,7 @@ from typing import Optional
 main_dir = os.path.abspath(os.path.dirname(__file__)).split('flexibert')[0]
 
 from datasets import load_dataset, interleave_datasets, load_from_disk
-from transformers.models.bert.modeling_modular_bert import BertModelModular, BertForMaskedLMModular
+from transformers.models.flexibert.modeling_flexibert import FlexiBERTConfig, FlexiBERTModel, FlexiBERTForMaskedLM
 from transformers import RobertaTokenizer, BertConfig
 
 import transformers
@@ -279,7 +279,7 @@ def pretrain(args, model_dict):
 
     tokenizer = RobertaTokenizer.from_pretrained(main_dir+'roberta_tokenizer/')
 
-    config = BertConfig(vocab_size = tokenizer.vocab_size)
+    config = FlexiBERTConfig(vocab_size = tokenizer.vocab_size)
 
     if 'p' in model_dict.keys():
         config.from_model_dict(model_dict)
@@ -307,7 +307,7 @@ def pretrain(args, model_dict):
     
     if model_args.model_name_or_path:
         logger.info(f"Loaded model from {model_args.model_name_or_path}")
-        model = BertForMaskedLMModular.from_pretrained(
+        model = FlexiBERTForMaskedLM.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
@@ -317,7 +317,7 @@ def pretrain(args, model_dict):
         )
     else:
         logger.info("Training new model from scratch")
-        model = BertForMaskedLMModular(config)
+        model = FlexiBERTForMaskedLM(config)
     
 
     model.resize_token_embeddings(len(tokenizer))
