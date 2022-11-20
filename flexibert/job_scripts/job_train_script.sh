@@ -142,8 +142,7 @@ if [[ $pretrain == "1" ]]
 then
     echo "python pretrain_flexibert.py --model_hash ${model_hash} \
         --output_dir ${model_name_or_path} \
-        --dataset_file ${dataset_file} \
-        --id ${id}" >> $job_file
+        --dataset_file ${dataset_file}" >> $job_file
     echo "wait" >> $job_file
 fi
 if [[ $autotune == "0" ]]
@@ -151,12 +150,10 @@ then
     if [[ $task == "glue" ]]
     then
         echo "python glue_score.py --model_hash ${model_hash} \
-            --id ${id} \
             --models_dir ${models_dir} " >> $job_file
     else
         echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
             --task_name ${task} \
-            --id ${id} \
             --do_train \
             --do_eval \
             --save_total_limit 2 \
@@ -172,14 +169,12 @@ else
     if [[ $task == "glue" ]]
     then
         echo "python glue_score.py --model_hash ${model_hash} \
-            --id ${id} \
             --models_dir ${models_dir} \
             --autotune \
             --autotune_trials ${autotune_trials}" >> $job_file
     else
         echo "python finetune_flexibert.py --model_name_or_path ${model_name_or_path} \
             --task_name ${task} \
-            --id ${id} \
             --do_train \
             --do_eval \
             --autotune \
