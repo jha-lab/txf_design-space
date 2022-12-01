@@ -80,7 +80,7 @@ cd flexibert/
 python run_boshnas.py
 cd ../
 ```
-Other flags can be used to control the training procedure (check using `python flexibert/run_boshnas.py --help`). This script uses the SLURM scheduler over mutiple compute nodes in a cluster (each cluster assumed to have 2 GPUs, this can be changed in code). SLURM can aso used in scenarios where distributed nodes are not available.
+Other flags can be used to control the training procedure (check using `python flexibert/run_boshnas.py --help`). This script uses the SLURM scheduler over mutiple compute nodes in a cluster (each cluster assumed to have 2 GPUs, this can be changed in code). SLURM can also be used in scenarios where distributed nodes are not available.
 
 ### Generate graph library for next level of hierarchy
 
@@ -133,7 +133,7 @@ We will be adding more pre-trained models so stay tuned!
 ## Cite this work
 
 Cite our work using the following bitex entry:
-```
+```bibtex
 @article{tuli2022jair,
       title={{FlexiBERT}: Are Current Transformer Architectures too Homogeneous and Rigid?}, 
       author={Tuli, Shikhar and Dedhia, Bhishma and Tuli, Shreshth and Jha, Niraj K.},
