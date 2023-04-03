@@ -5,7 +5,7 @@
 ![PyTorch](https://img.shields.io/badge/pytorch-v1.8.1-e74a2b)
 
 FlexiBERT is a tool which can be used to generate and evaluate different Transformer architectures on diverse NLP tasks.
-This repository has been forked from [huggingface/transformers](https://github.com/huggingface/transformers) and then expanded to incorporate more heterogenous Transformer architectures.
+This repository has been forked from [huggingface/transformers](https://github.com/huggingface/transformers) and then expanded to incorporate more heterogenous Transformer architectures. The proposed NAS technique, BOSHNAS, is available at [Jha-Lab/boshnas](https://github.com/JHA-Lab/boshnas).
 
 ## Table of Contents
 - [Environment setup](#environment-setup)
