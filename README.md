@@ -1,4 +1,4 @@
-# FlexiBERT: an Exploratory Study of the Transformer Design Space
+# FlexiBERT: Are Current Transformer Architectures too Homogeneous and Rigid?
 
 ![Python Version](https://img.shields.io/badge/python-v3.6%20%7C%20v3.7%20%7C%20v3.8-blue)
 ![Conda](https://img.shields.io/badge/conda%7Cconda--forge-v4.8.3-blue)
